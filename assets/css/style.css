@@ -435,6 +435,13 @@ select {
 
 /* Desktop adaptation */
 @media (min-width: 768px) {
+    :root { --max-w: 880px; }
     main.container { padding-left: var(--s-6); padding-right: var(--s-6); }
-    .bottom-nav { max-width: var(--max-w); margin: 0 auto; border-radius: var(--r-xl) var(--r-xl) 0 0; }
+    .bottom-nav {
+        max-width: var(--max-w);
+        left: 50%;
+        right: auto;
+        transform: translateX(-50%);
+        border-radius: var(--r-xl) var(--r-xl) 0 0;
+    }
 }
