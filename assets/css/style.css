@@ -172,18 +172,24 @@ h2 { font-size: 18px; font-weight: 600; margin: var(--s-6) 0 var(--s-3); }
  * Cards
  * ============================================ */
 .card {
+    display: block;
     background: var(--bg-elevated);
     border: 1px solid var(--border);
     border-radius: var(--r-lg);
     padding: var(--s-4);
     margin-bottom: var(--s-3);
     position: relative;
+    text-decoration: none;
+    color: inherit;
+    width: 100%;
 }
+a.card:active { background: var(--bg-input); }
 .card.attention { border-color: var(--c-orange); }
 .card.danger    { border-color: var(--c-danger); }
 .card.success   { border-color: var(--c-success); }
-.card .title { font-weight: 600; margin-bottom: 4px; }
-.card .desc  { color: var(--txt-2); font-size: 14px; }
+.card .title { font-weight: 600; margin-bottom: 4px; color: var(--c-primary-2); }
+.card .desc  { color: var(--txt-2); font-size: 14px; line-height: 1.4; }
+.card .title, .card .desc { display: block; }
 
 .kpi {
     background: var(--bg-elevated);
@@ -402,6 +408,8 @@ select {
     gap: var(--s-3);
     text-decoration: none;
     color: inherit;
+    width: 100%;
+    box-sizing: border-box;
 }
 .list-card:active { background: var(--bg-input); }
 .list-card .info { flex: 1; min-width: 0; }
