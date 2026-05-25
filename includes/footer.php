@@ -5,13 +5,17 @@ if ($u && empty($hide_nav)):
     $nav_active = $nav_active ?? '';
     $base = APP_BASE_URL;
 
-    if ($u['role'] === 'admin') {
+    if (in_array($u['role'], ['admin','sadmin'], true)) {
         $items = [
             ['key'=>'painel',   'href'=>"$base/dashboard.php", 'label'=>'Início',   'icon'=>'🏠'],
             ['key'=>'clientes', 'href'=>"$base/clientes.php",  'label'=>'Clientes', 'icon'=>'👥'],
-            ['key'=>'catalogo', 'href'=>"$base/catalogo.php",  'label'=>'Catálogo', 'icon'=>'📦'],
-            ['key'=>'perfil',   'href'=>"$base/perfil.php",    'label'=>'Perfil',   'icon'=>'👤'],
         ];
+        if ($u['role'] === 'sadmin') {
+            $items[] = ['key'=>'catalogo', 'href'=>"$base/catalogo.php", 'label'=>'Catálogo', 'icon'=>'📦'];
+        } else {
+            $items[] = ['key'=>'painel_fin', 'href'=>"$base/painel.php", 'label'=>'Painel', 'icon'=>'📊'];
+        }
+        $items[] = ['key'=>'perfil', 'href'=>"$base/perfil.php", 'label'=>'Perfil', 'icon'=>'👤'];
     } elseif ($u['role'] === 'funcionario') {
         $items = [
             ['key'=>'agenda',     'href'=>"$base/agenda.php",            'label'=>'Agenda',   'icon'=>'📅'],

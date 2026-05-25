@@ -30,10 +30,12 @@ require __DIR__ . '/includes/header.php';
     <div class="title">📊 Painel financeiro</div>
     <div class="desc">Agenda · Por cliente · Por serviço (vencidos, recebido, em aberto)</div>
   </a>
+  <?php if (is_sadmin()): ?>
   <a class="card" href="<?= e(APP_BASE_URL) ?>/catalogo.php">
     <div class="title">📦 Catálogo</div>
-    <div class="desc">Cadastrar e editar itens (serviços e pacotes)</div>
+    <div class="desc">Cadastrar e editar itens <span class="status status-destaque">sadmin</span></div>
   </a>
+  <?php endif; ?>
   <a class="card" href="<?= e(APP_BASE_URL) ?>/clientes.php">
     <div class="title">👥 Clientes</div>
     <div class="desc">Gerenciar clientes e gerar convites</div>
@@ -54,22 +56,27 @@ require __DIR__ . '/includes/header.php';
     <div class="title">💵 Pagamentos a funcionários</div>
     <div class="desc">Fila de valores liberados em USD para pagar via Wise</div>
   </a>
+  <?php if (is_sadmin()): ?>
   <a class="card" href="<?= e(APP_BASE_URL) ?>/regua.php">
     <div class="title">⏰ Régua de cobrança</div>
-    <div class="desc">Etapas automáticas + tarefas WhatsApp pendentes</div>
+    <div class="desc">Etapas automáticas + tarefas WhatsApp pendentes <span class="status status-destaque">sadmin</span></div>
   </a>
   <a class="card" href="<?= e(APP_BASE_URL) ?>/templates.php">
     <div class="title">📝 Templates de mensagem</div>
-    <div class="desc">Editar textos de email e WhatsApp</div>
+    <div class="desc">Editar textos de email e WhatsApp <span class="status status-destaque">sadmin</span></div>
   </a>
+  <?php endif; ?>
   <a class="card" href="<?= e(APP_BASE_URL) ?>/capacidade.php">
     <div class="title">📊 Capacidade da equipe</div>
     <div class="desc">Quanto cada funcionário absorve por mês</div>
   </a>
+  <?php if (is_sadmin()): ?>
+  <div class="section-label">Super Admin</div>
   <a class="card" href="<?= e(APP_BASE_URL) ?>/auditoria.php">
     <div class="title">🔍 Auditoria</div>
-    <div class="desc">Histórico de alterações (quem fez o quê)</div>
+    <div class="desc">Histórico de tudo no sistema (só sadmin)</div>
   </a>
+  <?php endif; ?>
 
   <div class="section-label">Minha área de execução (também trabalho nos serviços)</div>
   <a class="card" href="<?= e(APP_BASE_URL) ?>/agenda.php">

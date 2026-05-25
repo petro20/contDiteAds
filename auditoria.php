@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/includes/auth.php';
-require_admin();
+require_sadmin();
 $db = db();
 
 $f_usuario = (int)($_GET['usuario_id'] ?? 0);

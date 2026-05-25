@@ -30,7 +30,7 @@ function require_login(): array {
 
 function require_admin(): array {
     $u = require_login();
-    if ($u['role'] !== 'admin') {
+    if (!in_array($u['role'], ['admin','sadmin'], true)) {
         http_response_code(403);
         exit('Acesso negado.');
     }
@@ -39,7 +39,21 @@ function require_admin(): array {
 
 function is_admin(): bool {
     $u = current_user();
-    return $u && $u['role'] === 'admin';
+    return $u && in_array($u['role'], ['admin','sadmin'], true);
+}
+
+function require_sadmin(): array {
+    $u = require_login();
+    if ($u['role'] !== 'sadmin') {
+        http_response_code(403);
+        exit('Acesso negado. Apenas Super Admin.');
+    }
+    return $u;
+}
+
+function is_sadmin(): bool {
+    $u = current_user();
+    return $u && $u['role'] === 'sadmin';
 }
 
 function login(string $email, string $senha): bool {

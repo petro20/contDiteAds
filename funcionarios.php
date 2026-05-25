@@ -49,24 +49,59 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         header('Location: ' . APP_BASE_URL . '/funcionarios.php?acao=editar&id=' . $fid . '&ok=upd'); exit;
     }
+    if (($_POST['op'] ?? '') === 'apagar') {
+        if (!is_sadmin()) { http_response_code(403); exit('Apenas Sadmin pode apagar.'); }
+        $pid = (int)($_POST['id'] ?? 0);
+        if ($pid === (int)$me['id']) {
+            $flash = ['err', 'Você não pode apagar a si mesmo.'];
+        } else {
+            try {
+                $stmt = $db->prepare('DELETE FROM usuarios WHERE id = ?');
+                $stmt->execute([$pid]);
+                audit_log('usuario.apagado', 'usuarios', $pid);
+                header('Location: ' . APP_BASE_URL . '/funcionarios.php?ok=del'); exit;
+            } catch (PDOException $e) {
+                $flash = ['err', 'Não dá pra apagar: este usuário tem dados vinculados (cobranças, pagamentos, etc.). Desative em vez disso.'];
+            }
+        }
+    }
+
     if (($_POST['op'] ?? '') === 'salvar') {
         $pid = (int)($_POST['id'] ?? 0);
         $nome  = trim((string)($_POST['nome'] ?? ''));
         $email = trim((string)($_POST['email'] ?? ''));
-        $role  = ($_POST['role'] ?? 'funcionario') === 'admin' ? 'admin' : 'funcionario';
+
+        // Só sadmin promove a admin/sadmin. Admin comum só cria/edita funcionarios.
+        $role_in = $_POST['role'] ?? 'funcionario';
+        if (is_sadmin()) {
+            $role = in_array($role_in, ['sadmin','admin','funcionario'], true) ? $role_in : 'funcionario';
+        } else {
+            $role = 'funcionario'; // admin comum força funcionario
+        }
+
+        // Admin comum não pode editar admins/sadmins
+        if ($pid && !is_sadmin()) {
+            $stmt = $db->prepare('SELECT role FROM usuarios WHERE id = ?');
+            $stmt->execute([$pid]);
+            $cur_role = $stmt->fetchColumn();
+            if (in_array($cur_role, ['admin','sadmin'], true)) {
+                http_response_code(403); exit('Admin comum não pode editar outro admin.');
+            }
+        }
+
         $ativo = isset($_POST['ativo']) ? 1 : 0;
 
-        // Trava: impede rebaixar/desativar o ÚLTIMO admin do sistema
+        // Trava: impede rebaixar/desativar o ÚLTIMO sadmin (proteção total)
         if ($pid) {
             $stmt = $db->prepare('SELECT role, ativo FROM usuarios WHERE id = ?');
             $stmt->execute([$pid]);
             $atual = $stmt->fetch();
-            if ($atual && $atual['role'] === 'admin' && (int)$atual['ativo'] === 1) {
-                $vai_remover_admin = ($role !== 'admin') || ($ativo !== 1);
-                if ($vai_remover_admin) {
-                    $count_admins = (int)$db->query("SELECT COUNT(*) FROM usuarios WHERE role='admin' AND ativo=1")->fetchColumn();
-                    if ($count_admins <= 1) {
-                        $flash = ['err', 'Não dá pra rebaixar/desativar o único administrador do sistema. Crie outro admin primeiro.'];
+            if ($atual && $atual['role'] === 'sadmin' && (int)$atual['ativo'] === 1) {
+                $vai_perder_sadmin = ($role !== 'sadmin') || ($ativo !== 1);
+                if ($vai_perder_sadmin) {
+                    $count = (int)$db->query("SELECT COUNT(*) FROM usuarios WHERE role='sadmin' AND ativo=1")->fetchColumn();
+                    if ($count <= 1) {
+                        $flash = ['err', 'Não dá pra rebaixar/desativar o único Super Admin. Crie outro sadmin primeiro.'];
                         $acao = 'editar'; $id = $pid;
                         goto skip_save;
                     }
@@ -140,10 +175,14 @@ if ($acao === 'novo' || $acao === 'editar') {
         <div class="field"><label>Nome *</label><input name="nome" required value="<?= e($func['nome']) ?>"></div>
         <div class="field"><label>Email (login) *</label><input type="email" name="email" required value="<?= e($func['email']) ?>"></div>
         <div class="field"><label>Perfil</label>
-          <select name="role" id="role_select" data-original="<?= e($func['role']) ?>" data-original-name="<?= e($func['nome']) ?>" data-is-self="<?= ((int)$func['id'] === (int)$me['id']) ? '1' : '0' ?>">
+          <select name="role" id="role_select" data-original="<?= e($func['role']) ?>" data-original-name="<?= e($func['nome']) ?>" data-is-self="<?= ((int)$func['id'] === (int)$me['id']) ? '1' : '0' ?>" <?= is_sadmin() ? '' : 'disabled' ?>>
             <option value="funcionario" <?= $func['role']==='funcionario'?'selected':'' ?>>Funcionário</option>
-            <option value="admin" <?= $func['role']==='admin'?'selected':'' ?>>Admin</option>
+            <?php if (is_sadmin()): ?>
+              <option value="admin"  <?= $func['role']==='admin'?'selected':'' ?>>Admin</option>
+              <option value="sadmin" <?= $func['role']==='sadmin'?'selected':'' ?>>Super Admin</option>
+            <?php endif; ?>
           </select>
+          <?php if (!is_sadmin()): ?><div class="hint">Só Super Admin pode promover usuários.</div><?php endif; ?>
         </div>
         <div class="field"><label>CPF (opcional)</label><input name="cpf" value="<?= e($func['cpf']) ?>"></div>
         <div class="field"><label>WiseTag (recebe USD)</label><input name="wisetag" value="<?= e($func['wisetag']) ?>" placeholder="@wisetag"></div>
@@ -154,6 +193,16 @@ if ($acao === 'novo' || $acao === 'editar') {
       </div>
       <button class="btn block" type="submit">Salvar</button>
     </form>
+
+    <?php if ($func['id'] && is_sadmin() && (int)$func['id'] !== (int)$me['id']): ?>
+      <h2>⚠ Zona de perigo</h2>
+      <form method="post" onsubmit="return confirm('APAGAR DEFINITIVAMENTE este usuário?\n\nSó funciona se ele NÃO tiver dados vinculados (cobranças, pagamentos, etc.). Caso tenha, prefira DESATIVAR.\n\nConfirmar?');">
+        <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
+        <input type="hidden" name="op" value="apagar">
+        <input type="hidden" name="id" value="<?= (int)$func['id'] ?>">
+        <button class="btn btn-danger block" type="submit">🗑 Apagar definitivamente</button>
+      </form>
+    <?php endif; ?>
 
     <script>
     function confirmarMudancaPerfil(form) {
@@ -235,7 +284,7 @@ if ($acao === 'novo' || $acao === 'editar') {
 }
 
 require __DIR__ . '/includes/header.php';
-$users = $db->query("SELECT id, nome, email, role, ativo, wisetag, aceitando_clientes FROM usuarios WHERE role IN ('admin','funcionario') ORDER BY role DESC, nome")->fetchAll();
+$users = $db->query("SELECT id, nome, email, role, ativo, wisetag, aceitando_clientes FROM usuarios WHERE role IN ('sadmin','admin','funcionario') ORDER BY FIELD(role,'sadmin','admin','funcionario'), nome")->fetchAll();
 ?>
 <h1 class="page-title">Funcionários</h1>
 <?php if ($flash): ?><div class="flash <?= e($flash[0]) ?>"><?= e($flash[1]) ?></div><?php endif; ?>
@@ -249,7 +298,7 @@ $users = $db->query("SELECT id, nome, email, role, ativo, wisetag, aceitando_cli
     <div class="info">
       <div class="nome">
         <?= e($u['nome']) ?>
-        <?php if ($u['role'] === 'admin'): ?><span class="status status-ia">admin</span><?php endif; ?>
+        <?php if ($u['role'] === 'sadmin'): ?><span class="status status-destaque">super admin</span><?php elseif ($u['role'] === 'admin'): ?><span class="status status-ia">admin</span><?php endif; ?>
         <?php if (!$u['ativo']): ?><span class="status status-info">inativo</span><?php endif; ?>
       </div>
       <div class="sub">

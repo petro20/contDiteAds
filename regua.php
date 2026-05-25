@@ -3,7 +3,7 @@ require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/lib/audit.php';
 require_once __DIR__ . '/lib/regua.php';
 require_once __DIR__ . '/lib/whatsapp.php';
-$me = require_admin();
+$me = require_sadmin();
 $db = db();
 $flash = null;
 

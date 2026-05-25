@@ -2,7 +2,7 @@
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/lib/money.php';
 require_once __DIR__ . '/lib/audit.php';
-require_admin();
+require_sadmin();
 $db = db();
 
 $acao  = $_GET['acao'] ?? 'lista';
