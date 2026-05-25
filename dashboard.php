@@ -70,6 +70,16 @@ require __DIR__ . '/includes/header.php';
     <div class="title">🔍 Auditoria</div>
     <div class="desc">Histórico de alterações (quem fez o quê)</div>
   </a>
+
+  <div class="section-label">Minha área de execução (também trabalho nos serviços)</div>
+  <a class="card" href="<?= e(APP_BASE_URL) ?>/agenda.php">
+    <div class="title">📅 Minha agenda</div>
+    <div class="desc">Marcar entregas dos clientes que eu atendo (como funcionário)</div>
+  </a>
+  <a class="card" href="<?= e(APP_BASE_URL) ?>/meus_pagamentos.php">
+    <div class="title">💵 Meus pagamentos</div>
+    <div class="desc">O que tenho a receber em USD (quando o cliente paga)</div>
+  </a>
   <a class="card" href="<?= e(APP_BASE_URL) ?>/convites.php">
     <div class="title">✉️ Gerar convite</div>
     <div class="desc">Link para cliente ou funcionário se cadastrar</div>

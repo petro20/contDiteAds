@@ -177,7 +177,7 @@ if ($acao === 'novo' || $acao === 'editar') {
     }
     </script>
 
-    <?php if ($func['id'] && $func['role'] === 'funcionario'):
+    <?php if ($func['id'] && in_array($func['role'], ['funcionario','admin'], true)):
         // Capacidade declarada
         $cap_categorias = ['criativos','postagens','sites_projetos'];
         $stmt = $db->prepare('SELECT categoria, capacidade_mensal FROM capacidade_funcionario WHERE funcionario_id = ?');
