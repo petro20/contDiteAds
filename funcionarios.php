@@ -113,7 +113,7 @@ if ($acao === 'novo' || $acao === 'editar') {
     require __DIR__ . '/includes/header.php';
     ?>
     <?php if ($flash): ?><div class="flash <?= e($flash[0]) ?>"><?= e($flash[1]) ?></div><?php endif; ?>
-    <form method="post">
+    <form method="post" id="form_funcionario" onsubmit="return confirmarMudancaPerfil(this);">
       <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
       <input type="hidden" name="op" value="salvar">
       <input type="hidden" name="id" value="<?= (int)$u['id'] ?>">
@@ -121,7 +121,7 @@ if ($acao === 'novo' || $acao === 'editar') {
         <div class="field"><label>Nome *</label><input name="nome" required value="<?= e($u['nome']) ?>"></div>
         <div class="field"><label>Email (login) *</label><input type="email" name="email" required value="<?= e($u['email']) ?>"></div>
         <div class="field"><label>Perfil</label>
-          <select name="role">
+          <select name="role" id="role_select" data-original="<?= e($u['role']) ?>" data-original-name="<?= e($u['nome']) ?>" data-is-self="<?= ((int)$u['id'] === (int)$me['id']) ? '1' : '0' ?>">
             <option value="funcionario" <?= $u['role']==='funcionario'?'selected':'' ?>>Funcionário</option>
             <option value="admin" <?= $u['role']==='admin'?'selected':'' ?>>Admin</option>
           </select>
@@ -135,6 +135,28 @@ if ($acao === 'novo' || $acao === 'editar') {
       </div>
       <button class="btn block" type="submit">Salvar</button>
     </form>
+
+    <script>
+    function confirmarMudancaPerfil(form) {
+      var sel = form.querySelector('#role_select');
+      if (!sel) return true;
+      var atual = sel.value;
+      var orig  = sel.dataset.original;
+      var nome  = sel.dataset.originalName;
+      var euMesmo = sel.dataset.isSelf === '1';
+      if (orig && atual !== orig) {
+        var rotulo = {admin:'Admin', funcionario:'Funcionário'};
+        var msg = 'Você está mudando o perfil de "' + nome + '"\n' +
+                  'de ' + (rotulo[orig]||orig) + ' → ' + (rotulo[atual]||atual) + '\n\n';
+        if (euMesmo && orig === 'admin' && atual !== 'admin') {
+          msg += '⚠ ATENÇÃO: este é o SEU usuário. Se confirmar, você perde acesso de administrador imediatamente.\n\n';
+        }
+        msg += 'Confirma a mudança?';
+        return confirm(msg);
+      }
+      return true;
+    }
+    </script>
 
     <?php if ($u['id'] && $u['role'] === 'funcionario'):
         // Capacidade declarada
