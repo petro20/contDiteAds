@@ -81,8 +81,14 @@ require __DIR__ . '/includes/header.php';
   <div class="section-label">Sociedade</div>
   <a class="card" href="<?= e(APP_BASE_URL) ?>/distribuicao.php">
     <div class="title">💰 Distribuição de lucro</div>
-    <div class="desc">Sua parte da receita por moeda (sócio + empresa em quotas iguais)</div>
+    <div class="desc">Receita − despesas dividida em quotas (sócios + empresa)</div>
   </a>
+  <?php if (is_sadmin()): ?>
+  <a class="card" href="<?= e(APP_BASE_URL) ?>/despesas.php">
+    <div class="title">💸 Despesas da empresa</div>
+    <div class="desc">Cadastrar gastos (ferramentas, software, etc.) <span class="status status-destaque">sadmin</span></div>
+  </a>
+  <?php endif; ?>
 
   <div class="section-label">Minha área de execução (também trabalho nos serviços)</div>
   <a class="card" href="<?= e(APP_BASE_URL) ?>/agenda.php">

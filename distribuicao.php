@@ -2,6 +2,7 @@
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/lib/money.php';
 require_once __DIR__ . '/lib/distribuicao.php';
+require_once __DIR__ . '/lib/despesas.php';
 $u = require_login();
 if (!is_admin()) { http_response_code(403); exit('Apenas sócios.'); }
 $db = db();
@@ -15,6 +16,13 @@ $total_quotas = $n_socios + 1; // +1 empresa
 
 $rec_mes   = receita_mes($db, $competencia);
 $rec_total = receita_por_moeda($db); // tudo
+$desp_mes  = despesas_do_mes($db, $competencia);
+
+// Lucro líquido = receita - despesas (por moeda)
+$liq_mes = [];
+foreach (['BRL','USD','EUR'] as $m) {
+    $liq_mes[$m] = $rec_mes[$m] - ($desp_mes['totais'][$m] ?? 0);
+}
 
 $dt = DateTime::createFromFormat('Y-m', $competencia);
 $mes_ant  = (clone $dt)->modify('-1 month')->format('Y-m');
@@ -37,18 +45,25 @@ require __DIR__ . '/includes/header.php';
   <a class="btn btn-ghost small" href="?mes=<?= e($mes_prox) ?>"><?= e($mes_prox) ?> →</a>
 </div>
 
-<h2>Receita do mês</h2>
-<div class="grid-2">
-  <?php foreach (['BRL','USD','EUR'] as $m): $valor = $rec_mes[$m]; $parte = $total_quotas > 0 ? $valor / $total_quotas : 0; ?>
-    <div class="kpi">
-      <div class="v"><?= e(money_fmt($valor, $m)) ?></div>
-      <div class="l">Receita (<?= $m ?>)</div>
-      <div class="muted mt-3" style="font-size:13px;">
-        Por quota: <strong><?= e(money_fmt($parte, $m)) ?></strong>
-      </div>
+<h2>Receita × Despesas × Lucro líquido</h2>
+<?php foreach (['BRL','USD','EUR'] as $m):
+    $rec = $rec_mes[$m]; $desp = $desp_mes['totais'][$m] ?? 0; $liq = $liq_mes[$m]; $parte = $total_quotas > 0 ? $liq / $total_quotas : 0;
+    if ($rec == 0 && $desp == 0) continue;
+?>
+  <div class="card">
+    <div class="title"><?= $m ?></div>
+    <div class="spaced" style="padding:6px 0;"><span>Receita</span><strong style="color:var(--c-success);"><?= e(money_fmt($rec, $m)) ?></strong></div>
+    <div class="spaced" style="padding:6px 0;"><span>Despesas</span><strong style="color:var(--c-danger);">− <?= e(money_fmt($desp, $m)) ?></strong></div>
+    <div class="spaced" style="padding:6px 0; border-top:1px solid var(--border);">
+      <strong>Lucro líquido</strong>
+      <strong><?= e(money_fmt($liq, $m)) ?></strong>
     </div>
-  <?php endforeach; ?>
-</div>
+    <div class="spaced" style="padding:6px 0; color:var(--c-primary-2);">
+      <span>Por quota (÷ <?= $total_quotas ?>)</span>
+      <strong><?= e(money_fmt($parte, $m)) ?></strong>
+    </div>
+  </div>
+<?php endforeach; ?>
 
 <h2>Sócios ativos</h2>
 <?php foreach ($socios as $s): ?>
@@ -63,9 +78,9 @@ require __DIR__ . '/includes/header.php';
         <div class="sub muted">1 quota (1/<?= $total_quotas ?>)</div>
       </div>
       <div class="right">
-        <div class="money md"><?= e(money_fmt($rec_mes['BRL']/$total_quotas, 'BRL')) ?></div>
-        <div class="money md"><?= e(money_fmt($rec_mes['USD']/$total_quotas, 'USD')) ?></div>
-        <div class="money md"><?= e(money_fmt($rec_mes['EUR']/$total_quotas, 'EUR')) ?></div>
+        <div class="money md"><?= e(money_fmt($liq_mes['BRL']/$total_quotas, 'BRL')) ?></div>
+        <div class="money md"><?= e(money_fmt($liq_mes['USD']/$total_quotas, 'USD')) ?></div>
+        <div class="money md"><?= e(money_fmt($liq_mes['EUR']/$total_quotas, 'EUR')) ?></div>
       </div>
     </div>
   </div>
@@ -78,9 +93,9 @@ require __DIR__ . '/includes/header.php';
       <div class="sub muted">1 quota (1/<?= $total_quotas ?>)</div>
     </div>
     <div class="right">
-      <div class="money md"><?= e(money_fmt($rec_mes['BRL']/$total_quotas, 'BRL')) ?></div>
-      <div class="money md"><?= e(money_fmt($rec_mes['USD']/$total_quotas, 'USD')) ?></div>
-      <div class="money md"><?= e(money_fmt($rec_mes['EUR']/$total_quotas, 'EUR')) ?></div>
+      <div class="money md"><?= e(money_fmt($liq_mes['BRL']/$total_quotas, 'BRL')) ?></div>
+      <div class="money md"><?= e(money_fmt($liq_mes['USD']/$total_quotas, 'USD')) ?></div>
+      <div class="money md"><?= e(money_fmt($liq_mes['EUR']/$total_quotas, 'EUR')) ?></div>
     </div>
   </div>
 </div>
