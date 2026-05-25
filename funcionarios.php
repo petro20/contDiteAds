@@ -121,36 +121,36 @@ $nav_active = '';
 if ($acao === 'novo' || $acao === 'editar') {
     $show_back = true;
     $back_to = APP_BASE_URL . '/funcionarios.php';
-    $u = ['id'=>0,'nome'=>'','email'=>'','role'=>'funcionario','ativo'=>1,'cpf'=>'','wisetag'=>'','pais'=>'','aceitando_clientes'=>1,'telefone'=>''];
+    $func = ['id'=>0,'nome'=>'','email'=>'','role'=>'funcionario','ativo'=>1,'cpf'=>'','wisetag'=>'','pais'=>'','aceitando_clientes'=>1,'telefone'=>''];
     if ($acao === 'editar' && $id) {
         $stmt = $db->prepare("SELECT id, nome, email, role, ativo, cpf, wisetag, pais, aceitando_clientes FROM usuarios WHERE id=? AND role IN ('admin','funcionario')");
         $stmt->execute([$id]);
         $row = $stmt->fetch();
-        if ($row) $u = array_merge($u, $row);
+        if ($row) $func = array_merge($func, $row);
     }
-    $page = $u['id'] ? 'Editar funcionário' : 'Novo funcionário';
+    $page = $func['id'] ? 'Editar funcionário' : 'Novo funcionário';
     require __DIR__ . '/includes/header.php';
     ?>
     <?php if ($flash): ?><div class="flash <?= e($flash[0]) ?>"><?= e($flash[1]) ?></div><?php endif; ?>
     <form method="post" id="form_funcionario" onsubmit="return confirmarMudancaPerfil(this);">
       <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
       <input type="hidden" name="op" value="salvar">
-      <input type="hidden" name="id" value="<?= (int)$u['id'] ?>">
+      <input type="hidden" name="id" value="<?= (int)$func['id'] ?>">
       <div class="card">
-        <div class="field"><label>Nome *</label><input name="nome" required value="<?= e($u['nome']) ?>"></div>
-        <div class="field"><label>Email (login) *</label><input type="email" name="email" required value="<?= e($u['email']) ?>"></div>
+        <div class="field"><label>Nome *</label><input name="nome" required value="<?= e($func['nome']) ?>"></div>
+        <div class="field"><label>Email (login) *</label><input type="email" name="email" required value="<?= e($func['email']) ?>"></div>
         <div class="field"><label>Perfil</label>
-          <select name="role" id="role_select" data-original="<?= e($u['role']) ?>" data-original-name="<?= e($u['nome']) ?>" data-is-self="<?= ((int)$u['id'] === (int)$me['id']) ? '1' : '0' ?>">
-            <option value="funcionario" <?= $u['role']==='funcionario'?'selected':'' ?>>Funcionário</option>
-            <option value="admin" <?= $u['role']==='admin'?'selected':'' ?>>Admin</option>
+          <select name="role" id="role_select" data-original="<?= e($func['role']) ?>" data-original-name="<?= e($func['nome']) ?>" data-is-self="<?= ((int)$func['id'] === (int)$me['id']) ? '1' : '0' ?>">
+            <option value="funcionario" <?= $func['role']==='funcionario'?'selected':'' ?>>Funcionário</option>
+            <option value="admin" <?= $func['role']==='admin'?'selected':'' ?>>Admin</option>
           </select>
         </div>
-        <div class="field"><label>CPF (opcional)</label><input name="cpf" value="<?= e($u['cpf']) ?>"></div>
-        <div class="field"><label>WiseTag (recebe USD)</label><input name="wisetag" value="<?= e($u['wisetag']) ?>" placeholder="@wisetag"></div>
-        <div class="field"><label>País</label><input name="pais" value="<?= e($u['pais']) ?>"></div>
-        <div class="field"><label>Senha <?= $u['id'] ? '(deixe em branco para manter)' : '*' ?></label><input type="password" name="senha" <?= $u['id']?'':'required' ?> autocomplete="new-password"></div>
-        <label class="check"><input type="checkbox" name="ativo" <?= $u['ativo']?'checked':'' ?>> Ativo</label>
-        <label class="check"><input type="checkbox" name="aceitando_clientes" <?= $u['aceitando_clientes']?'checked':'' ?>> Aceitando novos clientes</label>
+        <div class="field"><label>CPF (opcional)</label><input name="cpf" value="<?= e($func['cpf']) ?>"></div>
+        <div class="field"><label>WiseTag (recebe USD)</label><input name="wisetag" value="<?= e($func['wisetag']) ?>" placeholder="@wisetag"></div>
+        <div class="field"><label>País</label><input name="pais" value="<?= e($func['pais']) ?>"></div>
+        <div class="field"><label>Senha <?= $func['id'] ? '(deixe em branco para manter)' : '*' ?></label><input type="password" name="senha" <?= $func['id']?'':'required' ?> autocomplete="new-password"></div>
+        <label class="check"><input type="checkbox" name="ativo" <?= $func['ativo']?'checked':'' ?>> Ativo</label>
+        <label class="check"><input type="checkbox" name="aceitando_clientes" <?= $func['aceitando_clientes']?'checked':'' ?>> Aceitando novos clientes</label>
       </div>
       <button class="btn block" type="submit">Salvar</button>
     </form>
@@ -177,11 +177,11 @@ if ($acao === 'novo' || $acao === 'editar') {
     }
     </script>
 
-    <?php if ($u['id'] && $u['role'] === 'funcionario'):
+    <?php if ($func['id'] && $func['role'] === 'funcionario'):
         // Capacidade declarada
         $cap_categorias = ['criativos','postagens','sites_projetos'];
         $stmt = $db->prepare('SELECT categoria, capacidade_mensal FROM capacidade_funcionario WHERE funcionario_id = ?');
-        $stmt->execute([$u['id']]);
+        $stmt->execute([$func['id']]);
         $cap_map = [];
         foreach ($stmt->fetchAll() as $r) $cap_map[$r['categoria']] = (int)$r['capacidade_mensal'];
     ?>
@@ -189,7 +189,7 @@ if ($acao === 'novo' || $acao === 'editar') {
       <form method="post">
         <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
         <input type="hidden" name="op" value="salvar_capacidade">
-        <input type="hidden" name="funcionario_id" value="<?= (int)$u['id'] ?>">
+        <input type="hidden" name="funcionario_id" value="<?= (int)$func['id'] ?>">
         <div class="card">
           <p class="muted">Quantos itens este funcionário consegue absorver por mês. Sistema usa pra mostrar 🟢/🔴 ao atribuir.</p>
           <?php foreach ($cap_categorias as $cat):
@@ -208,15 +208,15 @@ if ($acao === 'novo' || $acao === 'editar') {
         // Valores USD por item
         $itens_cat = $db->query('SELECT id, nome, tipo FROM itens_catalogo WHERE ativo=1 ORDER BY nome')->fetchAll();
         $stmt = $db->prepare('SELECT item_id, valor_usd FROM func_servico_pagamento WHERE funcionario_id = ?');
-        $stmt->execute([$u['id']]);
+        $stmt->execute([$func['id']]);
         $valores_map = [];
         foreach ($stmt->fetchAll() as $r) $valores_map[(int)$r['item_id']] = (float)$r['valor_usd'];
     ?>
       <h2>Quanto este funcionário recebe (USD)</h2>
-      <form method="post" action="<?= e(APP_BASE_URL) ?>/funcionarios.php?acao=editar&id=<?= (int)$u['id'] ?>">
+      <form method="post" action="<?= e(APP_BASE_URL) ?>/funcionarios.php?acao=editar&id=<?= (int)$func['id'] ?>">
         <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
         <input type="hidden" name="op" value="salvar_valores">
-        <input type="hidden" name="funcionario_id" value="<?= (int)$u['id'] ?>">
+        <input type="hidden" name="funcionario_id" value="<?= (int)$func['id'] ?>">
         <div class="card">
           <p class="muted">Quanto o funcionário recebe (em USD) cada vez que executa um item. Pacotes mensais: valor fixo por mês. Por unidade: valor × quantidade entregue.</p>
           <?php foreach ($itens_cat as $it): ?>
