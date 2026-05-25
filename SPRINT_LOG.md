@@ -90,4 +90,26 @@ Acompanhamento da execução do `BUILD_PLAN.md`.
 3. Escolher cliente + competência atual → "Gerar agora"
 4. Cobrança aparece com items consolidados
 
-## Sprint 3+ — ⏳ A FAZER
+## Sprint 3 — Entregas + Painel financeiro · ✅ ENTREGUE
+
+**Decisões adotadas como padrão**:
+- Cliente vê entregas em tempo real (SIM)
+- Funcionário pode marcar/desmarcar a qualquer momento (SIM)
+- Admin NÃO precisa aprovar marcações
+- Pacote incompleto cobra cheio (cobrança usa valor da assinatura)
+- Funcionário recebe fixo pelo pacote (mensal) e por unidade para por_unidade
+
+**Entregues**:
+- `lib/entregas.php` — helpers: 4 modos de UI (calendar/tally/single/info), CRUD de entregas, calendário do mês
+- `agenda.php` — funcionário marca entregas. POSTAGEM = grid de calendário; CTF/CTV/CTI avulsos = tally (clique pra +1); itens únicos = 1 botão; Meta/Google ADS = só info
+- `entregas.php` — cliente vê o mês (read-only) com mesmas visualizações
+- `painel.php` — admin, 3 abas: Agenda (vencidas + próximas 7 dias + KPIs por moeda), Por cliente (totais cobrado/pago/em aberto por cliente), Por serviço (quantos clientes ativos por item do catálogo)
+- Bottom nav admin agora aponta pra painel.php (era dashboard)
+
+**Como testar**:
+1. **Admin** → cria assinatura POSTAGEM 5D pro cliente, atribui a um funcionário
+2. **Funcionário** → Agenda → clica nos dias no calendário pra marcar entregas
+3. **Cliente** → Entregas → vê o mesmo calendário com os dias marcados
+4. **Admin** → Painel → aba "Por cliente" e "Por serviço" → visão agregada
+
+## Sprint 4+ — ⏳ A FAZER
