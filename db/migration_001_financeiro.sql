@@ -1,47 +1,25 @@
--- contDiteAds — schema completo (financeiro)
--- Para uma instalação nova, execute este arquivo inteiro.
--- Para um banco já populado, use db/migration_001_financeiro.sql
+-- Migration 001 — Reestruturação para sistema financeiro
+-- Drop tarefas/apontamentos (estavam vazios), criar servicos/cobrancas/pagamentos
+-- Adicionar role 'cliente', cliente_id e percentual_comissao em usuarios
 
-SET NAMES utf8mb4;
-SET time_zone = '+00:00';
+SET FOREIGN_KEY_CHECKS = 0;
+DROP TABLE IF EXISTS apontamentos;
+DROP TABLE IF EXISTS tarefas;
+SET FOREIGN_KEY_CHECKS = 1;
 
-CREATE TABLE IF NOT EXISTS clientes (
-    id          INT UNSIGNED NOT NULL AUTO_INCREMENT,
-    nome        VARCHAR(180) NOT NULL,
-    documento   VARCHAR(30) NULL,
-    email       VARCHAR(180) NULL,
-    telefone    VARCHAR(40) NULL,
-    endereco    VARCHAR(255) NULL,
-    observacoes TEXT NULL,
-    ativo       TINYINT(1) NOT NULL DEFAULT 1,
-    criado_em   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (id),
-    KEY ix_clientes_nome (nome)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-CREATE TABLE IF NOT EXISTS usuarios (
-    id                   INT UNSIGNED NOT NULL AUTO_INCREMENT,
-    nome                 VARCHAR(120) NOT NULL,
-    email                VARCHAR(180) NOT NULL,
-    senha_hash           VARCHAR(255) NOT NULL,
-    role                 ENUM('admin','funcionario','cliente') NOT NULL DEFAULT 'funcionario',
-    cliente_id           INT UNSIGNED NULL,
-    percentual_comissao  DECIMAL(5,2) NOT NULL DEFAULT 0.00,
-    ativo                TINYINT(1) NOT NULL DEFAULT 1,
-    criado_em            DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (id),
-    UNIQUE KEY uk_usuarios_email (email),
-    KEY ix_usuarios_cliente (cliente_id),
-    CONSTRAINT fk_usuarios_cliente FOREIGN KEY (cliente_id) REFERENCES clientes(id) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+ALTER TABLE usuarios
+    MODIFY role ENUM('admin','funcionario','cliente') NOT NULL DEFAULT 'funcionario',
+    ADD COLUMN cliente_id INT UNSIGNED NULL AFTER role,
+    ADD COLUMN percentual_comissao DECIMAL(5,2) NOT NULL DEFAULT 0.00 AFTER cliente_id,
+    ADD CONSTRAINT fk_usuarios_cliente FOREIGN KEY (cliente_id) REFERENCES clientes(id) ON DELETE SET NULL;
 
 CREATE TABLE IF NOT EXISTS servicos (
-    id           INT UNSIGNED NOT NULL AUTO_INCREMENT,
-    nome         VARCHAR(120) NOT NULL,
-    descricao    VARCHAR(255) NULL,
+    id          INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    nome        VARCHAR(120) NOT NULL,
+    descricao   VARCHAR(255) NULL,
     valor_padrao DECIMAL(10,2) NULL,
-    ativo        TINYINT(1) NOT NULL DEFAULT 1,
-    criado_em    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    ativo       TINYINT(1) NOT NULL DEFAULT 1,
+    criado_em   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
     KEY ix_servicos_nome (nome)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
