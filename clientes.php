@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/includes/auth.php';
+require_once __DIR__ . '/lib/audit.php';
 require_admin();
 $db = db();
 
@@ -13,25 +14,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($op === 'salvar') {
         $pid       = (int)($_POST['id'] ?? 0);
-        $nome      = trim((string)($_POST['nome'] ?? ''));
+        $nome_emp  = trim((string)($_POST['nome_empresa'] ?? ''));
+        $nome_cnt  = trim((string)($_POST['nome_contato'] ?? '')) ?: null;
         $doc       = trim((string)($_POST['documento'] ?? '')) ?: null;
         $email     = trim((string)($_POST['email'] ?? '')) ?: null;
+        $moeda     = in_array($_POST['moeda'] ?? '', ['USD','BRL','EUR'], true) ? $_POST['moeda'] : 'BRL';
         $tel       = trim((string)($_POST['telefone'] ?? '')) ?: null;
         $end       = trim((string)($_POST['endereco'] ?? '')) ?: null;
+        $link_grp  = trim((string)($_POST['link_grupo'] ?? '')) ?: null;
         $obs       = trim((string)($_POST['observacoes'] ?? '')) ?: null;
         $ativo     = isset($_POST['ativo']) ? 1 : 0;
-        if ($nome === '') {
-            $flash = ['err','Nome é obrigatório.'];
-            $acao = $pid ? 'editar' : 'novo';
-            $id = $pid;
+        if ($nome_emp === '') {
+            $flash = ['err','Nome da empresa é obrigatório.'];
+            $acao = $pid ? 'editar' : 'novo'; $id = $pid;
         } elseif ($pid) {
-            $stmt = $db->prepare('UPDATE clientes SET nome=?, documento=?, email=?, telefone=?, endereco=?, observacoes=?, ativo=? WHERE id=?');
-            $stmt->execute([$nome,$doc,$email,$tel,$end,$obs,$ativo,$pid]);
+            $stmt = $db->prepare('UPDATE clientes SET nome=?, nome_empresa=?, nome_contato=?, documento=?, email=?, moeda=?, telefone=?, endereco=?, link_grupo=?, observacoes=?, ativo=? WHERE id=?');
+            $stmt->execute([$nome_emp, $nome_emp, $nome_cnt, $doc, $email, $moeda, $tel, $end, $link_grp, $obs, $ativo, $pid]);
+            audit_log('cliente.editado', 'clientes', $pid);
             header('Location: ' . APP_BASE_URL . '/clientes.php?acao=editar&id=' . $pid . '&ok=upd'); exit;
         } else {
-            $stmt = $db->prepare('INSERT INTO clientes (nome,documento,email,telefone,endereco,observacoes,ativo) VALUES (?,?,?,?,?,?,?)');
-            $stmt->execute([$nome,$doc,$email,$tel,$end,$obs,$ativo]);
+            $stmt = $db->prepare('INSERT INTO clientes (nome, nome_empresa, nome_contato, documento, email, moeda, telefone, endereco, link_grupo, observacoes, ativo) VALUES (?,?,?,?,?,?,?,?,?,?,?)');
+            $stmt->execute([$nome_emp, $nome_emp, $nome_cnt, $doc, $email, $moeda, $tel, $end, $link_grp, $obs, $ativo]);
             $newId = (int)$db->lastInsertId();
+            audit_log('cliente.criado', 'clientes', $newId);
             header('Location: ' . APP_BASE_URL . '/clientes.php?acao=editar&id=' . $newId . '&ok=add'); exit;
         }
     }
@@ -40,129 +45,127 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $cid    = (int)($_POST['cliente_id'] ?? 0);
         $email  = trim((string)($_POST['login_email'] ?? ''));
         $senha  = (string)($_POST['login_senha'] ?? '');
-        if (!$cid || $email === '' || $senha === '') {
-            $flash = ['err', 'Email e senha são obrigatórios para criar login.'];
-            $acao = 'editar'; $id = $cid;
-        } else {
+        if ($cid && $email && $senha !== '') {
             try {
-                $stmt = $db->prepare("INSERT INTO usuarios (nome, email, senha_hash, role, cliente_id, ativo) SELECT nome, ?, ?, 'cliente', id, 1 FROM clientes WHERE id = ?");
+                $stmt = $db->prepare("INSERT INTO usuarios (nome, email, senha_hash, role, cliente_id, ativo) SELECT COALESCE(nome_contato, nome_empresa), ?, ?, 'cliente', id, 1 FROM clientes WHERE id = ?");
                 $stmt->execute([$email, password_hash($senha, PASSWORD_DEFAULT), $cid]);
-                header('Location: ' . APP_BASE_URL . '/clientes.php?acao=editar&id=' . $cid . '&ok=login'); exit;
+                audit_log('cliente.login_criado', 'clientes', $cid);
             } catch (PDOException $e) {
-                $flash = ['err', (int)$e->errorInfo[1] === 1062 ? 'Já existe um usuário com este email.' : 'Erro ao criar login.'];
+                $flash = ['err', (int)$e->errorInfo[1] === 1062 ? 'Já existe usuário com este email.' : 'Erro: ' . $e->getMessage()];
                 $acao = 'editar'; $id = $cid;
             }
         }
-    }
-
-    if ($op === 'reset_senha_cliente') {
-        $uid   = (int)($_POST['usuario_id'] ?? 0);
-        $cid   = (int)($_POST['cliente_id'] ?? 0);
-        $senha = (string)($_POST['nova_senha'] ?? '');
-        if ($uid && $senha !== '') {
-            $stmt = $db->prepare('UPDATE usuarios SET senha_hash=? WHERE id=? AND role=?');
-            $stmt->execute([password_hash($senha, PASSWORD_DEFAULT), $uid, 'cliente']);
-        }
-        header('Location: ' . APP_BASE_URL . '/clientes.php?acao=editar&id=' . $cid . '&ok=senha'); exit;
+        if (!$flash) { header('Location: ' . APP_BASE_URL . '/clientes.php?acao=editar&id=' . $cid . '&ok=login'); exit; }
     }
 }
 
 if (isset($_GET['ok'])) {
-    $msgs = ['add'=>'Cliente criado.','upd'=>'Cliente atualizado.','login'=>'Login do cliente criado.','senha'=>'Senha redefinida.'];
+    $msgs = ['add'=>'Cliente criado.','upd'=>'Cliente atualizado.','login'=>'Login do cliente criado.'];
     $flash = ['ok', $msgs[$_GET['ok']] ?? 'OK.'];
 }
 
 $page = 'Clientes';
-require __DIR__ . '/includes/header.php';
+$nav_active = 'clientes';
 
 if ($acao === 'novo' || $acao === 'editar') {
-    $c = ['id'=>0,'nome'=>'','documento'=>'','email'=>'','telefone'=>'','endereco'=>'','observacoes'=>'','ativo'=>1];
+    $show_back = true;
+    $back_to = APP_BASE_URL . '/clientes.php';
+    $c = ['id'=>0,'nome_empresa'=>'','nome_contato'=>'','documento'=>'','email'=>'','moeda'=>'BRL','telefone'=>'','endereco'=>'','link_grupo'=>'','observacoes'=>'','ativo'=>1];
     if ($acao === 'editar' && $id) {
         $stmt = $db->prepare('SELECT * FROM clientes WHERE id=?');
         $stmt->execute([$id]);
-        $c = $stmt->fetch() ?: $c;
+        $row = $stmt->fetch();
+        if ($row) $c = array_merge($c, $row);
     }
     $userCliente = null;
     if ($c['id']) {
-        $stmt = $db->prepare("SELECT id, email, ativo FROM usuarios WHERE cliente_id=? AND role='cliente' LIMIT 1");
+        $stmt = $db->prepare("SELECT id, email FROM usuarios WHERE cliente_id=? AND role='cliente' LIMIT 1");
         $stmt->execute([$c['id']]);
         $userCliente = $stmt->fetch() ?: null;
     }
+    $page = $c['id'] ? 'Editar cliente' : 'Novo cliente';
+    require __DIR__ . '/includes/header.php';
     ?>
-    <h1><?= $c['id'] ? 'Editar cliente' : 'Novo cliente' ?></h1>
     <?php if ($flash): ?><div class="flash <?= e($flash[0]) ?>"><?= e($flash[1]) ?></div><?php endif; ?>
-    <div class="card">
-      <form method="post">
-        <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
-        <input type="hidden" name="op" value="salvar">
-        <input type="hidden" name="id" value="<?= (int)$c['id'] ?>">
-        <div class="grid-2">
-          <div class="field"><label>Nome *</label><input name="nome" required value="<?= e($c['nome']) ?>"></div>
-          <div class="field"><label>Documento (CNPJ/CPF)</label><input name="documento" value="<?= e($c['documento']) ?>"></div>
-          <div class="field"><label>Email</label><input type="email" name="email" value="<?= e($c['email']) ?>"></div>
-          <div class="field"><label>Telefone</label><input name="telefone" value="<?= e($c['telefone']) ?>"></div>
+    <form method="post">
+      <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
+      <input type="hidden" name="op" value="salvar">
+      <input type="hidden" name="id" value="<?= (int)$c['id'] ?>">
+      <div class="card">
+        <div class="field"><label>Nome da empresa *</label><input name="nome_empresa" required value="<?= e($c['nome_empresa']) ?>"></div>
+        <div class="field"><label>Nome do contato</label><input name="nome_contato" value="<?= e($c['nome_contato']) ?>"></div>
+        <div class="field"><label>Documento (CNPJ/CPF)</label><input name="documento" value="<?= e($c['documento']) ?>"></div>
+        <div class="field"><label>Email</label><input type="email" name="email" value="<?= e($c['email']) ?>"></div>
+        <div class="field"><label>Moeda do cliente *</label>
+          <select name="moeda" required>
+            <?php foreach (['BRL'=>'Real (R$)','USD'=>'Dólar ($)','EUR'=>'Euro (€)'] as $k=>$v): ?>
+              <option value="<?= $k ?>" <?= $c['moeda']===$k?'selected':'' ?>><?= e($v) ?></option>
+            <?php endforeach; ?>
+          </select>
         </div>
+        <div class="field"><label>Telefone (com DDI)</label><input name="telefone" value="<?= e($c['telefone']) ?>" placeholder="+55 11 99999-9999"></div>
         <div class="field"><label>Endereço</label><input name="endereco" value="<?= e($c['endereco']) ?>"></div>
+        <div class="field"><label>Link do grupo (WhatsApp/Telegram)</label><input name="link_grupo" value="<?= e($c['link_grupo']) ?>"></div>
         <div class="field"><label>Observações</label><textarea name="observacoes"><?= e($c['observacoes']) ?></textarea></div>
-        <div class="field"><label><input type="checkbox" name="ativo" <?= $c['ativo'] ? 'checked' : '' ?>> Ativo</label></div>
-        <div class="actions">
-          <button class="btn" type="submit">Salvar</button>
-          <a class="btn secondary" href="<?= e(APP_BASE_URL) ?>/clientes.php">Voltar</a>
-        </div>
-      </form>
-    </div>
+        <label class="check"><input type="checkbox" name="ativo" <?= $c['ativo']?'checked':'' ?>> Cliente ativo</label>
+      </div>
+      <button class="btn block" type="submit">Salvar cliente</button>
+    </form>
 
     <?php if ($c['id']): ?>
-    <h2>Acesso do cliente ao sistema</h2>
-    <div class="card">
-      <?php if ($userCliente): ?>
-        <p>Login ativo: <strong><?= e($userCliente['email']) ?></strong></p>
-        <form method="post" style="display:flex; gap:.7rem; align-items:end; flex-wrap:wrap;">
-          <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
-          <input type="hidden" name="op" value="reset_senha_cliente">
-          <input type="hidden" name="usuario_id" value="<?= (int)$userCliente['id'] ?>">
-          <input type="hidden" name="cliente_id" value="<?= (int)$c['id'] ?>">
-          <div class="field" style="margin:0;"><label>Nova senha</label><input type="password" name="nova_senha" required></div>
-          <button class="btn" type="submit">Redefinir senha</button>
-        </form>
-      <?php else: ?>
-        <p class="muted">Crie um login para que o cliente possa entrar no sistema e ver suas cobranças.</p>
-        <form method="post">
-          <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
-          <input type="hidden" name="op" value="criar_login">
-          <input type="hidden" name="cliente_id" value="<?= (int)$c['id'] ?>">
-          <div class="grid-2">
+      <h2>Acesso ao sistema</h2>
+      <div class="card">
+        <?php if ($userCliente): ?>
+          <div class="title">✅ Login ativo</div>
+          <div class="desc"><?= e($userCliente['email']) ?></div>
+          <p class="muted mt-3">Para resetar senha do cliente, peça pra ele usar "Esqueci minha senha" no login.</p>
+        <?php else: ?>
+          <p class="muted">Crie um login para o cliente acessar o sistema e ver as cobranças.</p>
+          <form method="post" class="mt-3">
+            <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
+            <input type="hidden" name="op" value="criar_login">
+            <input type="hidden" name="cliente_id" value="<?= (int)$c['id'] ?>">
             <div class="field"><label>Email de login</label><input type="email" name="login_email" required value="<?= e($c['email']) ?>"></div>
             <div class="field"><label>Senha inicial</label><input type="password" name="login_senha" required></div>
-          </div>
-          <button class="btn" type="submit">Criar login</button>
-        </form>
-      <?php endif; ?>
-    </div>
+            <button class="btn block" type="submit">Criar login</button>
+          </form>
+        <?php endif; ?>
+      </div>
     <?php endif; ?>
     <?php
-} else {
-    $clientes = $db->query('SELECT cl.id, cl.nome, cl.documento, cl.telefone, cl.ativo, (SELECT COUNT(*) FROM usuarios u WHERE u.cliente_id=cl.id AND u.role="cliente") AS tem_login FROM clientes cl ORDER BY cl.nome')->fetchAll();
-    ?>
-    <h1>Clientes</h1>
-    <?php if ($flash): ?><div class="flash <?= e($flash[0]) ?>"><?= e($flash[1]) ?></div><?php endif; ?>
-    <p><a class="btn" href="?acao=novo">+ Novo cliente</a></p>
-    <table>
-      <thead><tr><th>Nome</th><th>Documento</th><th>Telefone</th><th>Login</th><th>Status</th><th></th></tr></thead>
-      <tbody>
-      <?php foreach ($clientes as $c): ?>
-        <tr>
-          <td><?= e($c['nome']) ?></td>
-          <td><?= e($c['documento']) ?: '—' ?></td>
-          <td><?= e($c['telefone']) ?: '—' ?></td>
-          <td><?= $c['tem_login'] ? '✅' : '—' ?></td>
-          <td><?= $c['ativo'] ? 'Ativo' : 'Inativo' ?></td>
-          <td><a class="btn small" href="?acao=editar&id=<?= (int)$c['id'] ?>">Editar</a></td>
-        </tr>
-      <?php endforeach; ?>
-      <?php if (!$clientes): ?><tr><td colspan="6" class="muted">Nenhum cliente cadastrado.</td></tr><?php endif; ?>
-      </tbody>
-    </table>
-    <?php
+    require __DIR__ . '/includes/footer.php';
+    exit;
 }
-require __DIR__ . '/includes/footer.php';
+
+require __DIR__ . '/includes/header.php';
+$clientes = $db->query('
+    SELECT cl.id, cl.nome_empresa, cl.nome_contato, cl.moeda, cl.ativo,
+           (SELECT COUNT(*) FROM usuarios u WHERE u.cliente_id=cl.id AND u.role="cliente") AS tem_login
+    FROM clientes cl ORDER BY cl.nome_empresa, cl.nome
+')->fetchAll();
+?>
+<h1 class="page-title">Clientes</h1>
+<?php if ($flash): ?><div class="flash <?= e($flash[0]) ?>"><?= e($flash[1]) ?></div><?php endif; ?>
+<div class="btn-pair">
+  <a href="?acao=novo" class="btn btn-brand">+ Novo</a>
+  <a href="<?= e(APP_BASE_URL) ?>/convites.php" class="btn btn-secondary">✉️ Convidar</a>
+</div>
+<div class="section-label mt-5">Cadastrados (<?= count($clientes) ?>)</div>
+<?php foreach ($clientes as $cl): ?>
+  <a class="list-card" href="?acao=editar&id=<?= (int)$cl['id'] ?>">
+    <div class="info">
+      <div class="nome">
+        <?= e($cl['nome_empresa'] ?: '(sem nome)') ?>
+        <?php if (!$cl['ativo']): ?><span class="status status-info">inativo</span><?php endif; ?>
+      </div>
+      <div class="sub">
+        <?= e($cl['nome_contato'] ?? '—') ?> · <?= e($cl['moeda']) ?>
+        <?php if ($cl['tem_login']): ?> · <span class="status status-paga">login</span><?php endif; ?>
+      </div>
+    </div>
+  </a>
+<?php endforeach; ?>
+<?php if (!$clientes): ?>
+  <p class="muted center mt-5">Nenhum cliente. Use "+ Novo" ou "Convidar".</p>
+<?php endif; ?>
+<?php require __DIR__ . '/includes/footer.php'; ?>
