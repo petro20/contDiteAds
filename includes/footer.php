@@ -7,7 +7,7 @@ if ($u && empty($hide_nav)):
 
     if ($u['role'] === 'admin') {
         $items = [
-            ['key'=>'painel',   'href'=>"$base/painel.php",    'label'=>'Painel',   'icon'=>'📊'],
+            ['key'=>'painel',   'href'=>"$base/dashboard.php", 'label'=>'Início',   'icon'=>'🏠'],
             ['key'=>'clientes', 'href'=>"$base/clientes.php",  'label'=>'Clientes', 'icon'=>'👥'],
             ['key'=>'catalogo', 'href'=>"$base/catalogo.php",  'label'=>'Catálogo', 'icon'=>'📦'],
             ['key'=>'perfil',   'href'=>"$base/perfil.php",    'label'=>'Perfil',   'icon'=>'👤'],

@@ -26,6 +26,10 @@ require __DIR__ . '/includes/header.php';
   </div>
 
   <div class="section-label">Ações rápidas</div>
+  <a class="card" href="<?= e(APP_BASE_URL) ?>/painel.php">
+    <div class="title">📊 Painel financeiro</div>
+    <div class="desc">Agenda · Por cliente · Por serviço (vencidos, recebido, em aberto)</div>
+  </a>
   <a class="card" href="<?= e(APP_BASE_URL) ?>/catalogo.php">
     <div class="title">📦 Catálogo</div>
     <div class="desc">Cadastrar e editar itens (serviços e pacotes)</div>
