@@ -55,6 +55,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $email = trim((string)($_POST['email'] ?? ''));
         $role  = ($_POST['role'] ?? 'funcionario') === 'admin' ? 'admin' : 'funcionario';
         $ativo = isset($_POST['ativo']) ? 1 : 0;
+
+        // Trava: impede rebaixar/desativar o ÚLTIMO admin do sistema
+        if ($pid) {
+            $stmt = $db->prepare('SELECT role, ativo FROM usuarios WHERE id = ?');
+            $stmt->execute([$pid]);
+            $atual = $stmt->fetch();
+            if ($atual && $atual['role'] === 'admin' && (int)$atual['ativo'] === 1) {
+                $vai_remover_admin = ($role !== 'admin') || ($ativo !== 1);
+                if ($vai_remover_admin) {
+                    $count_admins = (int)$db->query("SELECT COUNT(*) FROM usuarios WHERE role='admin' AND ativo=1")->fetchColumn();
+                    if ($count_admins <= 1) {
+                        $flash = ['err', 'Não dá pra rebaixar/desativar o único administrador do sistema. Crie outro admin primeiro.'];
+                        $acao = 'editar'; $id = $pid;
+                        goto skip_save;
+                    }
+                }
+            }
+        }
         $aceit = isset($_POST['aceitando_clientes']) ? 1 : 0;
         $senha = (string)($_POST['senha'] ?? '');
         $cpf     = trim((string)($_POST['cpf'] ?? '')) ?: null;
@@ -92,6 +110,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 } else { throw $e; }
             }
         }
+        skip_save:;
     }
 }
 if (isset($_GET['ok'])) $flash = ['ok', $_GET['ok'] === 'add' ? 'Criado.' : 'Atualizado.'];
