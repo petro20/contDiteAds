@@ -78,6 +78,12 @@ require __DIR__ . '/includes/header.php';
   </a>
   <?php endif; ?>
 
+  <div class="section-label">Sociedade</div>
+  <a class="card" href="<?= e(APP_BASE_URL) ?>/distribuicao.php">
+    <div class="title">💰 Distribuição de lucro</div>
+    <div class="desc">Sua parte da receita por moeda (sócio + empresa em quotas iguais)</div>
+  </a>
+
   <div class="section-label">Minha área de execução (também trabalho nos serviços)</div>
   <a class="card" href="<?= e(APP_BASE_URL) ?>/agenda.php">
     <div class="title">📅 Minha agenda</div>
