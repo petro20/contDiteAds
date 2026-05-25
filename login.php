@@ -22,24 +22,27 @@ if (current_user()) {
 }
 
 $page = 'Entrar';
+$hide_nav = true;
 require __DIR__ . '/includes/header.php';
 ?>
-<div class="login-wrap">
-  <div class="card">
-    <h1>Entrar</h1>
-    <?php if ($erro): ?><div class="flash err"><?= e($erro) ?></div><?php endif; ?>
-    <form method="post">
-      <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
-      <div class="field">
-        <label>Email</label>
-        <input type="email" name="email" required autofocus value="<?= e($_POST['email'] ?? '') ?>">
-      </div>
-      <div class="field">
-        <label>Senha</label>
-        <input type="password" name="senha" required>
-      </div>
-      <button class="btn" type="submit">Entrar</button>
-    </form>
+<div class="auth-wrap">
+  <div class="logo-wrap">
+    <img src="<?= e(APP_BASE_URL) ?>/assets/img/logo.png" alt="Dite Ads" onerror="this.style.display='none'">
   </div>
+  <h1>Entrar</h1>
+  <?php if ($erro): ?><div class="flash err"><?= e($erro) ?></div><?php endif; ?>
+  <form method="post">
+    <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
+    <div class="field">
+      <label>Email</label>
+      <input type="email" name="email" required autofocus value="<?= e($_POST['email'] ?? '') ?>" autocomplete="email">
+    </div>
+    <div class="field">
+      <label>Senha</label>
+      <input type="password" name="senha" required autocomplete="current-password">
+    </div>
+    <button class="btn block" type="submit">Entrar</button>
+    <p class="center mt-5"><a href="<?= e(APP_BASE_URL) ?>/esqueci.php" class="muted">Esqueci minha senha</a></p>
+  </form>
 </div>
 <?php require __DIR__ . '/includes/footer.php'; ?>

@@ -30,6 +30,16 @@ define('DB_PASS', getenv('DB_PASS') ?: '');
 define('APP_ENV', getenv('APP_ENV') ?: 'production');
 define('APP_BASE_URL', rtrim(getenv('APP_BASE_URL') ?: '', '/'));
 
+define('SMTP_HOST',       getenv('SMTP_HOST')       ?: 'smtp.hostinger.com');
+define('SMTP_PORT',       (int)(getenv('SMTP_PORT') ?: 465));
+define('SMTP_SECURE',     getenv('SMTP_SECURE')     ?: 'ssl');
+define('SMTP_USER',       getenv('SMTP_USER')       ?: '');
+define('SMTP_PASS',       getenv('SMTP_PASS')       ?: '');
+define('SMTP_FROM_EMAIL', getenv('SMTP_FROM_EMAIL') ?: 'contact@diteads.com');
+define('SMTP_FROM_NAME',  getenv('SMTP_FROM_NAME')  ?: 'Dite Ads');
+
+define('UPLOAD_DIR', __DIR__ . '/../' . (getenv('UPLOAD_DIR') ?: 'uploads'));
+
 if (APP_ENV === 'production') {
     error_reporting(E_ALL);
     ini_set('display_errors', '0');
