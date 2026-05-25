@@ -7,7 +7,7 @@ $db = db();
 
 // Funcionário vê só dele; admin pode ver de qualquer um via ?funcionario_id=
 $funcionario_id = (int)$u['id'];
-if ($u['role'] === 'admin' && isset($_GET['funcionario_id'])) {
+if (is_admin() && isset($_GET['funcionario_id'])) {
     $funcionario_id = (int)$_GET['funcionario_id'];
 }
 
@@ -39,7 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($op === 'remover') {
         entregas_remover($db, (int)($_POST['entrega_id'] ?? 0));
     }
-    header('Location: ' . APP_BASE_URL . '/agenda.php?mes=' . urlencode($comp) . ($u['role']==='admin' && $funcionario_id !== (int)$u['id'] ? '&funcionario_id=' . $funcionario_id : '')); exit;
+    header('Location: ' . APP_BASE_URL . '/agenda.php?mes=' . urlencode($comp) . (is_admin() && $funcionario_id !== (int)$u['id'] ? '&funcionario_id=' . $funcionario_id : '')); exit;
 }
 
 $assinaturas = agenda_assinaturas($db, $funcionario_id, $competencia);
@@ -56,9 +56,9 @@ require __DIR__ . '/includes/header.php';
 ?>
 <h1 class="page-title">Agenda</h1>
 <div class="spaced mb-3">
-  <a class="btn btn-ghost small" href="?mes=<?= e($mes_anterior_str) ?><?= $u['role']==='admin' ? '&funcionario_id='.$funcionario_id : '' ?>">← <?= e($mes_anterior_str) ?></a>
+  <a class="btn btn-ghost small" href="?mes=<?= e($mes_anterior_str) ?><?= is_admin() ? '&funcionario_id='.$funcionario_id : '' ?>">← <?= e($mes_anterior_str) ?></a>
   <strong><?= e($nome_mes) ?></strong>
-  <a class="btn btn-ghost small" href="?mes=<?= e($mes_proximo_str) ?><?= $u['role']==='admin' ? '&funcionario_id='.$funcionario_id : '' ?>"><?= e($mes_proximo_str) ?> →</a>
+  <a class="btn btn-ghost small" href="?mes=<?= e($mes_proximo_str) ?><?= is_admin() ? '&funcionario_id='.$funcionario_id : '' ?>"><?= e($mes_proximo_str) ?> →</a>
 </div>
 
 <?php if (!$assinaturas): ?>

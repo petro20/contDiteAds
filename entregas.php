@@ -7,7 +7,7 @@ $db = db();
 // Cliente vê suas; admin pode ver de qualquer cliente via ?cliente_id=
 if ($u['role'] === 'cliente') {
     $cliente_id = (int)$u['cliente_id'];
-} elseif ($u['role'] === 'admin') {
+} elseif (is_admin()) {
     $cliente_id = (int)($_GET['cliente_id'] ?? 0);
     if (!$cliente_id) {
         // listar todos
@@ -34,16 +34,16 @@ $nome_mes = ['','janeiro','fevereiro','março','abril','maio','junho','julho','a
 
 $page = 'Entregas';
 $nav_active = 'entregas';
-$page_sub = $u['role'] === 'admin' ? $cliente_nome : null;
-$show_back = $u['role'] === 'admin';
+$page_sub = is_admin() ? $cliente_nome : null;
+$show_back = is_admin();
 $back_to = APP_BASE_URL . '/painel.php';
 require __DIR__ . '/includes/header.php';
 ?>
 <h1 class="page-title">Entregas do mês</h1>
 <div class="spaced mb-3">
-  <a class="btn btn-ghost small" href="?mes=<?= e($mes_ant) ?><?= $u['role']==='admin' ? '&cliente_id='.$cliente_id : '' ?>">← <?= e($mes_ant) ?></a>
+  <a class="btn btn-ghost small" href="?mes=<?= e($mes_ant) ?><?= is_admin() ? '&cliente_id='.$cliente_id : '' ?>">← <?= e($mes_ant) ?></a>
   <strong><?= e($nome_mes) ?></strong>
-  <a class="btn btn-ghost small" href="?mes=<?= e($mes_prox) ?><?= $u['role']==='admin' ? '&cliente_id='.$cliente_id : '' ?>"><?= e($mes_prox) ?> →</a>
+  <a class="btn btn-ghost small" href="?mes=<?= e($mes_prox) ?><?= is_admin() ? '&cliente_id='.$cliente_id : '' ?>"><?= e($mes_prox) ?> →</a>
 </div>
 
 <?php if (!$assinaturas): ?>

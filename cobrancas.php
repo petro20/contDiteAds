@@ -13,7 +13,7 @@ $id   = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 $flash = null;
 
 function pode_ver_cobranca(array $c, array $me): bool {
-    if ($me['role'] === 'admin') return true;
+    if (in_array($me['role'], ['admin','sadmin'], true)) return true;
     if ($me['role'] === 'cliente') return (int)$c['cliente_id'] === (int)$me['cliente_id'];
     if ($me['role'] === 'funcionario') {
         $stmt = db()->prepare('SELECT 1 FROM cobranca_itens ci JOIN assinaturas a ON a.id = ci.assinatura_id WHERE ci.cobranca_id = ? AND a.funcionario_id = ? LIMIT 1');

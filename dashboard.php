@@ -5,12 +5,12 @@ $u  = require_login();
 $db = db();
 
 $page = 'Início';
-$nav_active = $u['role'] === 'admin' ? 'painel' : ($u['role'] === 'funcionario' ? 'agenda' : 'cobrancas');
+$nav_active = is_admin() ? 'painel' : ($u['role'] === 'funcionario' ? 'agenda' : 'cobrancas');
 require __DIR__ . '/includes/header.php';
 ?>
 <h1 class="page-title">Olá, <?= e($u['nome']) ?></h1>
 
-<?php if ($u['role'] === 'admin'): ?>
+<?php if (is_admin()): ?>
   <?php
   // Conta básica — só tabelas que existem após migration_002
   $totClientes = (int)$db->query('SELECT COUNT(*) FROM clientes WHERE ativo=1')->fetchColumn();

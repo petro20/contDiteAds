@@ -2,13 +2,13 @@
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/lib/pagamentos.php';
 $u = require_login();
-if ($u['role'] !== 'funcionario' && $u['role'] !== 'admin') {
+if ($u['role'] !== 'funcionario' && !is_admin()) {
     header('Location: ' . APP_BASE_URL . '/dashboard.php'); exit;
 }
 $db = db();
 
 $funcionario_id = (int)$u['id'];
-if ($u['role'] === 'admin' && isset($_GET['funcionario_id'])) {
+if (is_admin() && isset($_GET['funcionario_id'])) {
     $funcionario_id = (int)$_GET['funcionario_id'];
 }
 

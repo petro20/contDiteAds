@@ -11,7 +11,7 @@ $cob = $stmt->fetch();
 if (!$cob) { http_response_code(404); exit('Cobrança não encontrada.'); }
 
 // Auth: admin OU cliente da própria cobrança
-$autorizado = $u['role'] === 'admin' || ($u['role'] === 'cliente' && (int)$u['cliente_id'] === (int)$cob['cliente_id']);
+$autorizado = is_admin() || ($u['role'] === 'cliente' && (int)$u['cliente_id'] === (int)$cob['cliente_id']);
 if (!$autorizado) { http_response_code(403); exit('Acesso negado.'); }
 
 $stmt = $db->prepare('SELECT * FROM cobranca_itens WHERE cobranca_id = ? ORDER BY id');
