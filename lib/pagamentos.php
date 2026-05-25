@@ -51,6 +51,13 @@ function registrar_pagamento_cliente(
     $stmt->execute([$cobranca_id, $valor, $data, $metodo, $observacao, $comprovante_path, $registrado_por]);
     $pid = (int)$db->lastInsertId();
     atualiza_status_cobranca($db, $cobranca_id);
+    // Notifica cliente quando cobrança fica totalmente paga
+    $stmt = $db->prepare('SELECT status FROM cobrancas WHERE id = ?');
+    $stmt->execute([$cobranca_id]);
+    if ($stmt->fetchColumn() === 'paga') {
+        require_once __DIR__ . '/cobrancas.php';
+        notificar_cliente_email($db, $cobranca_id, 'pagamento_confirmado');
+    }
     return $pid;
 }
 

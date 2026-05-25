@@ -167,4 +167,35 @@ Acompanhamento da execução do `BUILD_PLAN.md`.
 3. Email é enviado se SMTP configurado; WhatsApp aparece em "Tarefas WhatsApp pendentes" em /regua.php
 4. Admin clica "Abrir WhatsApp" → wa.me com mensagem preenchida → revisa, envia, marca como enviado
 
-## Sprint 6+ — ⏳ A FAZER (Capacidade declarada, Notificações email, Audit log UI, 2FA)
+## Sprint 6 — Capacidade + Audit + Notificações + 2FA · ✅ ENTREGUE
+
+**Entregues**:
+- `capacidade.php` — admin vê capacidade declarada vs ocupação real por funcionário
+- `funcionarios.php` (editar) — admin define capacidade mensal por categoria (criativos / postagens / sites_projetos)
+- `auditoria.php` — admin filtra histórico de audit_log por usuário, entidade, ação, data
+- `lib/cobrancas.php` — gatilho `notificar_cliente_email('cobranca_nova')` quando gera cobrança
+- `lib/pagamentos.php` — gatilho `notificar_cliente_email('pagamento_confirmado')` quando cobrança fica paga
+- `db/migration_003_2fa.sql` — adiciona `totp_secret` + `totp_enabled` em usuarios (pendente de aplicar)
+- `lib/totp.php` — implementação TOTP RFC 6238 (compatível Google Auth / Authy / 1Password)
+- `seguranca.php` — usuário ativa/desativa 2FA com QR Code (api.qrserver.com)
+- `login.php` — fluxo de 2 passos: senha → código TOTP (se ativo)
+- `perfil.php` — link "Configurar 2FA"
+- `auth.php login()` — tolera ausência das colunas TOTP (migration_003 ainda não aplicada)
+
+**Cron na Hostinger** (todos os crons configurados):
+- `cron/gerar_cobrancas.php` → diário 05:00
+- `cron/regua_executar.php` → diário 06:00
+
+**Migration pendente**: `db/migration_003_2fa.sql` precisa ser aplicada pra 2FA funcionar. Site continua operando normalmente sem ela (login funciona, todas as outras telas funcionam). Só `seguranca.php` falhará até aplicar.
+
+## Status final do projeto
+
+✅ Sprint 0 — Foundation (schema, design system, helpers)
+✅ Sprint 1 — Catálogo + Onboarding + Reset senha
+✅ Sprint 2 — Assinaturas + Cobrança recorrente
+✅ Sprint 3 — Entregas + Painel financeiro
+✅ Sprint 4 — Pagamentos (comprovante, fila funcionários, recibo USD)
+✅ Sprint 5 — WhatsApp + Régua + Recibos
+✅ Sprint 6 — Capacidade + Audit + Notificações + 2FA (migration_003 pendente)
+
+**Sistema entregue conforme BUILD_PLAN.md**. Roadmap original 100% atendido.

@@ -3,6 +3,32 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/money.php';
+require_once __DIR__ . '/email.php';
+require_once __DIR__ . '/whatsapp.php';
+
+/**
+ * Notifica o cliente por email sobre uma cobrança nova/paga.
+ * Falha silenciosamente — não bloqueia a operação principal.
+ */
+function notificar_cliente_email(PDO $db, int $cobranca_id, string $codigo_template): void {
+    try {
+        $stmt = $db->prepare('SELECT cl.email FROM cobrancas c JOIN clientes cl ON cl.id = c.cliente_id WHERE c.id = ?');
+        $stmt->execute([$cobranca_id]);
+        $email = $stmt->fetchColumn();
+        if (!$email) return;
+
+        $tpl = wa_template($db, $codigo_template, 'email');
+        if (!$tpl) return;
+
+        $vars = wa_vars_cobranca($db, $cobranca_id);
+        $assunto = wa_render($tpl['assunto'] ?: 'Notificação Dite Ads', $vars);
+        $corpo_txt = wa_render($tpl['corpo'], $vars);
+        $html = '<pre style="font-family:inherit;white-space:pre-wrap;">' . htmlspecialchars($corpo_txt) . '</pre>';
+        email_enviar($email, $assunto, $html, $corpo_txt);
+    } catch (Throwable $e) {
+        error_log('notificar_cliente_email falhou: ' . $e->getMessage());
+    }
+}
 
 /**
  * Lógica central de geração de cobranças (Sprint 2).
@@ -193,6 +219,7 @@ function gerar_cobranca_mensal(PDO $db, int $cliente_id, string $competencia, ?s
             $ins->execute([$cobrId, $l['assinatura_id'], $l['descricao'], $l['quantidade'], $l['valor_unitario'], $l['subtotal']]);
         }
         $db->commit();
+        notificar_cliente_email($db, $cobrId, 'cobranca_nova');
         return ['cobranca_id' => $cobrId, 'status' => 'created'];
     } catch (Throwable $e) {
         $db->rollBack();

@@ -58,6 +58,14 @@ require __DIR__ . '/includes/header.php';
     <div class="title">📝 Templates de mensagem</div>
     <div class="desc">Editar textos de email e WhatsApp</div>
   </a>
+  <a class="card" href="<?= e(APP_BASE_URL) ?>/capacidade.php">
+    <div class="title">📊 Capacidade da equipe</div>
+    <div class="desc">Quanto cada funcionário absorve por mês</div>
+  </a>
+  <a class="card" href="<?= e(APP_BASE_URL) ?>/auditoria.php">
+    <div class="title">🔍 Auditoria</div>
+    <div class="desc">Histórico de alterações (quem fez o quê)</div>
+  </a>
   <a class="card" href="<?= e(APP_BASE_URL) ?>/convites.php">
     <div class="title">✉️ Gerar convite</div>
     <div class="desc">Link para cliente ou funcionário se cadastrar</div>

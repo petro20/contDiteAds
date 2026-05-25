@@ -11,6 +11,25 @@ $flash = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_check();
+    if (($_POST['op'] ?? '') === 'salvar_capacidade') {
+        $fid = (int)($_POST['funcionario_id'] ?? 0);
+        $cap = $_POST['cap'] ?? [];
+        if ($fid && is_array($cap)) {
+            foreach ($cap as $categoria => $valor) {
+                $categoria = preg_replace('/[^a-z_]/', '', (string)$categoria);
+                $v = (int)$valor;
+                if ($v <= 0) {
+                    $stmt = $db->prepare('DELETE FROM capacidade_funcionario WHERE funcionario_id=? AND categoria=?');
+                    $stmt->execute([$fid, $categoria]);
+                } else {
+                    $stmt = $db->prepare('INSERT INTO capacidade_funcionario (funcionario_id, categoria, capacidade_mensal) VALUES (?,?,?) ON DUPLICATE KEY UPDATE capacidade_mensal = VALUES(capacidade_mensal)');
+                    $stmt->execute([$fid, $categoria, $v]);
+                }
+            }
+            audit_log('funcionario.capacidade_atualizada', 'usuarios', $fid);
+        }
+        header('Location: ' . APP_BASE_URL . '/funcionarios.php?acao=editar&id=' . $fid . '&ok=upd'); exit;
+    }
     if (($_POST['op'] ?? '') === 'salvar_valores') {
         $fid = (int)($_POST['funcionario_id'] ?? 0);
         $vals = $_POST['valor'] ?? [];
@@ -118,6 +137,33 @@ if ($acao === 'novo' || $acao === 'editar') {
     </form>
 
     <?php if ($u['id'] && $u['role'] === 'funcionario'):
+        // Capacidade declarada
+        $cap_categorias = ['criativos','postagens','sites_projetos'];
+        $stmt = $db->prepare('SELECT categoria, capacidade_mensal FROM capacidade_funcionario WHERE funcionario_id = ?');
+        $stmt->execute([$u['id']]);
+        $cap_map = [];
+        foreach ($stmt->fetchAll() as $r) $cap_map[$r['categoria']] = (int)$r['capacidade_mensal'];
+    ?>
+      <h2>Capacidade mensal declarada</h2>
+      <form method="post">
+        <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
+        <input type="hidden" name="op" value="salvar_capacidade">
+        <input type="hidden" name="funcionario_id" value="<?= (int)$u['id'] ?>">
+        <div class="card">
+          <p class="muted">Quantos itens este funcionário consegue absorver por mês. Sistema usa pra mostrar 🟢/🔴 ao atribuir.</p>
+          <?php foreach ($cap_categorias as $cat):
+              $label = ['criativos'=>'Criativos (CTF/CTV/CTI)','postagens'=>'Pacotes POSTAGEM','sites_projetos'=>'Sites/projetos únicos'][$cat];
+          ?>
+            <div class="field">
+              <label><?= e($label) ?></label>
+              <input type="number" min="0" name="cap[<?= e($cat) ?>]" value="<?= isset($cap_map[$cat]) ? (int)$cap_map[$cat] : '' ?>" placeholder="0">
+            </div>
+          <?php endforeach; ?>
+          <button class="btn block" type="submit">Salvar capacidade</button>
+        </div>
+      </form>
+
+    <?php
         // Valores USD por item
         $itens_cat = $db->query('SELECT id, nome, tipo FROM itens_catalogo WHERE ativo=1 ORDER BY nome')->fetchAll();
         $stmt = $db->prepare('SELECT item_id, valor_usd FROM func_servico_pagamento WHERE funcionario_id = ?');

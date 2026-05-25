@@ -42,5 +42,6 @@ require __DIR__ . '/includes/header.php';
   <button class="btn block" type="submit">Salvar alterações</button>
 </form>
 
-<a class="btn btn-ghost block mt-5" href="<?= e(APP_BASE_URL) ?>/logout.php">Sair</a>
+<a class="btn btn-secondary block mt-5" href="<?= e(APP_BASE_URL) ?>/seguranca.php">🔐 Configurar 2FA</a>
+<a class="btn btn-ghost block mt-3" href="<?= e(APP_BASE_URL) ?>/logout.php">Sair</a>
 <?php require __DIR__ . '/includes/footer.php'; ?>
