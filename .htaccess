@@ -1,0 +1,29 @@
+# Força HTTPS (Hostinger emite cert automático)
+RewriteEngine On
+RewriteCond %{HTTPS} !=on
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# Bloqueia listagem de diretório
+Options -Indexes
+
+# Bloqueia arquivos sensíveis
+<FilesMatch "^(\.env|composer\.json|composer\.lock|README\.md|\.gitignore|\.git.*)$">
+  Require all denied
+</FilesMatch>
+
+# Cache leve de assets
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType text/css "access plus 7 days"
+  ExpiresByType application/javascript "access plus 7 days"
+  ExpiresByType image/png "access plus 30 days"
+  ExpiresByType image/jpeg "access plus 30 days"
+  ExpiresByType image/svg+xml "access plus 30 days"
+</IfModule>
+
+# Headers de segurança
+<IfModule mod_headers.c>
+  Header set X-Content-Type-Options "nosniff"
+  Header set X-Frame-Options "SAMEORIGIN"
+  Header set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
