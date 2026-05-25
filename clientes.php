@@ -113,6 +113,9 @@ if ($acao === 'novo' || $acao === 'editar') {
     </form>
 
     <?php if ($c['id']): ?>
+      <h2>Assinaturas</h2>
+      <a class="btn btn-secondary block" href="<?= e(APP_BASE_URL) ?>/assinaturas.php?cliente_id=<?= (int)$c['id'] ?>">Ver e atribuir itens →</a>
+
       <h2>Acesso ao sistema</h2>
       <div class="card">
         <?php if ($userCliente): ?>

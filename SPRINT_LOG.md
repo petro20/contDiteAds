@@ -61,4 +61,33 @@ Acompanhamento da execução do `BUILD_PLAN.md`.
 - Convites → gerar link de cliente e funcionário
 - Logout → "Esqueci minha senha" (depende do SMTP_USER no .env)
 
-## Sprint 2+ — ⏳ A FAZER
+## Sprint 2 — Assinaturas + Cobrança recorrente · ✅ ENTREGUE
+
+**Commits**: pendente (push agora)
+
+**Decisões adotadas como padrão** (não estavam fechadas no BUILD_PLAN; ajusto se mudar):
+- Vencimento default = `dia_cobranca + 5 dias`
+- Item por unidade sem entregas no mês = não aparece na cobrança (cobra zero)
+- Pausa/cancela no meio do mês = mantém cobrança já gerada (admin pode cancelar manualmente)
+- Cron via Hostinger Cron Jobs, executável também via CLI local
+
+**Entregues**:
+- `lib/cobrancas.php` — lógica central: `ensure_dia_cobranca`, `gerar_cobranca_avulsa_unico` (item único), `gerar_cobranca_mensal`, `executar_geracao_diaria`
+- `assinaturas.php` — admin atribui itens a clientes; auto-preenche preço da tabela conforme moeda; override permitido; troca de funcionário só vale mês seguinte; status ativa/pausada/cancelada
+- `cobrancas.php` reescrita — lista + detalhe + botão "Gerar manualmente" (admin) para teste
+- `cron/gerar_cobrancas.php` — script diário (CLI-only) que processa todos os clientes elegíveis
+- Cliente/funcionário também veem cobranças (filtradas por escopo)
+- Dashboard ganhou cards de Assinaturas e Cobranças
+
+**Como configurar o cron na Hostinger** (uma vez):
+1. hPanel → Avançado → Cron Jobs
+2. Comando: `php /home/u788472657/domains/cont.diteads.com/public_html/cron/gerar_cobrancas.php`
+3. Frequência: `0 5 * * *` (todo dia às 5h)
+
+**Como testar agora** sem esperar cron:
+1. Painel → Assinaturas → criar uma assinatura de item mensal/pacote
+2. Painel → Cobranças → abrir "Gerar cobrança manualmente (teste)"
+3. Escolher cliente + competência atual → "Gerar agora"
+4. Cobrança aparece com items consolidados
+
+## Sprint 3+ — ⏳ A FAZER

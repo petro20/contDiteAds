@@ -38,6 +38,14 @@ require __DIR__ . '/includes/header.php';
     <div class="title">🧑‍💼 Funcionários</div>
     <div class="desc">Gerenciar equipe e capacidades</div>
   </a>
+  <a class="card" href="<?= e(APP_BASE_URL) ?>/assinaturas.php">
+    <div class="title">📝 Assinaturas</div>
+    <div class="desc">Atribuir itens do catálogo a clientes</div>
+  </a>
+  <a class="card" href="<?= e(APP_BASE_URL) ?>/cobrancas.php">
+    <div class="title">💳 Cobranças</div>
+    <div class="desc">Ver cobranças geradas e gerar manualmente para teste</div>
+  </a>
   <a class="card" href="<?= e(APP_BASE_URL) ?>/convites.php">
     <div class="title">✉️ Gerar convite</div>
     <div class="desc">Link para cliente ou funcionário se cadastrar</div>

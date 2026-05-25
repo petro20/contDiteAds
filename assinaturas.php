@@ -1,0 +1,274 @@
+<?php
+require_once __DIR__ . '/includes/auth.php';
+require_once __DIR__ . '/lib/audit.php';
+require_once __DIR__ . '/lib/money.php';
+require_once __DIR__ . '/lib/cobrancas.php';
+$me = require_admin();
+$db = db();
+
+$acao = $_GET['acao'] ?? 'lista';
+$id   = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+$cliente_filter = isset($_GET['cliente_id']) ? (int)$_GET['cliente_id'] : 0;
+$flash = null;
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    csrf_check();
+    $op = $_POST['op'] ?? '';
+
+    if ($op === 'salvar') {
+        $pid       = (int)($_POST['id'] ?? 0);
+        $cliente   = (int)($_POST['cliente_id'] ?? 0);
+        $item      = (int)($_POST['item_id'] ?? 0);
+        $func      = (int)($_POST['funcionario_id'] ?? 0) ?: null;
+        $variante  = ($_POST['variante'] ?? 'normal') === 'ia' ? 'ia' : 'normal';
+        $valor     = (float)str_replace(',', '.', (string)($_POST['valor_cobrado'] ?? '0'));
+        $iniciada  = $_POST['iniciada_em'] ?? date('Y-m-d');
+        $status    = in_array($_POST['status'] ?? 'ativa', ['ativa','pausada','cancelada'], true) ? $_POST['status'] : 'ativa';
+
+        if (!$cliente || !$item || $valor <= 0) {
+            $flash = ['err', 'Cliente, item e valor (>0) são obrigatórios.'];
+            $acao = $pid ? 'editar' : 'novo'; $id = $pid;
+        } else {
+            try {
+                if ($pid) {
+                    $stmt = $db->prepare('UPDATE assinaturas SET funcionario_id=?, variante=?, valor_cobrado=?, status=? WHERE id=?');
+                    $stmt->execute([$func, $variante, $valor, $status, $pid]);
+                    audit_log('assinatura.editada', 'assinaturas', $pid);
+                    header('Location: ' . APP_BASE_URL . '/assinaturas.php?id=' . $pid . '&ok=upd'); exit;
+                } else {
+                    $db->beginTransaction();
+                    $stmt = $db->prepare('INSERT INTO assinaturas (cliente_id, item_id, funcionario_id, variante, valor_cobrado, status, iniciada_em) VALUES (?,?,?,?,?,?,?)');
+                    $stmt->execute([$cliente, $item, $func, $variante, $valor, $status, $iniciada]);
+                    $newId = (int)$db->lastInsertId();
+                    ensure_dia_cobranca($db, $cliente, $iniciada);
+                    $db->commit();
+
+                    // Se o item é único, gera cobrança avulsa imediata
+                    $stmt = $db->prepare('SELECT tipo FROM itens_catalogo WHERE id = ?');
+                    $stmt->execute([$item]);
+                    $tipo = $stmt->fetchColumn();
+                    $cobr_id = null;
+                    if ($tipo === 'unico') {
+                        try {
+                            $cobr_id = gerar_cobranca_avulsa_unico($db, $newId, (int)$me['id']);
+                        } catch (Throwable $e) {
+                            error_log('Erro cobrança avulsa: ' . $e->getMessage());
+                        }
+                    }
+                    audit_log('assinatura.criada', 'assinaturas', $newId);
+                    $redir = APP_BASE_URL . '/assinaturas.php?id=' . $newId . '&ok=add';
+                    if ($cobr_id) $redir .= '&cobranca=' . $cobr_id;
+                    header('Location: ' . $redir); exit;
+                }
+            } catch (Throwable $e) {
+                if ($db->inTransaction()) $db->rollBack();
+                $flash = ['err', 'Erro: ' . $e->getMessage()];
+                $acao = $pid ? 'editar' : 'novo'; $id = $pid;
+            }
+        }
+    }
+}
+
+if (isset($_GET['ok'])) {
+    $msg = $_GET['ok'] === 'add' ? 'Assinatura criada.' : 'Assinatura atualizada.';
+    if (isset($_GET['cobranca'])) $msg .= ' Cobrança avulsa gerada (#' . (int)$_GET['cobranca'] . ').';
+    $flash = ['ok', $msg];
+}
+
+$page = 'Assinaturas';
+$nav_active = '';
+
+if ($acao === 'novo' || $acao === 'editar') {
+    $show_back = true;
+    $back_to = APP_BASE_URL . '/assinaturas.php' . ($cliente_filter ? '?cliente_id=' . $cliente_filter : '');
+
+    $a = ['id'=>0,'cliente_id'=>$cliente_filter,'item_id'=>0,'funcionario_id'=>0,'variante'=>'normal','valor_cobrado'=>'','status'=>'ativa','iniciada_em'=>date('Y-m-d')];
+    if ($acao === 'editar' && $id) {
+        $stmt = $db->prepare('SELECT * FROM assinaturas WHERE id = ?');
+        $stmt->execute([$id]);
+        $row = $stmt->fetch();
+        if ($row) $a = array_merge($a, $row);
+    }
+
+    $clientes = $db->query('SELECT id, nome_empresa, moeda FROM clientes WHERE ativo=1 ORDER BY nome_empresa')->fetchAll();
+    $itens = $db->query('SELECT id, nome, tipo, preco_usd, preco_brl, preco_eur, tem_variante_ia, preco_ia_usd, preco_ia_brl, preco_ia_eur, e_pacote FROM itens_catalogo WHERE ativo=1 ORDER BY e_pacote DESC, nome')->fetchAll();
+    $funcs = $db->query("SELECT id, nome, aceitando_clientes FROM usuarios WHERE ativo=1 AND role IN ('admin','funcionario') ORDER BY nome")->fetchAll();
+
+    // Mapa JS de preços por item (para autopreencher valor)
+    $jsItens = [];
+    foreach ($itens as $it) {
+        $jsItens[(int)$it['id']] = [
+            'tipo' => $it['tipo'],
+            'tem_variante_ia' => (int)$it['tem_variante_ia'],
+            'usd' => $it['preco_usd'], 'brl' => $it['preco_brl'], 'eur' => $it['preco_eur'],
+            'usd_ia' => $it['preco_ia_usd'], 'brl_ia' => $it['preco_ia_brl'], 'eur_ia' => $it['preco_ia_eur'],
+        ];
+    }
+    $jsClientes = [];
+    foreach ($clientes as $c) {
+        $jsClientes[(int)$c['id']] = ['moeda' => strtolower($c['moeda'])];
+    }
+
+    $page = $a['id'] ? 'Editar assinatura' : 'Nova assinatura';
+    require __DIR__ . '/includes/header.php';
+    ?>
+    <?php if ($flash): ?><div class="flash <?= e($flash[0]) ?>"><?= e($flash[1]) ?></div><?php endif; ?>
+    <form method="post">
+      <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
+      <input type="hidden" name="op" value="salvar">
+      <input type="hidden" name="id" value="<?= (int)$a['id'] ?>">
+
+      <div class="card">
+        <div class="field">
+          <label>Cliente *</label>
+          <select name="cliente_id" id="cliente_id" required <?= $a['id']?'disabled':'' ?>>
+            <option value="">— selecione —</option>
+            <?php foreach ($clientes as $c): ?>
+              <option value="<?= (int)$c['id'] ?>" <?= $a['cliente_id']==$c['id']?'selected':'' ?>><?= e($c['nome_empresa']) ?> (<?= e($c['moeda']) ?>)</option>
+            <?php endforeach; ?>
+          </select>
+          <?php if ($a['id']): ?><input type="hidden" name="cliente_id" value="<?= (int)$a['cliente_id'] ?>"><?php endif; ?>
+        </div>
+
+        <div class="field">
+          <label>Item do catálogo *</label>
+          <select name="item_id" id="item_id" required <?= $a['id']?'disabled':'' ?>>
+            <option value="">— selecione —</option>
+            <?php foreach ($itens as $it): ?>
+              <option value="<?= (int)$it['id'] ?>" <?= $a['item_id']==$it['id']?'selected':'' ?>>
+                <?= e($it['nome']) ?> · <?= e($it['tipo']) ?><?= $it['e_pacote']?' · pacote':'' ?>
+              </option>
+            <?php endforeach; ?>
+          </select>
+          <?php if ($a['id']): ?><input type="hidden" name="item_id" value="<?= (int)$a['item_id'] ?>"><?php endif; ?>
+        </div>
+
+        <div class="field" id="field_variante" style="display:none;">
+          <label>Variante</label>
+          <select name="variante" id="variante">
+            <option value="normal" <?= $a['variante']==='normal'?'selected':'' ?>>Normal</option>
+            <option value="ia"     <?= $a['variante']==='ia'?'selected':'' ?>>Com IA</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Funcionário responsável</label>
+          <select name="funcionario_id">
+            <option value="">— (sem atribuição) —</option>
+            <?php foreach ($funcs as $f): ?>
+              <option value="<?= (int)$f['id'] ?>" <?= $a['funcionario_id']==$f['id']?'selected':'' ?>>
+                <?= e($f['nome']) ?> <?= $f['aceitando_clientes'] ? '🟢' : '🔴' ?>
+              </option>
+            <?php endforeach; ?>
+          </select>
+          <div class="hint">Troca vale para o mês seguinte; histórico fica preservado.</div>
+        </div>
+
+        <div class="field">
+          <label>Valor cobrado *</label>
+          <input type="number" step="0.01" min="0.01" name="valor_cobrado" id="valor_cobrado" required value="<?= $a['valor_cobrado']!==''?e(number_format((float)$a['valor_cobrado'],2,'.','')):'' ?>">
+          <div class="hint">Preenchido com preço da tabela; pode sobrescrever (override por cliente).</div>
+        </div>
+
+        <div class="field">
+          <label>Data de início *</label>
+          <input type="date" name="iniciada_em" required value="<?= e($a['iniciada_em']) ?>" <?= $a['id']?'disabled':'' ?>>
+          <?php if ($a['id']): ?><input type="hidden" name="iniciada_em" value="<?= e($a['iniciada_em']) ?>"><?php endif; ?>
+        </div>
+
+        <?php if ($a['id']): ?>
+        <div class="field">
+          <label>Status</label>
+          <select name="status">
+            <option value="ativa"      <?= $a['status']==='ativa'?'selected':'' ?>>Ativa</option>
+            <option value="pausada"    <?= $a['status']==='pausada'?'selected':'' ?>>Pausada</option>
+            <option value="cancelada"  <?= $a['status']==='cancelada'?'selected':'' ?>>Cancelada</option>
+          </select>
+        </div>
+        <?php endif; ?>
+      </div>
+
+      <button class="btn block" type="submit">Salvar</button>
+    </form>
+
+    <script>
+    const ITENS = <?= json_encode($jsItens, JSON_UNESCAPED_UNICODE) ?>;
+    const CLIENTES = <?= json_encode($jsClientes, JSON_UNESCAPED_UNICODE) ?>;
+    function atualizaPreco() {
+      const itemId = document.getElementById('item_id').value;
+      const cliId  = document.getElementById('cliente_id').value;
+      if (!itemId || !cliId) return;
+      const it = ITENS[itemId]; const cli = CLIENTES[cliId];
+      if (!it || !cli) return;
+      const varianteIA = document.getElementById('variante').value === 'ia';
+      const key = cli.moeda + (varianteIA ? '_ia' : '');
+      const v = it[key];
+      const fv = document.getElementById('field_variante');
+      fv.style.display = it.tem_variante_ia ? '' : 'none';
+      const input = document.getElementById('valor_cobrado');
+      if (v !== null && v !== undefined && !input.dataset.touched) {
+        input.value = parseFloat(v).toFixed(2);
+      }
+    }
+    document.getElementById('item_id')?.addEventListener('change', atualizaPreco);
+    document.getElementById('cliente_id')?.addEventListener('change', atualizaPreco);
+    document.getElementById('variante')?.addEventListener('change', atualizaPreco);
+    document.getElementById('valor_cobrado')?.addEventListener('input', function(){ this.dataset.touched = '1'; });
+    atualizaPreco();
+    </script>
+    <?php
+    require __DIR__ . '/includes/footer.php';
+    exit;
+}
+
+// Lista
+require __DIR__ . '/includes/header.php';
+$where = ['1=1']; $params = [];
+if ($cliente_filter) { $where[] = 'a.cliente_id = ?'; $params[] = $cliente_filter; }
+$sql = 'SELECT a.id, a.valor_cobrado, a.variante, a.status, a.iniciada_em,
+               cl.id AS cliente_id, cl.nome_empresa, cl.moeda,
+               i.nome AS item_nome, i.tipo,
+               u.nome AS funcionario_nome
+        FROM assinaturas a
+        JOIN clientes cl ON cl.id = a.cliente_id
+        JOIN itens_catalogo i ON i.id = a.item_id
+        LEFT JOIN usuarios u ON u.id = a.funcionario_id
+        WHERE ' . implode(' AND ', $where) . '
+        ORDER BY a.status, cl.nome_empresa, i.nome';
+$stmt = $db->prepare($sql);
+$stmt->execute($params);
+$lista = $stmt->fetchAll();
+
+$cliente_nome = null;
+if ($cliente_filter) {
+    $stmt = $db->prepare('SELECT nome_empresa FROM clientes WHERE id = ?');
+    $stmt->execute([$cliente_filter]);
+    $cliente_nome = $stmt->fetchColumn();
+}
+?>
+<h1 class="page-title">Assinaturas<?= $cliente_nome ? ' — ' . e($cliente_nome) : '' ?></h1>
+<?php if ($flash): ?><div class="flash <?= e($flash[0]) ?>"><?= e($flash[1]) ?></div><?php endif; ?>
+
+<a class="btn btn-brand block" href="?acao=novo<?= $cliente_filter ? '&cliente_id=' . $cliente_filter : '' ?>">+ Nova assinatura</a>
+
+<div class="section-label mt-5">Total (<?= count($lista) ?>)</div>
+<?php foreach ($lista as $a): ?>
+  <a class="list-card" href="?acao=editar&id=<?= (int)$a['id'] ?>">
+    <div class="info">
+      <div class="nome">
+        <?= e($a['item_nome']) ?>
+        <?php if ($a['variante']==='ia'): ?><span class="status status-ia">IA</span><?php endif; ?>
+        <span class="status status-<?= e($a['status']) ?>"><?= e($a['status']) ?></span>
+      </div>
+      <div class="sub"><?= e($a['nome_empresa']) ?> · <?= e($a['funcionario_nome'] ?? 'sem responsável') ?> · <?= e($a['tipo']) ?></div>
+    </div>
+    <div class="right">
+      <div class="money md"><?= e(money_fmt((float)$a['valor_cobrado'], $a['moeda'])) ?></div>
+    </div>
+  </a>
+<?php endforeach; ?>
+<?php if (!$lista): ?>
+  <p class="muted center mt-5">Nenhuma assinatura. Clique em "+ Nova".</p>
+<?php endif; ?>
+
+<?php require __DIR__ . '/includes/footer.php'; ?>
