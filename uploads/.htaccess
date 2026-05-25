@@ -1,0 +1,2 @@
+# Bloqueia acesso direto. Arquivos são servidos via cobrancas.php?baixar_comprovante=N com checagem de auth.
+Require all denied

@@ -1,0 +1,73 @@
+<?php
+require_once __DIR__ . '/includes/auth.php';
+require_once __DIR__ . '/lib/pagamentos.php';
+$u = require_login();
+if ($u['role'] !== 'funcionario' && $u['role'] !== 'admin') {
+    header('Location: ' . APP_BASE_URL . '/dashboard.php'); exit;
+}
+$db = db();
+
+$funcionario_id = (int)$u['id'];
+if ($u['role'] === 'admin' && isset($_GET['funcionario_id'])) {
+    $funcionario_id = (int)$_GET['funcionario_id'];
+}
+
+$pendentes = itens_pendentes_funcionario($db, $funcionario_id);
+$total_pendente = (float)array_sum(array_column($pendentes, 'subtotal_usd'));
+
+$de  = $_GET['de']  ?? null;
+$ate = $_GET['ate'] ?? null;
+$historico = historico_pagamentos_funcionario($db, $funcionario_id, $de, $ate);
+$total_historico = (float)array_sum(array_column($historico, 'valor_usd'));
+
+$page = 'Meus pagamentos';
+$nav_active = 'pagamentos';
+require __DIR__ . '/includes/header.php';
+?>
+<h1 class="page-title">Meus pagamentos</h1>
+
+<div class="grid-2">
+  <div class="kpi"><div class="v" style="color:var(--c-success);">$<?= e(number_format($total_pendente, 2, '.', ',')) ?></div><div class="l">A receber (liberado)</div></div>
+  <div class="kpi"><div class="v">$<?= e(number_format($total_historico, 2, '.', ',')) ?></div><div class="l">Recebido no período</div></div>
+</div>
+
+<h2>A receber</h2>
+<?php if (!$pendentes): ?>
+  <p class="muted">Nada pendente no momento.</p>
+<?php else: foreach ($pendentes as $it): ?>
+  <div class="card">
+    <div class="spaced">
+      <div>
+        <div class="title"><?= e($it['item_nome']) ?></div>
+        <div class="sub muted"><?= e($it['nome_empresa']) ?> · <?= e($it['competencia_mes']) ?> · <?= (int)$it['quantidade'] ?>× $<?= e(number_format((float)$it['valor_unitario_usd'], 2, '.', ',')) ?></div>
+      </div>
+      <div class="money md">$<?= e(number_format((float)$it['subtotal_usd'], 2, '.', ',')) ?></div>
+    </div>
+  </div>
+<?php endforeach; endif; ?>
+
+<h2>Histórico de pagamentos recebidos</h2>
+<form method="get" class="card">
+  <div class="grid-2">
+    <div class="field"><label>De</label><input type="date" name="de" value="<?= e($de ?? '') ?>"></div>
+    <div class="field"><label>Até</label><input type="date" name="ate" value="<?= e($ate ?? '') ?>"></div>
+  </div>
+  <button class="btn block" type="submit">Filtrar</button>
+</form>
+
+<?php if (!$historico): ?>
+  <p class="muted">Nenhum pagamento recebido no período.</p>
+<?php else: foreach ($historico as $h): ?>
+  <a class="list-card" href="<?= e(APP_BASE_URL) ?>/comprovante_funcionario.php?id=<?= (int)$h['id'] ?>" target="_blank">
+    <div class="info">
+      <div class="nome">Pagamento #<?= (int)$h['id'] ?></div>
+      <div class="sub"><?= e(date('d/m/Y', strtotime($h['data_pagamento']))) ?></div>
+    </div>
+    <div class="right">
+      <div class="money md">$<?= e(number_format((float)$h['valor_usd'], 2, '.', ',')) ?></div>
+      <div class="muted" style="font-size:11px;">📄 comprovante</div>
+    </div>
+  </a>
+<?php endforeach; endif; ?>
+
+<?php require __DIR__ . '/includes/footer.php'; ?>

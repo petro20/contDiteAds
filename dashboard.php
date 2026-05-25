@@ -46,6 +46,10 @@ require __DIR__ . '/includes/header.php';
     <div class="title">💳 Cobranças</div>
     <div class="desc">Ver cobranças geradas e gerar manualmente para teste</div>
   </a>
+  <a class="card" href="<?= e(APP_BASE_URL) ?>/pagamentos_funcionarios.php">
+    <div class="title">💵 Pagamentos a funcionários</div>
+    <div class="desc">Fila de valores liberados em USD para pagar via Wise</div>
+  </a>
   <a class="card" href="<?= e(APP_BASE_URL) ?>/convites.php">
     <div class="title">✉️ Gerar convite</div>
     <div class="desc">Link para cliente ou funcionário se cadastrar</div>

@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/lib/audit.php';
+require_once __DIR__ . '/lib/pagamentos.php';
 require_admin();
 $db = db();
 
@@ -10,6 +11,25 @@ $flash = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_check();
+    if (($_POST['op'] ?? '') === 'salvar_valores') {
+        $fid = (int)($_POST['funcionario_id'] ?? 0);
+        $vals = $_POST['valor'] ?? [];
+        if ($fid && is_array($vals)) {
+            foreach ($vals as $item_id => $v) {
+                $iid = (int)$item_id;
+                $vf = $v === '' ? null : (float)str_replace(',', '.', (string)$v);
+                if (!$iid) continue;
+                if ($vf === null) {
+                    $stmt = $db->prepare('DELETE FROM func_servico_pagamento WHERE funcionario_id=? AND item_id=?');
+                    $stmt->execute([$fid, $iid]);
+                } else {
+                    definir_valor_funcionario_item($db, $fid, $iid, $vf);
+                }
+            }
+            audit_log('funcionario.valores_atualizados', 'usuarios', $fid);
+        }
+        header('Location: ' . APP_BASE_URL . '/funcionarios.php?acao=editar&id=' . $fid . '&ok=upd'); exit;
+    }
     if (($_POST['op'] ?? '') === 'salvar') {
         $pid = (int)($_POST['id'] ?? 0);
         $nome  = trim((string)($_POST['nome'] ?? ''));
@@ -96,6 +116,32 @@ if ($acao === 'novo' || $acao === 'editar') {
       </div>
       <button class="btn block" type="submit">Salvar</button>
     </form>
+
+    <?php if ($u['id'] && $u['role'] === 'funcionario'):
+        // Valores USD por item
+        $itens_cat = $db->query('SELECT id, nome, tipo FROM itens_catalogo WHERE ativo=1 ORDER BY nome')->fetchAll();
+        $stmt = $db->prepare('SELECT item_id, valor_usd FROM func_servico_pagamento WHERE funcionario_id = ?');
+        $stmt->execute([$u['id']]);
+        $valores_map = [];
+        foreach ($stmt->fetchAll() as $r) $valores_map[(int)$r['item_id']] = (float)$r['valor_usd'];
+    ?>
+      <h2>Quanto este funcionário recebe (USD)</h2>
+      <form method="post" action="<?= e(APP_BASE_URL) ?>/funcionarios.php?acao=editar&id=<?= (int)$u['id'] ?>">
+        <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
+        <input type="hidden" name="op" value="salvar_valores">
+        <input type="hidden" name="funcionario_id" value="<?= (int)$u['id'] ?>">
+        <div class="card">
+          <p class="muted">Quanto o funcionário recebe (em USD) cada vez que executa um item. Pacotes mensais: valor fixo por mês. Por unidade: valor × quantidade entregue.</p>
+          <?php foreach ($itens_cat as $it): ?>
+            <div class="field">
+              <label><?= e($it['nome']) ?> <span class="muted">(<?= e($it['tipo']) ?>)</span></label>
+              <input type="number" step="0.01" min="0" name="valor[<?= (int)$it['id'] ?>]" value="<?= isset($valores_map[(int)$it['id']]) ? e(number_format($valores_map[(int)$it['id']], 2, '.', '')) : '' ?>" placeholder="0.00">
+            </div>
+          <?php endforeach; ?>
+          <button class="btn block" type="submit">Salvar valores</button>
+        </div>
+      </form>
+    <?php endif; ?>
     <?php
     require __DIR__ . '/includes/footer.php';
     exit;

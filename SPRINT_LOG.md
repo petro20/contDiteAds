@@ -112,4 +112,31 @@ Acompanhamento da execução do `BUILD_PLAN.md`.
 3. **Cliente** → Entregas → vê o mesmo calendário com os dias marcados
 4. **Admin** → Painel → aba "Por cliente" e "Por serviço" → visão agregada
 
-## Sprint 4+ — ⏳ A FAZER
+## Sprint 4 — Pagamentos · ✅ ENTREGUE
+
+**Decisões adotadas como padrão**:
+- Comprovante max 5MB, formatos PDF/JPG/PNG
+- Pagamento parcial ao funcionário: permitido via seleção de itens (admin marca quais incluir)
+- Comprovante imutável (admin pode remover pagamento inteiro; "corrige" criando novo)
+- Comprovante de pagamento ao funcionário: HTML print-to-PDF (sem lib externa)
+
+**Entregues**:
+- `lib/pagamentos.php` — atualização de status, fila pendente, criação de pagamentos
+- `cobrancas.php` reescrita — cliente envia comprovante; admin registra pagamento direto; remove pagamento
+- `funcionarios.php` (edição) — admin define valor USD por item para o funcionário
+- `pagamentos_funcionarios.php` — fila admin com total USD por funcionário, formulário pra marcar pago
+- `meus_pagamentos.php` — funcionário vê "a receber" e histórico
+- `comprovante_funcionario.php` — página printable (Ctrl+P → Save as PDF)
+- `uploads/` — diretório com .htaccess Require all denied (serve via PHP com auth)
+- Email automático ao funcionário quando admin marca como pago (link pro comprovante)
+
+**Como testar (ciclo completo)**:
+1. Admin cria assinatura com funcionário responsável
+2. Admin edita funcionário → "Quanto recebe (USD)" → define valor pro item
+3. Admin → Cobranças → gera cobrança manual → registra pagamento (com ou sem comprovante)
+4. Admin → Pagamentos a funcionários → vê fila com total USD
+5. Clica em "Pagar [func]" → confirma itens → "Marquei como pago"
+6. Email é enviado pro funcionário (se SMTP configurado)
+7. Funcionário → "Pagamentos" → vê o histórico → clica pra abrir comprovante → "Imprimir / Salvar PDF"
+
+## Sprint 5+ — ⏳ A FAZER (Comunicação WhatsApp + Régua + Notificações + Audit + 2FA)
