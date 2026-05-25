@@ -50,6 +50,14 @@ require __DIR__ . '/includes/header.php';
     <div class="title">💵 Pagamentos a funcionários</div>
     <div class="desc">Fila de valores liberados em USD para pagar via Wise</div>
   </a>
+  <a class="card" href="<?= e(APP_BASE_URL) ?>/regua.php">
+    <div class="title">⏰ Régua de cobrança</div>
+    <div class="desc">Etapas automáticas + tarefas WhatsApp pendentes</div>
+  </a>
+  <a class="card" href="<?= e(APP_BASE_URL) ?>/templates.php">
+    <div class="title">📝 Templates de mensagem</div>
+    <div class="desc">Editar textos de email e WhatsApp</div>
+  </a>
   <a class="card" href="<?= e(APP_BASE_URL) ?>/convites.php">
     <div class="title">✉️ Gerar convite</div>
     <div class="desc">Link para cliente ou funcionário se cadastrar</div>

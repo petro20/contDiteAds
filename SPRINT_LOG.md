@@ -139,4 +139,32 @@ Acompanhamento da execução do `BUILD_PLAN.md`.
 6. Email é enviado pro funcionário (se SMTP configurado)
 7. Funcionário → "Pagamentos" → vê o histórico → clica pra abrir comprovante → "Imprimir / Salvar PDF"
 
-## Sprint 5+ — ⏳ A FAZER (Comunicação WhatsApp + Régua + Notificações + Audit + 2FA)
+## Sprint 5 — Comunicação (WhatsApp + Régua + Recibos) · ✅ ENTREGUE
+
+**Entregues**:
+- `recibo.php?cobranca=N` — recibo HTML printable (admin OU cliente da cobrança acessam)
+- `lib/whatsapp.php` — helpers: `wa_link`, `wa_render`, `wa_template`, `wa_vars_cobranca`
+- `templates.php` — admin edita templates de mensagem (canal: email/whatsapp)
+- `cobrancas.php` — botão "💬 Enviar pelo WhatsApp" + "📄 Ver recibo" em cada cobrança (admin escolhe template padrão baseado em status: paga/vencida/normal)
+- `lib/regua.php` — execução da régua + tarefas pendentes
+- `regua.php` — admin configura etapas + lista tarefas WhatsApp pendentes (com botão wa.me) + permite silenciar cobranças específicas
+- `cron/regua_executar.php` — script diário (CLI-only): envia emails automáticos, cria tarefas WhatsApp pendentes na agenda do admin
+
+**Cron na Hostinger** (uma vez):
+- hPanel → Avançado → Cron Jobs
+- Comando: `php /home/u788472657/domains/cont.diteads.com/public_html/cron/regua_executar.php`
+- Frequência: `0 6 * * *` (todo dia às 6h)
+
+**Régua padrão** (já seedada):
+- Etapa 1: dia 0 (vencimento) — email "vence hoje" + WhatsApp na agenda
+- Etapa 2: +3 dias — lembrete email + WhatsApp
+- Etapa 3: +7 dias — urgente
+- Etapa 4: +15 dias — última automática
+
+**Como testar**:
+1. Crie cobrança com vencimento de ontem (data passada)
+2. Cron pode ser rodado manualmente local: `php cron/regua_executar.php`
+3. Email é enviado se SMTP configurado; WhatsApp aparece em "Tarefas WhatsApp pendentes" em /regua.php
+4. Admin clica "Abrir WhatsApp" → wa.me com mensagem preenchida → revisa, envia, marca como enviado
+
+## Sprint 6+ — ⏳ A FAZER (Capacidade declarada, Notificações email, Audit log UI, 2FA)

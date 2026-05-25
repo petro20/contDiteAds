@@ -4,6 +4,7 @@ require_once __DIR__ . '/lib/audit.php';
 require_once __DIR__ . '/lib/money.php';
 require_once __DIR__ . '/lib/cobrancas.php';
 require_once __DIR__ . '/lib/pagamentos.php';
+require_once __DIR__ . '/lib/whatsapp.php';
 $me = require_login();
 $db = db();
 
@@ -319,7 +320,33 @@ if ($id) {
       <?php endif; ?>
     <?php endif; ?>
 
-    <?php if (is_admin()): ?>
+    <h2>Ações</h2>
+    <a class="btn btn-secondary block" href="<?= e(APP_BASE_URL) ?>/recibo.php?cobranca=<?= (int)$cob['id'] ?>" target="_blank">📄 Ver recibo (imprimir/PDF)</a>
+
+    <?php if (is_admin()):
+      $vars = wa_vars_cobranca($db, (int)$cob['id']);
+      $tem_tel = !empty($vars['_telefone']);
+      // Determina template padrão por status
+      if ($cob['status'] === 'paga')             $codigo_tpl = 'pagamento_confirmado';
+      elseif (strtotime($cob['vencimento']) < strtotime(date('Y-m-d'))) $codigo_tpl = 'lembrete_vencida';
+      else                                       $codigo_tpl = 'cobranca_nova';
+      $tpl = wa_template($db, $codigo_tpl, 'whatsapp');
+      if ($tem_tel && $tpl) {
+        $msg = wa_render($tpl['corpo'], $vars);
+        $link = wa_link($vars['_telefone'], $msg);
+      }
+    ?>
+      <?php if ($tem_tel && $tpl): ?>
+        <a class="btn btn-whatsapp block mt-3" href="<?= e($link) ?>" target="_blank">💬 Enviar pelo WhatsApp ({{<?= e($codigo_tpl) ?>}})</a>
+      <?php else: ?>
+        <div class="card attention mt-3">
+          <div class="title">⚠ WhatsApp indisponível</div>
+          <div class="desc">
+            <?= !$tem_tel ? 'Cliente sem telefone cadastrado.' : 'Template ' . e($codigo_tpl) . ' não encontrado/ativo.' ?>
+          </div>
+        </div>
+      <?php endif; ?>
+
       <div class="btn-pair mt-5">
         <?php if ($cob['status'] !== 'cancelada'): ?>
           <form method="post" style="flex:1; margin:0;" onsubmit="return confirm('Cancelar esta cobrança?');">
