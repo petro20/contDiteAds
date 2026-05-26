@@ -111,10 +111,39 @@ require __DIR__ . '/includes/header.php';
   </div>
 
 <?php else: /* cliente */ ?>
-  <div class="card">
-    <div class="title">Bem-vindo!</div>
-    <div class="desc">As cobranças e entregas (Sprint 2 e 3) ainda estão sendo construídas. Sua conta já está ativa.</div>
-  </div>
+  <?php
+    $cid = (int)($u['cliente_id'] ?? 0);
+    if ($cid) {
+      $stmt = $db->prepare("SELECT moeda, nome_empresa FROM clientes WHERE id = ?");
+      $stmt->execute([$cid]);
+      $cli = $stmt->fetch();
+      $stmt = $db->prepare("SELECT COALESCE(SUM(valor_total),0) FROM cobrancas WHERE cliente_id = ? AND status='aberta'");
+      $stmt->execute([$cid]);
+      $em_aberto = (float)$stmt->fetchColumn();
+      $stmt = $db->prepare("SELECT COUNT(*) FROM cobrancas WHERE cliente_id = ? AND status='aberta' AND vencimento < CURDATE()");
+      $stmt->execute([$cid]);
+      $vencidas = (int)$stmt->fetchColumn();
+    } else { $cli = null; $em_aberto = 0; $vencidas = 0; }
+  ?>
+
+  <?php if (!$cli): ?>
+    <div class="card attention"><div class="title">⚠ Conta sem empresa vinculada</div><div class="desc">Avise o admin pra ligar sua conta a um cliente cadastrado.</div></div>
+  <?php else: ?>
+    <div class="grid-2">
+      <div class="kpi"><div class="v"><?= e(money_fmt($em_aberto, $cli['moeda'])) ?></div><div class="l">Em aberto</div></div>
+      <div class="kpi <?= $vencidas?'':'' ?>" <?= $vencidas?'style="border-color:var(--c-danger);"':'' ?>><div class="v"><?= $vencidas ?></div><div class="l"><?= $vencidas?'<span style="color:var(--c-danger);">Vencidas</span>':'Vencidas' ?></div></div>
+    </div>
+
+    <div class="section-label">Acesso rápido</div>
+    <a class="card" href="<?= e(APP_BASE_URL) ?>/cobrancas.php">
+      <div class="title">💳 Minhas cobranças</div>
+      <div class="desc">Ver, anexar comprovante de pagamento</div>
+    </a>
+    <a class="card" href="<?= e(APP_BASE_URL) ?>/entregas.php">
+      <div class="title">✅ Minhas entregas</div>
+      <div class="desc">Acompanhar o que foi entregue no mês</div>
+    </a>
+  <?php endif; ?>
 <?php endif; ?>
 
 <?php require __DIR__ . '/includes/footer.php'; ?>
