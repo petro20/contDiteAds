@@ -142,11 +142,11 @@ require __DIR__ . '/includes/header.php';
         $d = $db->query("SELECT MIN(data_pagamento) FROM pagamentos_funcionario")->fetchColumn();
         if ($d) $datas_min[] = $d;
     } catch (PDOException $e) {}
-    $mes_inicial = $datas_min ? substr(min($datas_min), 0, 7) : (clone $cur_dt)->modify('-11 months')->format('Y-m');
-    // Garante no mínimo 12 meses de histórico (mesmo sem dados antigos) — pra que
-    // o botão "1a" sempre mostre 12 pontos no gráfico (alguns com zero).
+    // mes_primeira_mov = primeiro mês com qualquer dado real (sem fallback)
+    $mes_primeira_mov = $datas_min ? substr(min($datas_min), 0, 7) : $competencia;
+    // Pro chart, sempre gera pelo menos 12 meses (pra "1a" funcionar com zeros).
     $doze_atras = (clone $cur_dt)->modify('-11 months')->format('Y-m');
-    if ($mes_inicial > $doze_atras) $mes_inicial = $doze_atras;
+    $mes_inicial = ($mes_primeira_mov < $doze_atras) ? $mes_primeira_mov : $doze_atras;
     // Calcula quantos meses do mes_inicial até cur_dt
     $ini_dt = DateTimeImmutable::createFromFormat('Y-m', $mes_inicial);
     $total_meses = ((int)$cur_dt->format('Y') - (int)$ini_dt->format('Y')) * 12
@@ -186,6 +186,11 @@ require __DIR__ . '/includes/header.php';
             $h[$cur] = ['r'=>$r, 'd'=>$d + $pf, 's'=>$ps, 'l'=>$r - $d - $pf];
         }
         $historico[] = $h;
+    }
+    // Índice do primeiro mês com movimento real (pro botão "Tudo" cortar daqui)
+    $idx_primeira_mov = 0;
+    foreach ($historico as $i => $h) {
+        if ($h['mes'] >= $mes_primeira_mov) { $idx_primeira_mov = $i; break; }
     }
 
     // Resumo por moeda (mês competencia)
@@ -243,6 +248,7 @@ require __DIR__ . '/includes/header.php';
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
 const HISTORICO = <?= json_encode($historico, JSON_UNESCAPED_UNICODE) ?>;
+const IDX_PRIMEIRA_MOV = <?= (int)$idx_primeira_mov ?>;
 let chart_saude = null;
 let moeda_atual = 'BRL';
 let periodo_atual = 6; // 0 = tudo
@@ -270,7 +276,7 @@ function trocarPeriodoGrafico(p) {
 }
 
 function fatiarHistorico() {
-  if (periodo_atual === 0) return HISTORICO;
+  if (periodo_atual === 0) return HISTORICO.slice(IDX_PRIMEIRA_MOV);
   return HISTORICO.slice(-periodo_atual);
 }
 
