@@ -18,10 +18,21 @@ $rec_mes   = receita_mes($db, $competencia);
 $rec_total = receita_por_moeda($db); // tudo
 $desp_mes  = despesas_do_mes($db, $competencia);
 
-// Lucro líquido = receita - despesas (por moeda)
+// Pagamentos a funcionários no mês (USD)
+$ini_m = $competencia . '-01';
+$fim_m = date('Y-m-t', strtotime($ini_m));
+$pag_func_mes = 0.0;
+try {
+    $stmt = $db->prepare("SELECT COALESCE(SUM(valor_usd),0) FROM pagamentos_funcionario WHERE data_pagamento BETWEEN ? AND ?");
+    $stmt->execute([$ini_m, $fim_m]);
+    $pag_func_mes = (float)$stmt->fetchColumn();
+} catch (PDOException $e) {}
+
+// Lucro líquido = receita - despesas - pagamentos a funcionários (USD)
 $liq_mes = [];
 foreach (['BRL','USD','EUR'] as $m) {
     $liq_mes[$m] = $rec_mes[$m] - ($desp_mes['totais'][$m] ?? 0);
+    if ($m === 'USD') $liq_mes[$m] -= $pag_func_mes;
 }
 
 $dt = DateTime::createFromFormat('Y-m', $competencia);
@@ -47,16 +58,23 @@ require __DIR__ . '/includes/header.php';
 
 <h2>Receita × Despesas × Lucro líquido</h2>
 <?php foreach (['BRL','USD','EUR'] as $m):
-    $rec = $rec_mes[$m]; $desp = $desp_mes['totais'][$m] ?? 0; $liq = $liq_mes[$m]; $parte = $total_quotas > 0 ? $liq / $total_quotas : 0;
-    if ($rec == 0 && $desp == 0) continue;
+    $rec = $rec_mes[$m]; $desp = $desp_mes['totais'][$m] ?? 0;
+    $pf = ($m === 'USD') ? $pag_func_mes : 0;
+    $liq = $liq_mes[$m]; $parte = $total_quotas > 0 ? $liq / $total_quotas : 0;
+    if ($rec == 0 && $desp == 0 && $pf == 0) continue;
 ?>
   <div class="card">
     <div class="title"><?= $m ?></div>
     <div class="spaced" style="padding:6px 0;"><span>Receita</span><strong style="color:var(--c-success);"><?= e(money_fmt($rec, $m)) ?></strong></div>
-    <div class="spaced" style="padding:6px 0;"><span>Despesas</span><strong style="color:var(--c-danger);">− <?= e(money_fmt($desp, $m)) ?></strong></div>
+    <?php if ($desp > 0): ?>
+      <div class="spaced" style="padding:6px 0;"><span>Despesas</span><strong style="color:var(--c-danger);">− <?= e(money_fmt($desp, $m)) ?></strong></div>
+    <?php endif; ?>
+    <?php if ($pf > 0): ?>
+      <div class="spaced" style="padding:6px 0;"><span>Pagos a funcionários</span><strong style="color:var(--c-danger);">− <?= e(money_fmt($pf, $m)) ?></strong></div>
+    <?php endif; ?>
     <div class="spaced" style="padding:6px 0; border-top:1px solid var(--border);">
       <strong>Lucro líquido</strong>
-      <strong><?= e(money_fmt($liq, $m)) ?></strong>
+      <strong style="color:<?= $liq>=0 ? 'var(--c-success)' : 'var(--c-danger)' ?>;"><?= e(money_fmt($liq, $m)) ?></strong>
     </div>
     <div class="spaced" style="padding:6px 0; color:var(--c-primary-2);">
       <span>Por quota (÷ <?= $total_quotas ?>)</span>
