@@ -45,6 +45,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
+    if ($op === 'apagar') {
+        $pid = (int)($_POST['id'] ?? 0);
+        try {
+            $stmt = $db->prepare('DELETE FROM clientes WHERE id = ?');
+            $stmt->execute([$pid]);
+            audit_log('cliente.apagado', 'clientes', $pid);
+            header('Location: ' . APP_BASE_URL . '/clientes.php?ok=del'); exit;
+        } catch (PDOException $e) {
+            $flash = ['err', 'Não dá pra apagar: cliente tem cobranças/assinaturas vinculadas. Desative em vez disso.'];
+            $acao = 'editar'; $id = $pid;
+        }
+    }
+
     if ($op === 'criar_login') {
         $cid    = (int)($_POST['cliente_id'] ?? 0);
         $email  = trim((string)($_POST['login_email'] ?? ''));
