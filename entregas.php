@@ -6,11 +6,10 @@ $db = db();
 
 // Cliente vê suas; admin pode ver de qualquer cliente via ?cliente_id=
 if ($u['role'] === 'cliente') {
-    $cliente_id = (int)$u['cliente_id'];
+    $cliente_id = (int)($u['cliente_id'] ?? 0);
 } elseif (is_admin()) {
     $cliente_id = (int)($_GET['cliente_id'] ?? 0);
     if (!$cliente_id) {
-        // listar todos
         header('Location: ' . APP_BASE_URL . '/painel.php'); exit;
     }
 } else {
@@ -20,10 +19,22 @@ if ($u['role'] === 'cliente') {
 $competencia = $_GET['mes'] ?? date('Y-m');
 if (!preg_match('/^\d{4}-\d{2}$/', $competencia)) $competencia = date('Y-m');
 
-$stmt = $db->prepare('SELECT nome_empresa FROM clientes WHERE id = ?');
-$stmt->execute([$cliente_id]);
-$cliente_nome = $stmt->fetchColumn();
-if (!$cliente_nome) { http_response_code(404); exit('Cliente não encontrado.'); }
+$cliente_nome = null;
+if ($cliente_id) {
+    $stmt = $db->prepare('SELECT nome_empresa FROM clientes WHERE id = ?');
+    $stmt->execute([$cliente_id]);
+    $cliente_nome = $stmt->fetchColumn();
+}
+if (!$cliente_nome) {
+    $page = 'Entregas';
+    $nav_active = 'entregas';
+    require __DIR__ . '/includes/header.php';
+    echo '<h1 class="page-title">Conta sem cliente vinculado</h1>';
+    echo '<div class="card attention"><div class="title">⚠ Vínculo ausente</div><div class="desc">Sua conta de cliente não está ligada a um registro de empresa. Avise o admin pra corrigir o cadastro.</div></div>';
+    echo '<a class="btn btn-ghost block mt-3" href="' . htmlspecialchars(APP_BASE_URL) . '/perfil.php">Voltar</a>';
+    require __DIR__ . '/includes/footer.php';
+    exit;
+}
 
 $assinaturas = agenda_assinaturas_cliente($db, $cliente_id, $competencia);
 
