@@ -46,26 +46,63 @@ require __DIR__ . '/includes/header.php';
                           FROM cobrancas WHERE competencia_mes = ? GROUP BY moeda, status");
     $stmt->execute([$competencia]);
     $resumo = $stmt->fetchAll();
-    $por_moeda = ['BRL'=>['receber'=>0,'recebido'=>0],'USD'=>['receber'=>0,'recebido'=>0],'EUR'=>['receber'=>0,'recebido'=>0]];
+    $por_moeda = ['BRL'=>['receber'=>0,'recebido'=>0,'analise'=>0],'USD'=>['receber'=>0,'recebido'=>0,'analise'=>0],'EUR'=>['receber'=>0,'recebido'=>0,'analise'=>0]];
     foreach ($resumo as $r) {
         $m = $r['moeda'];
-        if ($r['status'] === 'paga') $por_moeda[$m]['recebido'] += (float)$r['total'];
-        elseif ($r['status'] === 'aberta') $por_moeda[$m]['receber'] += (float)$r['total'];
+        if ($r['status'] === 'paga')             $por_moeda[$m]['recebido'] += (float)$r['total'];
+        elseif ($r['status'] === 'aberta')       $por_moeda[$m]['receber']  += (float)$r['total'];
+        elseif ($r['status'] === 'em_analise')   $por_moeda[$m]['analise']  += (float)$r['total'];
+    }
+
+    // Totais ALL-TIME (todas as cobranças até hoje, não só esse mês)
+    $stmt = $db->query("SELECT moeda, status, SUM(valor_total) AS total
+                        FROM cobrancas GROUP BY moeda, status");
+    $resumo_total = $stmt->fetchAll();
+    $por_moeda_total = ['BRL'=>['receber'=>0,'recebido'=>0,'analise'=>0],'USD'=>['receber'=>0,'recebido'=>0,'analise'=>0],'EUR'=>['receber'=>0,'recebido'=>0,'analise'=>0]];
+    foreach ($resumo_total as $r) {
+        $m = $r['moeda'];
+        if ($r['status'] === 'paga')           $por_moeda_total[$m]['recebido'] += (float)$r['total'];
+        elseif ($r['status'] === 'aberta')     $por_moeda_total[$m]['receber']  += (float)$r['total'];
+        elseif ($r['status'] === 'em_analise') $por_moeda_total[$m]['analise']  += (float)$r['total'];
     }
 ?>
-<div class="section-label">Resumo (<?= e($competencia) ?>)</div>
-<div class="grid-2">
-  <?php foreach (['BRL','USD','EUR'] as $m): ?>
-    <div class="kpi">
-      <div class="v"><?= e(money_fmt($por_moeda[$m]['recebido'], $m)) ?></div>
-      <div class="l">Recebido (<?= $m ?>)</div>
-    </div>
-    <div class="kpi">
-      <div class="v"><?= e(money_fmt($por_moeda[$m]['receber'], $m)) ?></div>
-      <div class="l">A receber (<?= $m ?>)</div>
+<div class="section-label">Resumo do mês (<?= e($competencia) ?>)</div>
+<?php foreach (['BRL','USD','EUR'] as $m):
+    $rec = $por_moeda[$m]['recebido']; $rcv = $por_moeda[$m]['receber']; $ana = $por_moeda[$m]['analise'];
+    if ($rec == 0 && $rcv == 0 && $ana == 0) continue;
+?>
+  <div class="card">
+    <div class="title"><?= $m ?> · este mês</div>
+    <div class="info-pair"><span class="l">Recebido</span><span class="v" style="color:var(--c-success);"><?= e(money_fmt($rec, $m)) ?></span></div>
+    <?php if ($ana > 0): ?>
+      <div class="info-pair"><span class="l">Em análise</span><span class="v" style="color:var(--c-orange);"><?= e(money_fmt($ana, $m)) ?></span></div>
+    <?php endif; ?>
+    <div class="info-pair"><span class="l">A receber</span><span class="v"><?= e(money_fmt($rcv, $m)) ?></span></div>
+  </div>
+<?php endforeach; ?>
+
+<?php
+  $tem_total = false;
+  foreach (['BRL','USD','EUR'] as $m) {
+      if ($por_moeda_total[$m]['recebido'] + $por_moeda_total[$m]['receber'] + $por_moeda_total[$m]['analise'] > 0) { $tem_total = true; break; }
+  }
+?>
+<?php if ($tem_total): ?>
+  <div class="section-label">Acumulado total (todas as cobranças até hoje)</div>
+  <?php foreach (['BRL','USD','EUR'] as $m):
+      $rec = $por_moeda_total[$m]['recebido']; $rcv = $por_moeda_total[$m]['receber']; $ana = $por_moeda_total[$m]['analise'];
+      if ($rec == 0 && $rcv == 0 && $ana == 0) continue;
+  ?>
+    <div class="card">
+      <div class="title"><?= $m ?> · total</div>
+      <div class="info-pair"><span class="l">Recebido</span><span class="v" style="color:var(--c-success);"><?= e(money_fmt($rec, $m)) ?></span></div>
+      <?php if ($ana > 0): ?>
+        <div class="info-pair"><span class="l">Em análise</span><span class="v" style="color:var(--c-orange);"><?= e(money_fmt($ana, $m)) ?></span></div>
+      <?php endif; ?>
+      <div class="info-pair"><span class="l">A receber</span><span class="v"><?= e(money_fmt($rcv, $m)) ?></span></div>
     </div>
   <?php endforeach; ?>
-</div>
+<?php endif; ?>
 
 <?php if ($vencidas): ?>
 <div class="section-label">⚠️ Vencidas (<?= count($vencidas) ?>)</div>
