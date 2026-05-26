@@ -12,6 +12,24 @@ $flash = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_check();
+    if (($_POST['op'] ?? '') === 'apagar_pagamento') {
+        if (!is_sadmin()) { http_response_code(403); exit('Apenas Super Admin pode apagar pagamentos.'); }
+        $pid = (int)($_POST['id'] ?? 0);
+        if ($pid > 0) {
+            try {
+                $db->beginTransaction();
+                // Apaga os itens primeiro (sem FK ON DELETE CASCADE garantido)
+                $db->prepare('DELETE FROM pagamento_funcionario_itens WHERE pagamento_id = ?')->execute([$pid]);
+                $db->prepare('DELETE FROM pagamentos_funcionario WHERE id = ?')->execute([$pid]);
+                $db->commit();
+                audit_log('pagamento_funcionario.apagado', 'pagamentos_funcionario', $pid);
+                header('Location: ' . APP_BASE_URL . '/pagamentos_funcionarios.php?ok=del'); exit;
+            } catch (Throwable $e) {
+                if ($db->inTransaction()) $db->rollBack();
+                $flash = ['err', 'Erro ao apagar: ' . $e->getMessage()];
+            }
+        }
+    }
     if (($_POST['op'] ?? '') === 'marcar_pago') {
         $funcionario_id = (int)($_POST['funcionario_id'] ?? 0);
         $items = $_POST['items'] ?? [];
@@ -88,6 +106,16 @@ if ($acao === 'detalhe') {
     <?php endforeach; ?>
 
     <a class="btn btn-secondary block mt-5" href="<?= e(APP_BASE_URL) ?>/comprovante_funcionario.php?id=<?= (int)$pag['id'] ?>" target="_blank">📄 Ver comprovante (para imprimir/PDF)</a>
+
+    <?php if (is_sadmin()): ?>
+      <h2 class="mt-5">⚠ Zona de perigo</h2>
+      <form method="post" action="<?= e(APP_BASE_URL) ?>/pagamentos_funcionarios.php" onsubmit="return confirm('APAGAR este pagamento DEFINITIVAMENTE?\n\nOs itens vão voltar pra fila como pendentes.\n\nConfirmar?');">
+        <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
+        <input type="hidden" name="op" value="apagar_pagamento">
+        <input type="hidden" name="id" value="<?= (int)$pag['id'] ?>">
+        <button class="btn btn-danger block" type="submit">🗑 Apagar este pagamento</button>
+      </form>
+    <?php endif; ?>
     <?php
     require __DIR__ . '/includes/footer.php';
     exit;
@@ -154,6 +182,7 @@ $fila = fila_pagamentos_funcionarios($db);
 require __DIR__ . '/includes/header.php';
 ?>
 <h1 class="page-title">Pagamentos a funcionários</h1>
+<?php if (isset($_GET['ok']) && $_GET['ok'] === 'del'): ?><div class="flash ok">Pagamento apagado.</div><?php endif; ?>
 <?php if ($flash): ?><div class="flash <?= e($flash[0]) ?>"><?= e($flash[1]) ?></div><?php endif; ?>
 
 <?php if (!$fila): ?>

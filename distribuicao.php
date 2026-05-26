@@ -11,6 +11,20 @@ $flash = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_check();
+    if (($_POST['op'] ?? '') === 'apagar_pagamento_socio') {
+        if (!is_sadmin()) { http_response_code(403); exit('Apenas Super Admin pode apagar pagamentos a sócios.'); }
+        $pid = (int)($_POST['id'] ?? 0);
+        $comp_back = $_POST['competencia'] ?? date('Y-m');
+        if ($pid > 0) {
+            try {
+                $db->prepare('DELETE FROM pagamentos_socio WHERE id = ?')->execute([$pid]);
+                audit_log('socio.pagamento_apagado', 'pagamentos_socio', $pid);
+                header('Location: ' . APP_BASE_URL . '/distribuicao.php?mes=' . urlencode($comp_back) . '&del=1'); exit;
+            } catch (PDOException $e) {
+                $flash = ['err', 'Erro ao apagar: ' . $e->getMessage()];
+            }
+        }
+    }
     if (($_POST['op'] ?? '') === 'pagar_socio') {
         $socio_id = ($_POST['socio_id'] ?? '') === 'empresa' ? null : (int)$_POST['socio_id'];
         $comp     = $_POST['competencia'] ?? date('Y-m');
@@ -33,6 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 if (isset($_GET['ok'])) $flash = ['ok', 'Pagamento registrado.'];
+if (isset($_GET['del'])) $flash = ['ok', 'Pagamento apagado.'];
 
 $competencia = $_GET['mes'] ?? date('Y-m');
 if (!preg_match('/^\d{4}-\d{2}$/', $competencia)) $competencia = date('Y-m');
@@ -194,6 +209,50 @@ require __DIR__ . '/includes/header.php';
 <?php bloco_socio('🏢 Empresa (reserva)', 'empresa', true, '', $quota_brl, $quota_usd, $quota_eur, $ja_pago_por, $competencia, (int)$u['id']); ?>
 
 <?php if ($flash): ?><div class="flash <?= e($flash[0]) ?> mt-3"><?= e($flash[1]) ?></div><?php endif; ?>
+
+<?php
+  // Lista pagamentos individuais do mês — pra sadmin poder apagar entradas erradas
+  $pagamentos_mes = [];
+  try {
+      $stmt = $db->prepare("SELECT ps.id, ps.socio_id, ps.moeda, ps.valor, ps.data_pagamento, ps.observacao,
+                                    u.nome AS socio_nome
+                             FROM pagamentos_socio ps
+                             LEFT JOIN usuarios u ON u.id = ps.socio_id
+                             WHERE ps.competencia_mes = ?
+                             ORDER BY ps.data_pagamento DESC, ps.id DESC");
+      $stmt->execute([$competencia]);
+      $pagamentos_mes = $stmt->fetchAll();
+  } catch (PDOException $e) {}
+?>
+
+<?php if ($pagamentos_mes): ?>
+  <h2 class="mt-5">Pagamentos lançados em <?= e($nome_mes) ?></h2>
+  <?php foreach ($pagamentos_mes as $p):
+      $nome_destino = $p['socio_id'] === null ? '🏢 Empresa (reserva)' : $p['socio_nome'];
+  ?>
+    <div class="card spaced">
+      <div class="info" style="flex:1;">
+        <div class="nome"><?= e($nome_destino) ?></div>
+        <div class="sub muted">
+          <?= e(date('d/m/Y', strtotime($p['data_pagamento']))) ?>
+          <?php if ($p['observacao']): ?> · <?= e($p['observacao']) ?><?php endif; ?>
+        </div>
+      </div>
+      <div class="right" style="display:flex; gap:8px; align-items:center;">
+        <div class="money md" style="color:var(--c-danger);">− <?= e(money_fmt((float)$p['valor'], $p['moeda'])) ?></div>
+        <?php if (is_sadmin()): ?>
+          <form method="post" style="margin:0;" onsubmit="return confirm('Apagar este pagamento de <?= e($nome_destino) ?> (<?= e(money_fmt((float)$p['valor'], $p['moeda'])) ?>)?');">
+            <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
+            <input type="hidden" name="op" value="apagar_pagamento_socio">
+            <input type="hidden" name="id" value="<?= (int)$p['id'] ?>">
+            <input type="hidden" name="competencia" value="<?= e($competencia) ?>">
+            <button class="btn btn-ghost small" type="submit" title="Apagar" style="color:var(--c-danger);">🗑</button>
+          </form>
+        <?php endif; ?>
+      </div>
+    </div>
+  <?php endforeach; ?>
+<?php endif; ?>
 
 <h2>Acumulado total (todas as cobranças pagas até hoje)</h2>
 <div class="grid-2">
