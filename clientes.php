@@ -1,7 +1,10 @@
 <?php
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/lib/audit.php';
-require_admin();
+$me = require_login();
+if ($me['role'] === 'cliente') { header('Location: ' . APP_BASE_URL . '/dashboard.php'); exit; }
+$func_view_only = $me['role'] === 'funcionario'; // funcionário vê só seus clientes, read-only
+if (!is_admin() && !$func_view_only) { http_response_code(403); exit('Acesso negado.'); }
 $db = db();
 
 $acao  = $_GET['acao'] ?? 'lista';
@@ -9,6 +12,7 @@ $id    = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 $flash = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!is_admin()) { http_response_code(403); exit('Apenas admin pode modificar.'); }
     csrf_check();
     $op = $_POST['op'] ?? '';
 
@@ -66,6 +70,10 @@ if (isset($_GET['ok'])) {
 
 $page = 'Clientes';
 $nav_active = 'clientes';
+
+if (($acao === 'novo' || $acao === 'editar') && !is_admin()) {
+    http_response_code(403); exit('Apenas admin pode criar/editar clientes.');
+}
 
 if ($acao === 'novo' || $acao === 'editar') {
     $show_back = true;
@@ -141,34 +149,59 @@ if ($acao === 'novo' || $acao === 'editar') {
 }
 
 require __DIR__ . '/includes/header.php';
-$clientes = $db->query('
-    SELECT cl.id, cl.nome_empresa, cl.nome_contato, cl.moeda, cl.ativo,
-           (SELECT COUNT(*) FROM usuarios u WHERE u.cliente_id=cl.id AND u.role="cliente") AS tem_login
-    FROM clientes cl ORDER BY cl.nome_empresa, cl.nome
-')->fetchAll();
+if ($func_view_only) {
+    // Funcionário vê só clientes que atende via assinaturas ativas
+    $stmt = $db->prepare('
+        SELECT DISTINCT cl.id, cl.nome_empresa, cl.nome_contato, cl.moeda, cl.ativo,
+               (SELECT COUNT(*) FROM assinaturas a2 WHERE a2.cliente_id=cl.id AND a2.funcionario_id=? AND a2.status="ativa") AS qtd_assin,
+               0 AS tem_login
+        FROM clientes cl
+        JOIN assinaturas a ON a.cliente_id = cl.id
+        WHERE a.funcionario_id = ? AND cl.ativo = 1
+        ORDER BY cl.nome_empresa');
+    $stmt->execute([(int)$me['id'], (int)$me['id']]);
+    $clientes = $stmt->fetchAll();
+} else {
+    $clientes = $db->query('
+        SELECT cl.id, cl.nome_empresa, cl.nome_contato, cl.moeda, cl.ativo,
+               (SELECT COUNT(*) FROM usuarios u WHERE u.cliente_id=cl.id AND u.role="cliente") AS tem_login
+        FROM clientes cl ORDER BY cl.nome_empresa, cl.nome
+    ')->fetchAll();
+}
 ?>
-<h1 class="page-title">Clientes</h1>
+<h1 class="page-title"><?= $func_view_only ? 'Meus clientes' : 'Clientes' ?></h1>
 <?php if ($flash): ?><div class="flash <?= e($flash[0]) ?>"><?= e($flash[1]) ?></div><?php endif; ?>
+<?php if (is_admin()): ?>
 <div class="btn-pair">
   <a href="?acao=novo" class="btn btn-brand">+ Novo</a>
   <a href="<?= e(APP_BASE_URL) ?>/convites.php" class="btn btn-secondary">✉️ Convidar</a>
 </div>
-<div class="section-label mt-5">Cadastrados (<?= count($clientes) ?>)</div>
+<?php endif; ?>
+<div class="section-label mt-5"><?= $func_view_only ? 'Que você atende' : 'Cadastrados' ?> (<?= count($clientes) ?>)</div>
 <?php foreach ($clientes as $cl): ?>
-  <a class="list-card" href="?acao=editar&id=<?= (int)$cl['id'] ?>">
-    <div class="info">
-      <div class="nome">
-        <?= e($cl['nome_empresa'] ?: '(sem nome)') ?>
-        <?php if (!$cl['ativo']): ?><span class="status status-info">inativo</span><?php endif; ?>
+  <?php if ($func_view_only): ?>
+    <a class="list-card" href="<?= e(APP_BASE_URL) ?>/agenda.php?cliente_id=<?= (int)$cl['id'] ?>">
+      <div class="info">
+        <div class="nome"><?= e($cl['nome_empresa'] ?: '(sem nome)') ?></div>
+        <div class="sub"><?= e($cl['nome_contato'] ?? '—') ?> · <?= e($cl['moeda']) ?> · <?= (int)$cl['qtd_assin'] ?> serviço<?= $cl['qtd_assin']==1?'':'s' ?></div>
       </div>
-      <div class="sub">
-        <?= e($cl['nome_contato'] ?? '—') ?> · <?= e($cl['moeda']) ?>
-        <?php if ($cl['tem_login']): ?> · <span class="status status-paga">login</span><?php endif; ?>
+    </a>
+  <?php else: ?>
+    <a class="list-card" href="?acao=editar&id=<?= (int)$cl['id'] ?>">
+      <div class="info">
+        <div class="nome">
+          <?= e($cl['nome_empresa'] ?: '(sem nome)') ?>
+          <?php if (!$cl['ativo']): ?><span class="status status-info">inativo</span><?php endif; ?>
+        </div>
+        <div class="sub">
+          <?= e($cl['nome_contato'] ?? '—') ?> · <?= e($cl['moeda']) ?>
+          <?php if ($cl['tem_login']): ?> · <span class="status status-paga">login</span><?php endif; ?>
+        </div>
       </div>
-    </div>
-  </a>
+    </a>
+  <?php endif; ?>
 <?php endforeach; ?>
 <?php if (!$clientes): ?>
-  <p class="muted center mt-5">Nenhum cliente. Use "+ Novo" ou "Convidar".</p>
+  <p class="muted center mt-5"><?= $func_view_only ? 'Você ainda não tem clientes atribuídos.' : 'Nenhum cliente. Use "+ Novo" ou "Convidar".' ?></p>
 <?php endif; ?>
 <?php require __DIR__ . '/includes/footer.php'; ?>
