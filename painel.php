@@ -94,6 +94,32 @@ require __DIR__ . '/includes/header.php';
     $mes_prox = (clone $dt)->modify('+1 month')->format('Y-m');
     $nome_mes_pt = ['','janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'][(int)$dt->format('n')] . ' de ' . $dt->format('Y');
 
+    // Histórico dos últimos 6 meses para o gráfico
+    $cur_dt = DateTimeImmutable::createFromFormat('Y-m', $competencia);
+    $historico = []; // [{mes:'2026-05', label:'mai/26', BRL:{r,d,l}, USD:{r,d,l}, EUR:{r,d,l}}]
+    for ($i = 5; $i >= 0; $i--) {
+        $mes = (clone $cur_dt)->modify("-{$i} months")->format('Y-m');
+        $ini_m = $mes . '-01';
+        $fim_m = date('Y-m-t', strtotime($ini_m));
+        $mn_pt = ['','jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'][(int)substr($mes,5,2)] . '/' . substr($mes,2,2);
+        $h = ['mes'=>$mes,'label'=>$mn_pt];
+        foreach (['BRL','USD','EUR'] as $cur) {
+            $stmt = $db->prepare("SELECT COALESCE(SUM(p.valor_pago),0) FROM pagamentos_cliente p JOIN cobrancas c ON c.id = p.cobranca_id WHERE p.data_pagamento BETWEEN ? AND ? AND c.moeda = ? AND COALESCE(p.pendente,0)=0");
+            $stmt->execute([$ini_m, $fim_m, $cur]);
+            $r = (float)$stmt->fetchColumn();
+            $d_mes = despesas_do_mes($db, $mes);
+            $d = $d_mes['totais'][$cur] ?? 0;
+            $pf = 0;
+            if ($cur === 'USD') {
+                $stmt = $db->prepare("SELECT COALESCE(SUM(valor_usd),0) FROM pagamentos_funcionario WHERE data_pagamento BETWEEN ? AND ?");
+                $stmt->execute([$ini_m, $fim_m]);
+                $pf = (float)$stmt->fetchColumn();
+            }
+            $h[$cur] = ['r'=>$r, 'd'=>$d + $pf, 'l'=>$r - $d - $pf];
+        }
+        $historico[] = $h;
+    }
+
     // Resumo por moeda (mês competencia)
     $stmt = $db->prepare("SELECT moeda, status, SUM(valor_total) AS total
                           FROM cobrancas WHERE competencia_mes = ? GROUP BY moeda, status");
@@ -124,6 +150,69 @@ require __DIR__ . '/includes/header.php';
   <strong><?= e($nome_mes_pt) ?></strong>
   <a class="btn btn-ghost small" href="?aba=agenda&mes=<?= e($mes_prox) ?>"><?= e($mes_prox) ?> →</a>
 </div>
+
+<div class="card">
+  <div class="spaced mb-3">
+    <strong>📈 Saúde financeira (últimos 6 meses)</strong>
+    <div id="chart-moeda-tabs" class="btn-pair" style="gap:4px;">
+      <button type="button" class="btn small btn-secondary" data-moeda="BRL" onclick="trocarMoedaGrafico('BRL')">R$</button>
+      <button type="button" class="btn small btn-ghost" data-moeda="USD" onclick="trocarMoedaGrafico('USD')">$</button>
+      <button type="button" class="btn small btn-ghost" data-moeda="EUR" onclick="trocarMoedaGrafico('EUR')">€</button>
+    </div>
+  </div>
+  <div style="position:relative; height:240px;">
+    <canvas id="chart_saude"></canvas>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+const HISTORICO = <?= json_encode($historico, JSON_UNESCAPED_UNICODE) ?>;
+let chart_saude = null;
+let moeda_atual = 'BRL';
+
+function trocarMoedaGrafico(m) {
+  moeda_atual = m;
+  document.querySelectorAll('#chart-moeda-tabs button').forEach(b => {
+    b.classList.toggle('btn-secondary', b.dataset.moeda === m);
+    b.classList.toggle('btn-ghost', b.dataset.moeda !== m);
+  });
+  renderChartSaude();
+}
+
+function renderChartSaude() {
+  const labels = HISTORICO.map(h => h.label);
+  const receitas = HISTORICO.map(h => h[moeda_atual]?.r ?? 0);
+  const despesas = HISTORICO.map(h => h[moeda_atual]?.d ?? 0);
+  const lucros   = HISTORICO.map(h => h[moeda_atual]?.l ?? 0);
+
+  const ctx = document.getElementById('chart_saude').getContext('2d');
+  if (chart_saude) chart_saude.destroy();
+  chart_saude = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [
+        { label: 'Receita',  data: receitas, backgroundColor: '#10B981', borderRadius: 4 },
+        { label: 'Despesa',  data: despesas, backgroundColor: '#DC2626', borderRadius: 4 },
+        { label: 'Lucro',    data: lucros,   backgroundColor: '#2563EB', borderRadius: 4, type: 'line', borderColor: '#3B82F6', borderWidth: 2, tension: 0.3, fill: false, pointBackgroundColor: '#3B82F6', pointRadius: 4 }
+      ]
+    },
+    options: {
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { labels: { color: '#A0A0AB', boxWidth: 12 } },
+        tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(2) } }
+      },
+      scales: {
+        x: { ticks: { color: '#A0A0AB' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+        y: { ticks: { color: '#A0A0AB' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+      }
+    }
+  });
+}
+renderChartSaude();
+</script>
 
 <?php foreach (['BRL','USD','EUR'] as $m):
     $r = $rec[$m]; $a = $analise[$m]; $ar = $a_receber[$m];
