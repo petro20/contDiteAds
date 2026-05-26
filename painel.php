@@ -65,11 +65,35 @@ require __DIR__ . '/includes/header.php';
         $pag_func_usd = (float)$stmt->fetchColumn();
     } catch (PDOException $e) {}
 
-    // LUCRO LÍQUIDO (recebido - despesas; USD também desconta pag. funcionário)
+    // PAGAMENTOS a sócios + empresa (distribuição de lucro) no mês de competência
+    // $pag_socios[$moeda]                 = total geral (para o cálculo do saldo)
+    // $pag_socios_det[$moeda][] = ['nome'=>..., 'valor'=>...]   (por sócio/empresa, para listar)
+    $pag_socios     = ['BRL'=>0.0,'USD'=>0.0,'EUR'=>0.0];
+    $pag_socios_det = ['BRL'=>[],  'USD'=>[],  'EUR'=>[]];
+    try {
+        $stmt = $db->prepare("SELECT ps.socio_id, ps.moeda, COALESCE(u.nome,'🏢 Empresa (reserva)') AS nome,
+                                     COALESCE(SUM(ps.valor),0) AS total
+                              FROM pagamentos_socio ps
+                              LEFT JOIN usuarios u ON u.id = ps.socio_id
+                              WHERE ps.competencia_mes = ?
+                              GROUP BY ps.socio_id, ps.moeda, nome
+                              ORDER BY (ps.socio_id IS NULL), nome");
+        $stmt->execute([$competencia]);
+        foreach ($stmt->fetchAll() as $r) {
+            $m = $r['moeda']; $v = (float)$r['total'];
+            $pag_socios[$m]     += $v;
+            $pag_socios_det[$m][] = ['nome' => $r['nome'], 'valor' => $v];
+        }
+    } catch (PDOException $e) {}
+
+    // LUCRO LÍQUIDO operacional (recebido - despesas; USD também desconta pag. funcionário).
+    // Distribuição aos sócios não entra aqui — é mostrada como saída em separado, após o lucro.
     $lucro = [];
+    $saldo_pos_dist = [];
     foreach (['BRL','USD','EUR'] as $m) {
         $lucro[$m] = $rec[$m] - ($desp_mes['totais'][$m] ?? 0);
         if ($m === 'USD') $lucro[$m] -= $pag_func_usd;
+        $saldo_pos_dist[$m] = $lucro[$m] - $pag_socios[$m];
     }
 
     // Quotas pra distribuição
@@ -226,8 +250,10 @@ renderChartSaude();
     $r = $rec[$m]; $a = $analise[$m]; $ar = $a_receber[$m];
     $d = $desp_mes['totais'][$m] ?? 0;
     $extra_func = ($m === 'USD') ? $pag_func_usd : 0;
+    $dist = $pag_socios[$m];
     $luc = $lucro[$m];
-    if ($r == 0 && $a == 0 && $ar == 0 && $d == 0 && $extra_func == 0) continue;
+    $saldo = $saldo_pos_dist[$m];
+    if ($r == 0 && $a == 0 && $ar == 0 && $d == 0 && $extra_func == 0 && $dist == 0) continue;
 ?>
   <div class="card">
     <div class="title" style="font-size:18px;"><?= $m ?></div>
@@ -243,7 +269,7 @@ renderChartSaude();
       <div class="info-pair"><span class="l">⏳ A receber</span><span class="v"><?= e(money_fmt($ar, $m)) ?></span></div>
     <?php endif; ?>
 
-    <?php if ($d > 0 || $extra_func > 0): ?>
+    <?php if ($d > 0 || $extra_func > 0 || $dist > 0): ?>
       <div class="section-label" style="margin-top:var(--s-3);">Saídas</div>
       <?php if ($d > 0): ?>
         <div class="info-pair"><span class="l">💸 Despesas</span><span class="v" style="color:var(--c-danger);">− <?= e(money_fmt($d, $m)) ?></span></div>
@@ -251,20 +277,36 @@ renderChartSaude();
       <?php if ($extra_func > 0): ?>
         <div class="info-pair"><span class="l">💵 Pagos a funcionários</span><span class="v" style="color:var(--c-danger);">− <?= e(money_fmt($extra_func, $m)) ?></span></div>
       <?php endif; ?>
+      <?php if ($dist > 0): ?>
+        <div class="info-pair" style="margin-top:var(--s-2);"><span class="l"><strong>💼 Pagamento de sócios</strong></span><span class="v" style="color:var(--c-danger);">− <?= e(money_fmt($dist, $m)) ?></span></div>
+        <?php foreach ($pag_socios_det[$m] as $ps): ?>
+          <div class="info-pair muted" style="font-size:13px; padding-left:var(--s-3);">
+            <span class="l">• <?= e($ps['nome']) ?></span>
+            <span class="v" style="color:var(--c-danger);">− <?= e(money_fmt($ps['valor'], $m)) ?></span>
+          </div>
+        <?php endforeach; ?>
+      <?php endif; ?>
     <?php endif; ?>
 
     <div class="info-pair" style="border-top:2px solid var(--border); padding-top:var(--s-3); margin-top:var(--s-3);">
-      <strong style="font-size:15px;">💎 Lucro líquido</strong>
+      <strong style="font-size:15px;">💎 Lucro líquido <span class="muted" style="font-weight:normal; font-size:12px;">(antes de distribuir)</span></strong>
       <strong style="font-size:18px; color:<?= $luc >= 0 ? 'var(--c-success)' : 'var(--c-danger)' ?>;"><?= e(money_fmt($luc, $m)) ?></strong>
     </div>
     <?php if ($qts > 0 && $luc != 0): ?>
       <div class="info-pair muted" style="font-size:13px;"><span>Por quota (÷ <?= $qts ?>)</span><span><?= e(money_fmt($luc / $qts, $m)) ?></span></div>
     <?php endif; ?>
+
+    <?php if ($dist > 0): ?>
+      <div class="info-pair" style="border-top:1px solid var(--border); padding-top:var(--s-3); margin-top:var(--s-2);">
+        <strong style="font-size:15px;">💰 Saldo após distribuição</strong>
+        <strong style="font-size:18px; color:<?= $saldo >= 0 ? 'var(--c-success)' : 'var(--c-danger)' ?>;"><?= e(money_fmt($saldo, $m)) ?></strong>
+      </div>
+    <?php endif; ?>
   </div>
 <?php endforeach; ?>
 
 <?php
-  $vazio_total = (array_sum($rec) + array_sum($analise) + array_sum($a_receber) + array_sum($desp_mes['totais']) + $pag_func_usd) == 0;
+  $vazio_total = (array_sum($rec) + array_sum($analise) + array_sum($a_receber) + array_sum($desp_mes['totais']) + $pag_func_usd + array_sum($pag_socios)) == 0;
   if ($vazio_total):
 ?>
   <p class="muted center mt-5">Sem movimentação financeira em <?= e($nome_mes_pt) ?>.</p>
