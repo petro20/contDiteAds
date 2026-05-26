@@ -63,6 +63,70 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $flash = ['err', $map[$r['status']] ?? 'Falhou.'];
     }
 
+    if ($op === 'nova_avulsa' && is_admin()) {
+        $cliente_id = (int)($_POST['cliente_id'] ?? 0);
+        $vencimento = $_POST['vencimento'] ?? date('Y-m-d', strtotime('+5 days'));
+        $competencia = $_POST['competencia'] ?? date('Y-m');
+        $descricoes = $_POST['descricao'] ?? [];
+        $quantidades = $_POST['quantidade'] ?? [];
+        $valores = $_POST['valor'] ?? [];
+
+        if (!$cliente_id || !is_array($descricoes) || count($descricoes) === 0) {
+            $flash = ['err', 'Cliente e ao menos 1 item são obrigatórios.'];
+        } else {
+            $stmt = $db->prepare('SELECT moeda FROM clientes WHERE id = ?');
+            $stmt->execute([$cliente_id]);
+            $moeda = (string)$stmt->fetchColumn() ?: 'BRL';
+
+            $linhas = [];
+            $total = 0.0;
+            foreach ($descricoes as $i => $desc) {
+                $desc = trim((string)$desc);
+                $qtd = max(1, (int)($quantidades[$i] ?? 1));
+                $val = (float)str_replace(',', '.', (string)($valores[$i] ?? '0'));
+                if ($desc === '' || $val <= 0) continue;
+                $linhas[] = ['descricao'=>$desc, 'quantidade'=>$qtd, 'valor_unitario'=>$val, 'subtotal'=>$qtd * $val];
+                $total += $qtd * $val;
+            }
+            if (!$linhas) {
+                $flash = ['err', 'Adicione ao menos 1 item válido.'];
+            } else {
+                $db->beginTransaction();
+                try {
+                    $stmt = $db->prepare('INSERT INTO cobrancas (cliente_id, competencia_mes, valor_total, moeda, vencimento, status) VALUES (?,?,?,?,?,"aberta")');
+                    $stmt->execute([$cliente_id, $competencia, $total, $moeda, $vencimento]);
+                    $newId = (int)$db->lastInsertId();
+                    $ins = $db->prepare('INSERT INTO cobranca_itens (cobranca_id, assinatura_id, descricao, quantidade, valor_unitario, subtotal) VALUES (?, NULL, ?, ?, ?, ?)');
+                    foreach ($linhas as $l) {
+                        $ins->execute([$newId, $l['descricao'], $l['quantidade'], $l['valor_unitario'], $l['subtotal']]);
+                    }
+                    $db->commit();
+                    audit_log('cobranca.avulsa_criada', 'cobrancas', $newId);
+                    header('Location: ' . APP_BASE_URL . '/cobrancas.php?id=' . $newId . '&ok=add'); exit;
+                } catch (Throwable $e) {
+                    $db->rollBack();
+                    $flash = ['err', 'Erro: ' . $e->getMessage()];
+                }
+            }
+        }
+    }
+
+    if ($op === 'adicionar_item' && is_admin()) {
+        $cid = (int)($_POST['id'] ?? 0);
+        $desc = trim((string)($_POST['descricao'] ?? ''));
+        $qtd  = max(1, (int)($_POST['quantidade'] ?? 1));
+        $val  = (float)str_replace(',', '.', (string)($_POST['valor'] ?? '0'));
+        if ($desc && $val > 0) {
+            $sub = $qtd * $val;
+            $stmt = $db->prepare('INSERT INTO cobranca_itens (cobranca_id, assinatura_id, descricao, quantidade, valor_unitario, subtotal) VALUES (?, NULL, ?, ?, ?, ?)');
+            $stmt->execute([$cid, $desc, $qtd, $val, $sub]);
+            $stmt = $db->prepare('UPDATE cobrancas SET valor_total = valor_total + ? WHERE id = ?');
+            $stmt->execute([$sub, $cid]);
+            audit_log('cobranca.item_adicionado', 'cobranca_itens', (int)$db->lastInsertId());
+        }
+        header('Location: ' . APP_BASE_URL . '/cobrancas.php?id=' . $cid); exit;
+    }
+
     if ($op === 'cancelar' && is_admin()) {
         $cid = (int)($_POST['id'] ?? 0);
         $stmt = $db->prepare("UPDATE cobrancas SET status='cancelada' WHERE id=?");
@@ -312,6 +376,22 @@ if ($id) {
     </div>
 
     <div class="section-label">Itens cobrados</div>
+    <?php if (is_admin()): ?>
+      <details class="card">
+        <summary class="muted" style="cursor:pointer; padding:6px;">+ Adicionar item avulso</summary>
+        <form method="post" class="mt-3">
+          <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
+          <input type="hidden" name="op" value="adicionar_item">
+          <input type="hidden" name="id" value="<?= (int)$cob['id'] ?>">
+          <div class="field"><label>Descrição</label><input name="descricao" required placeholder="Ex: Hora extra de design"></div>
+          <div class="grid-2">
+            <div class="field"><label>Quantidade</label><input type="number" min="1" name="quantidade" value="1" required></div>
+            <div class="field"><label>Valor unitário (<?= e($cob['moeda']) ?>)</label><input type="number" step="0.01" min="0.01" name="valor" required></div>
+          </div>
+          <button class="btn block" type="submit">Adicionar à cobrança</button>
+        </form>
+      </details>
+    <?php endif; ?>
     <?php foreach ($itens as $it): ?>
       <div class="card" style="position:relative;">
         <?php if (is_admin()): ?>
@@ -527,7 +607,50 @@ $cls = is_admin() ? $db->query('SELECT id, nome_empresa FROM clientes WHERE ativ
 
 <?php if (is_admin()): ?>
   <details class="card">
-    <summary><strong>🔧 Gerar cobrança manualmente</strong> (teste)</summary>
+    <summary><strong>➕ Nova cobrança avulsa</strong> (itens livres)</summary>
+    <form method="post" class="mt-3" id="form_avulsa">
+      <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
+      <input type="hidden" name="op" value="nova_avulsa">
+      <div class="grid-2">
+        <div class="field"><label>Cliente</label>
+          <select name="cliente_id" required>
+            <option value="">— selecione —</option>
+            <?php foreach ($cls as $c): ?>
+              <option value="<?= (int)$c['id'] ?>"><?= e($c['nome_empresa']) ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+        <div class="field"><label>Vencimento</label><input type="date" name="vencimento" value="<?= e(date('Y-m-d', strtotime('+5 days'))) ?>" required></div>
+      </div>
+      <div class="field"><label>Competência (YYYY-MM)</label><input name="competencia" value="<?= e(date('Y-m')) ?>" pattern="\d{4}-\d{2}" required></div>
+
+      <div class="section-label">Itens</div>
+      <div id="lista_itens"></div>
+      <button type="button" class="btn btn-ghost block" onclick="adicionarLinhaItem()">+ Adicionar item</button>
+
+      <button class="btn block mt-3" type="submit">Criar cobrança</button>
+    </form>
+    <script>
+    function adicionarLinhaItem() {
+      const lista = document.getElementById('lista_itens');
+      const linha = document.createElement('div');
+      linha.className = 'card';
+      linha.style.position = 'relative';
+      linha.innerHTML = `
+        <button type="button" onclick="this.parentElement.remove()" style="position:absolute;top:8px;right:8px;background:transparent;border:0;color:var(--c-danger);cursor:pointer;font-size:16px;">✕</button>
+        <div class="field"><label>Descrição</label><input name="descricao[]" required placeholder="Ex: Criação extra de criativo"></div>
+        <div class="grid-2">
+          <div class="field"><label>Quantidade</label><input type="number" min="1" name="quantidade[]" value="1" required></div>
+          <div class="field"><label>Valor unitário</label><input type="number" step="0.01" min="0.01" name="valor[]" required></div>
+        </div>`;
+      lista.appendChild(linha);
+    }
+    adicionarLinhaItem();
+    </script>
+  </details>
+
+  <details class="card mt-3">
+    <summary><strong>🔧 Gerar cobrança mensal automática</strong> (testar cron)</summary>
     <form method="post" class="mt-3">
       <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
       <input type="hidden" name="op" value="gerar_manual">
