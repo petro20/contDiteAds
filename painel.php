@@ -142,10 +142,11 @@ require __DIR__ . '/includes/header.php';
         $d = $db->query("SELECT MIN(data_pagamento) FROM pagamentos_funcionario")->fetchColumn();
         if ($d) $datas_min[] = $d;
     } catch (PDOException $e) {}
-    $mes_inicial = $datas_min ? substr(min($datas_min), 0, 7) : (clone $cur_dt)->modify('-5 months')->format('Y-m');
-    // Garante no mínimo 6 meses de histórico (mesmo sem dados antigos)
-    $seis_atras = (clone $cur_dt)->modify('-5 months')->format('Y-m');
-    if ($mes_inicial > $seis_atras) $mes_inicial = $seis_atras;
+    $mes_inicial = $datas_min ? substr(min($datas_min), 0, 7) : (clone $cur_dt)->modify('-11 months')->format('Y-m');
+    // Garante no mínimo 12 meses de histórico (mesmo sem dados antigos) — pra que
+    // o botão "1a" sempre mostre 12 pontos no gráfico (alguns com zero).
+    $doze_atras = (clone $cur_dt)->modify('-11 months')->format('Y-m');
+    if ($mes_inicial > $doze_atras) $mes_inicial = $doze_atras;
     // Calcula quantos meses do mes_inicial até cur_dt
     $ini_dt = DateTimeImmutable::createFromFormat('Y-m', $mes_inicial);
     $total_meses = ((int)$cur_dt->format('Y') - (int)$ini_dt->format('Y')) * 12
