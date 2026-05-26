@@ -23,7 +23,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $variante  = ($_POST['variante'] ?? 'normal') === 'ia' ? 'ia' : 'normal';
         $valor     = (float)str_replace(',', '.', (string)($_POST['valor_cobrado'] ?? '0'));
         $iniciada  = $_POST['iniciada_em'] ?? date('Y-m-d');
-        $status    = in_array($_POST['status'] ?? 'ativa', ['ativa','pausada','cancelada'], true) ? $_POST['status'] : 'ativa';
+        $status    = $_POST['status'] ?? 'ativa';
+        if (!in_array($status, ['ativa','pausada','cancelada'], true)) $status = 'ativa';
 
         if (!$cliente || !$item || $valor <= 0) {
             $flash = ['err', 'Cliente, item e valor (>0) são obrigatórios.'];
