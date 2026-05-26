@@ -3,9 +3,36 @@ require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/lib/money.php';
 require_once __DIR__ . '/lib/distribuicao.php';
 require_once __DIR__ . '/lib/despesas.php';
+require_once __DIR__ . '/lib/audit.php';
 $u = require_login();
 if (!is_admin()) { http_response_code(403); exit('Apenas sócios.'); }
 $db = db();
+$flash = null;
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    csrf_check();
+    if (($_POST['op'] ?? '') === 'pagar_socio') {
+        $socio_id = ($_POST['socio_id'] ?? '') === 'empresa' ? null : (int)$_POST['socio_id'];
+        $comp     = $_POST['competencia'] ?? date('Y-m');
+        $moeda    = in_array($_POST['moeda'] ?? '', ['USD','BRL','EUR'], true) ? $_POST['moeda'] : 'BRL';
+        $valor    = (float)str_replace(',', '.', (string)($_POST['valor'] ?? '0'));
+        $data     = $_POST['data_pagamento'] ?? date('Y-m-d');
+        $obs      = trim((string)($_POST['observacao'] ?? '')) ?: null;
+        if ($valor > 0) {
+            try {
+                $stmt = $db->prepare('INSERT INTO pagamentos_socio (socio_id, competencia_mes, moeda, valor, data_pagamento, observacao, criado_por) VALUES (?,?,?,?,?,?,?)');
+                $stmt->execute([$socio_id, $comp, $moeda, $valor, $data, $obs, (int)$u['id']]);
+                audit_log('socio.pago', 'pagamentos_socio', (int)$db->lastInsertId());
+                header('Location: ' . APP_BASE_URL . '/distribuicao.php?mes=' . urlencode($comp) . '&ok=1'); exit;
+            } catch (PDOException $e) {
+                $flash = ['err', 'Erro: ' . $e->getMessage()];
+            }
+        } else {
+            $flash = ['err', 'Valor deve ser maior que zero.'];
+        }
+    }
+}
+if (isset($_GET['ok'])) $flash = ['ok', 'Pagamento registrado.'];
 
 $competencia = $_GET['mes'] ?? date('Y-m');
 if (!preg_match('/^\d{4}-\d{2}$/', $competencia)) $competencia = date('Y-m');
@@ -83,40 +110,90 @@ require __DIR__ . '/includes/header.php';
   </div>
 <?php endforeach; ?>
 
-<h2>Sócios ativos</h2>
-<?php foreach ($socios as $s): ?>
-  <div class="card">
-    <div class="spaced">
-      <div>
-        <div class="title">
-          <?= e($s['nome']) ?>
-          <span class="status status-<?= $s['role']==='sadmin'?'destaque':'ia' ?>"><?= $s['role'] === 'sadmin' ? 'super admin' : 'admin' ?></span>
-          <?php if ((int)$s['id'] === (int)$u['id']): ?><span class="status status-paga">você</span><?php endif; ?>
+<?php
+  // Quanto já foi pago a cada sócio (e à empresa) NESTE mês
+  $ja_pago_por = []; // ['socio_X' => ['BRL'=>0,'USD'=>0,'EUR'=>0], 'empresa' => [...]]
+  try {
+      $stmt = $db->prepare('SELECT socio_id, moeda, COALESCE(SUM(valor),0) AS total FROM pagamentos_socio WHERE competencia_mes = ? GROUP BY socio_id, moeda');
+      $stmt->execute([$competencia]);
+      foreach ($stmt->fetchAll() as $r) {
+          $k = $r['socio_id'] === null ? 'empresa' : 'socio_' . (int)$r['socio_id'];
+          if (!isset($ja_pago_por[$k])) $ja_pago_por[$k] = ['BRL'=>0,'USD'=>0,'EUR'=>0];
+          $ja_pago_por[$k][$r['moeda']] = (float)$r['total'];
+      }
+  } catch (PDOException $e) { /* tabela ainda não criada */ }
+
+  function bloco_socio($nome, $key, $is_empresa, $tag_html, $quota_brl, $quota_usd, $quota_eur, $ja_pago_por, $competencia, $u_id) {
+      $jp = $ja_pago_por[$key] ?? ['BRL'=>0,'USD'=>0,'EUR'=>0];
+      $pendente = [
+          'BRL' => max(0, $quota_brl - $jp['BRL']),
+          'USD' => max(0, $quota_usd - $jp['USD']),
+          'EUR' => max(0, $quota_eur - $jp['EUR']),
+      ];
+      $tem_pendente = $pendente['BRL'] + $pendente['USD'] + $pendente['EUR'] > 0.001;
+      ?>
+      <div class="card<?= $is_empresa ? '' : '' ?>" <?= $is_empresa ? 'style="border-color:var(--c-orange);"' : '' ?>>
+        <div class="title"><?= e($nome) ?> <?= $tag_html ?></div>
+        <div class="sub muted">1 quota</div>
+        <div class="grid-2 mt-3">
+          <div>
+            <div class="muted" style="font-size:11px;">Quota total</div>
+            <div class="money md"><?= e(money_fmt($quota_brl, 'BRL')) ?></div>
+            <div class="money md"><?= e(money_fmt($quota_usd, 'USD')) ?></div>
+            <div class="money md"><?= e(money_fmt($quota_eur, 'EUR')) ?></div>
+          </div>
+          <div>
+            <div class="muted" style="font-size:11px;">Já pago</div>
+            <div class="money md" style="color:var(--c-success);"><?= e(money_fmt($jp['BRL'], 'BRL')) ?></div>
+            <div class="money md" style="color:var(--c-success);"><?= e(money_fmt($jp['USD'], 'USD')) ?></div>
+            <div class="money md" style="color:var(--c-success);"><?= e(money_fmt($jp['EUR'], 'EUR')) ?></div>
+          </div>
         </div>
-        <div class="sub muted">1 quota (1/<?= $total_quotas ?>)</div>
+        <?php if ($tem_pendente): ?>
+          <div class="mt-3">
+            <details>
+              <summary class="btn btn-secondary block" style="cursor:pointer;"><?= $is_empresa ? '🏦 Registrar retenção da empresa' : '💵 Registrar pagamento' ?></summary>
+              <?php foreach (['BRL','USD','EUR'] as $m): if ($pendente[$m] <= 0) continue; ?>
+                <form method="post" class="mt-3" onsubmit="return confirm('Confirmar pagamento de <?= e(money_fmt($pendente[$m], $m)) ?>?');">
+                  <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
+                  <input type="hidden" name="op" value="pagar_socio">
+                  <input type="hidden" name="socio_id" value="<?= e((string)($is_empresa ? 'empresa' : $key)) ?>">
+                  <input type="hidden" name="competencia" value="<?= e($competencia) ?>">
+                  <input type="hidden" name="moeda" value="<?= e($m) ?>">
+                  <div class="grid-2">
+                    <div class="field"><label>Valor (<?= e($m) ?>)</label><input type="number" step="0.01" min="0.01" name="valor" required value="<?= e(number_format($pendente[$m], 2, '.', '')) ?>"></div>
+                    <div class="field"><label>Data</label><input type="date" name="data_pagamento" required value="<?= e(date('Y-m-d')) ?>"></div>
+                  </div>
+                  <div class="field"><label>Observação</label><input name="observacao" placeholder="opcional"></div>
+                  <button class="btn block" type="submit"><?= e(money_fmt($pendente[$m], $m)) ?> · marcar como pago</button>
+                </form>
+              <?php endforeach; ?>
+            </details>
+          </div>
+        <?php else: ?>
+          <div class="mt-3"><span class="status status-paga">✅ pago neste mês</span></div>
+        <?php endif; ?>
       </div>
-      <div class="right">
-        <div class="money md"><?= e(money_fmt($liq_mes['BRL']/$total_quotas, 'BRL')) ?></div>
-        <div class="money md"><?= e(money_fmt($liq_mes['USD']/$total_quotas, 'USD')) ?></div>
-        <div class="money md"><?= e(money_fmt($liq_mes['EUR']/$total_quotas, 'EUR')) ?></div>
-      </div>
-    </div>
-  </div>
+      <?php
+  }
+
+  $quota_brl = $liq_mes['BRL'] / $total_quotas;
+  $quota_usd = $liq_mes['USD'] / $total_quotas;
+  $quota_eur = $liq_mes['EUR'] / $total_quotas;
+?>
+
+<h2>Sócios ativos</h2>
+<?php foreach ($socios as $s):
+    $key = 'socio_' . (int)$s['id'];
+    $tag = '<span class="status status-' . ($s['role']==='sadmin'?'destaque':'ia') . '">' . ($s['role']==='sadmin'?'super admin':'admin') . '</span>';
+    if ((int)$s['id'] === (int)$u['id']) $tag .= ' <span class="status status-paga">você</span>';
+    bloco_socio($s['nome'], $key, false, $tag, $quota_brl, $quota_usd, $quota_eur, $ja_pago_por, $competencia, (int)$u['id']);
+?>
 <?php endforeach; ?>
 
-<div class="card" style="border-color:var(--c-orange);">
-  <div class="spaced">
-    <div>
-      <div class="title">🏢 Empresa (reserva)</div>
-      <div class="sub muted">1 quota (1/<?= $total_quotas ?>)</div>
-    </div>
-    <div class="right">
-      <div class="money md"><?= e(money_fmt($liq_mes['BRL']/$total_quotas, 'BRL')) ?></div>
-      <div class="money md"><?= e(money_fmt($liq_mes['USD']/$total_quotas, 'USD')) ?></div>
-      <div class="money md"><?= e(money_fmt($liq_mes['EUR']/$total_quotas, 'EUR')) ?></div>
-    </div>
-  </div>
-</div>
+<?php bloco_socio('🏢 Empresa (reserva)', 'empresa', true, '', $quota_brl, $quota_usd, $quota_eur, $ja_pago_por, $competencia, (int)$u['id']); ?>
+
+<?php if ($flash): ?><div class="flash <?= e($flash[0]) ?> mt-3"><?= e($flash[1]) ?></div><?php endif; ?>
 
 <h2>Acumulado total (todas as cobranças pagas até hoje)</h2>
 <div class="grid-2">
