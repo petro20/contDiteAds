@@ -339,6 +339,7 @@ renderChartSaude();
                (SELECT COUNT(*) FROM assinaturas WHERE item_id = i.id AND status = 'ativa') AS qtd_assin
         FROM itens_catalogo i
         WHERE i.ativo = 1
+          AND EXISTS (SELECT 1 FROM assinaturas WHERE item_id = i.id AND status = 'ativa')
         ORDER BY qtd_clientes DESC, i.nome
     ");
     $stmt->execute();
