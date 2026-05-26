@@ -18,13 +18,14 @@ if ($u && empty($hide_nav)):
         $items[] = ['key'=>'perfil', 'href'=>"$base/perfil.php", 'label'=>'Perfil', 'icon'=>'👤'];
     } elseif ($u['role'] === 'funcionario') {
         $items = [
+            ['key'=>'inicio',     'href'=>"$base/dashboard.php",         'label'=>'Início',   'icon'=>'🏠'],
             ['key'=>'agenda',     'href'=>"$base/agenda.php",            'label'=>'Agenda',   'icon'=>'📅'],
-            ['key'=>'clientes',   'href'=>"$base/clientes.php",          'label'=>'Clientes', 'icon'=>'👥'],
             ['key'=>'pagamentos', 'href'=>"$base/meus_pagamentos.php",   'label'=>'Pagamentos','icon'=>'💵'],
             ['key'=>'perfil',     'href'=>"$base/perfil.php",            'label'=>'Perfil',   'icon'=>'👤'],
         ];
     } else { // cliente
         $items = [
+            ['key'=>'inicio',    'href'=>"$base/dashboard.php", 'label'=>'Início',   'icon'=>'🏠'],
             ['key'=>'cobrancas', 'href'=>"$base/cobrancas.php", 'label'=>'Cobranças','icon'=>'💳'],
             ['key'=>'entregas',  'href'=>"$base/entregas.php",  'label'=>'Entregas', 'icon'=>'✅'],
             ['key'=>'perfil',    'href'=>"$base/perfil.php",    'label'=>'Perfil',   'icon'=>'👤'],
