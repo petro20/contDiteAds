@@ -56,11 +56,14 @@ require __DIR__ . '/includes/header.php';
     // DESPESAS do mês
     $desp_mes = despesas_do_mes($db, $competencia);
 
-    // PAGAMENTOS a funcionários no mês
-    $stmt = $db->prepare("SELECT COALESCE(SUM(valor_usd),0) FROM pagamentos_funcionario
-                          WHERE data_pagamento BETWEEN ? AND ?");
-    $stmt->execute([$ini, $fim]);
-    $pag_func_usd = (float)$stmt->fetchColumn();
+    // PAGAMENTOS a funcionários no mês (tolera tabela ausente)
+    $pag_func_usd = 0.0;
+    try {
+        $stmt = $db->prepare("SELECT COALESCE(SUM(valor_usd),0) FROM pagamentos_funcionario
+                              WHERE data_pagamento BETWEEN ? AND ?");
+        $stmt->execute([$ini, $fim]);
+        $pag_func_usd = (float)$stmt->fetchColumn();
+    } catch (PDOException $e) {}
 
     // LUCRO LÍQUIDO (recebido - despesas; USD também desconta pag. funcionário)
     $lucro = [];
@@ -94,9 +97,9 @@ require __DIR__ . '/includes/header.php';
     $mes_prox = (clone $dt)->modify('+1 month')->format('Y-m');
     $nome_mes_pt = ['','janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'][(int)$dt->format('n')] . ' de ' . $dt->format('Y');
 
-    // Histórico dos últimos 6 meses para o gráfico
+    // Histórico dos últimos 6 meses para o gráfico (todas as queries toleram tabelas ausentes)
     $cur_dt = DateTimeImmutable::createFromFormat('Y-m', $competencia);
-    $historico = []; // [{mes:'2026-05', label:'mai/26', BRL:{r,d,l}, USD:{r,d,l}, EUR:{r,d,l}}]
+    $historico = [];
     for ($i = 5; $i >= 0; $i--) {
         $mes = (clone $cur_dt)->modify("-{$i} months")->format('Y-m');
         $ini_m = $mes . '-01';
@@ -104,16 +107,21 @@ require __DIR__ . '/includes/header.php';
         $mn_pt = ['','jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'][(int)substr($mes,5,2)] . '/' . substr($mes,2,2);
         $h = ['mes'=>$mes,'label'=>$mn_pt];
         foreach (['BRL','USD','EUR'] as $cur) {
-            $stmt = $db->prepare("SELECT COALESCE(SUM(p.valor_pago),0) FROM pagamentos_cliente p JOIN cobrancas c ON c.id = p.cobranca_id WHERE p.data_pagamento BETWEEN ? AND ? AND c.moeda = ? AND COALESCE(p.pendente,0)=0");
-            $stmt->execute([$ini_m, $fim_m, $cur]);
-            $r = (float)$stmt->fetchColumn();
+            $r = 0.0;
+            try {
+                $stmt = $db->prepare("SELECT COALESCE(SUM(p.valor_pago),0) FROM pagamentos_cliente p JOIN cobrancas c ON c.id = p.cobranca_id WHERE p.data_pagamento BETWEEN ? AND ? AND c.moeda = ? AND COALESCE(p.pendente,0)=0");
+                $stmt->execute([$ini_m, $fim_m, $cur]);
+                $r = (float)$stmt->fetchColumn();
+            } catch (PDOException $e) {}
             $d_mes = despesas_do_mes($db, $mes);
             $d = $d_mes['totais'][$cur] ?? 0;
             $pf = 0;
             if ($cur === 'USD') {
-                $stmt = $db->prepare("SELECT COALESCE(SUM(valor_usd),0) FROM pagamentos_funcionario WHERE data_pagamento BETWEEN ? AND ?");
-                $stmt->execute([$ini_m, $fim_m]);
-                $pf = (float)$stmt->fetchColumn();
+                try {
+                    $stmt = $db->prepare("SELECT COALESCE(SUM(valor_usd),0) FROM pagamentos_funcionario WHERE data_pagamento BETWEEN ? AND ?");
+                    $stmt->execute([$ini_m, $fim_m]);
+                    $pf = (float)$stmt->fetchColumn();
+                } catch (PDOException $e) {}
             }
             $h[$cur] = ['r'=>$r, 'd'=>$d + $pf, 'l'=>$r - $d - $pf];
         }

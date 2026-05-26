@@ -14,11 +14,15 @@ require_once __DIR__ . '/money.php';
  *  - despesa inativa não conta
  */
 function despesas_do_mes(PDO $db, string $competencia): array {
-    // YYYY-MM
-    $stmt = $db->prepare("SELECT * FROM despesas WHERE ativo = 1 AND data_inicio <= ?");
-    $fim_mes = date('Y-m-t', strtotime($competencia . '-01'));
-    $stmt->execute([$fim_mes]);
-    $linhas = $stmt->fetchAll();
+    // YYYY-MM. Tolera ausência da tabela (migration_005 não aplicada).
+    try {
+        $stmt = $db->prepare("SELECT * FROM despesas WHERE ativo = 1 AND data_inicio <= ?");
+        $fim_mes = date('Y-m-t', strtotime($competencia . '-01'));
+        $stmt->execute([$fim_mes]);
+        $linhas = $stmt->fetchAll();
+    } catch (PDOException $e) {
+        return ['totais' => ['BRL'=>0.0,'USD'=>0.0,'EUR'=>0.0], 'detalhes' => []];
+    }
 
     $total = ['BRL'=>0.0,'USD'=>0.0,'EUR'=>0.0];
     $detalhes = [];
