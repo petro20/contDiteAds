@@ -13,7 +13,7 @@ $nav_active   = $nav_active   ?? '';
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0A0A0F">
-<title><?= e($page) ?> · Dite Ads</title>
+<title><?= e($page) ?> · controle e gestão Dite Ads</title>
 <link rel="icon" type="image/png" href="<?= e(APP_BASE_URL) ?>/assets/img/logo.png">
 <link rel="stylesheet" href="<?= e(APP_BASE_URL) ?>/assets/css/style.css?v=<?= e(@filemtime(__DIR__ . '/../assets/css/style.css') ?: '1') ?>">
 </head>
