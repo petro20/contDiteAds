@@ -182,6 +182,43 @@ require __DIR__ . '/includes/header.php';
       <div class="kpi <?= $vencidas?'':'' ?>" <?= $vencidas?'style="border-color:var(--c-danger);"':'' ?>><div class="v"><?= $vencidas ?></div><div class="l"><?= $vencidas?'<span style="color:var(--c-danger);">Vencidas</span>':'Vencidas' ?></div></div>
     </div>
 
+    <?php
+      $stmt = $db->prepare("
+        SELECT a.id, a.variante, a.valor_cobrado, a.status, a.iniciada_em,
+               i.nome AS item_nome, i.tipo, i.e_pacote,
+               u.nome AS func_nome
+        FROM assinaturas a
+        JOIN itens_catalogo i ON i.id = a.item_id
+        LEFT JOIN usuarios u ON u.id = a.funcionario_id
+        WHERE a.cliente_id = ? AND a.status = 'ativa'
+        ORDER BY i.nome
+      ");
+      $stmt->execute([$cid]);
+      $minhas_assin = $stmt->fetchAll();
+    ?>
+    <div class="section-label">Meus serviços contratados</div>
+    <?php if (!$minhas_assin): ?>
+      <div class="card"><div class="desc muted">Nenhum serviço ativo. Fale com a Dite Ads pra contratar.</div></div>
+    <?php else: foreach ($minhas_assin as $a): ?>
+      <div class="card">
+        <div class="spaced">
+          <div>
+            <div class="title" style="color:var(--txt-1);">
+              <?= e($a['item_nome']) ?>
+              <?php if ($a['e_pacote']): ?><span class="status status-ia">pacote</span><?php endif; ?>
+              <?php if ($a['variante']==='ia'): ?><span class="status status-destaque">com IA</span><?php endif; ?>
+            </div>
+            <div class="sub muted">
+              <?= e(['unico'=>'único','mensal'=>'mensal','por_unidade'=>'por unidade'][$a['tipo']] ?? $a['tipo']) ?>
+              · ativo desde <?= e(date('d/m/Y', strtotime($a['iniciada_em']))) ?>
+              <?php if ($a['func_nome']): ?> · com <?= e($a['func_nome']) ?><?php endif; ?>
+            </div>
+          </div>
+          <div class="money md"><?= e(money_fmt((float)$a['valor_cobrado'], $cli['moeda'])) ?></div>
+        </div>
+      </div>
+    <?php endforeach; endif; ?>
+
     <div class="section-label">Acesso rápido</div>
     <a class="card" href="<?= e(APP_BASE_URL) ?>/cobrancas.php">
       <div class="title">💳 Minhas cobranças</div>
