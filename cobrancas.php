@@ -295,9 +295,13 @@ if ($id) {
       <?php endif; ?>
     </div>
 
-    <div class="section-label">Itens cobrados</div>
-    <?php foreach ($itens as $it): ?>
-      <div class="card">
+    <div class="section-label">Itens cobrados<?= is_admin() ? ' <span class="muted" style="text-transform:none; letter-spacing:0;">(toque para editar a assinatura)</span>' : '' ?></div>
+    <?php foreach ($itens as $it):
+        $clickable = is_admin() && !empty($it['assinatura_id']);
+        $tag       = $clickable ? 'a' : 'div';
+        $href_attr = $clickable ? ' href="' . e(APP_BASE_URL) . '/assinaturas.php?acao=editar&id=' . (int)$it['assinatura_id'] . '"' : '';
+    ?>
+      <<?= $tag ?> class="card"<?= $href_attr ?>>
         <div class="spaced">
           <div class="info" style="flex:1; min-width:0;">
             <div class="title" style="color:var(--txt-1);"><?= e($it['descricao']) ?></div>
@@ -309,7 +313,7 @@ if ($id) {
           </div>
           <div class="money md"><?= e(money_fmt((float)$it['subtotal'], $cob['moeda'])) ?></div>
         </div>
-      </div>
+      </<?= $tag ?>>
     <?php endforeach; ?>
 
     <?php if (is_admin() && $cob['status'] === 'aberta'):
