@@ -121,10 +121,38 @@ require __DIR__ . '/includes/header.php';
     $mes_prox = (clone $dt)->modify('+1 month')->format('Y-m');
     $nome_mes_pt = ['','janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'][(int)$dt->format('n')] . ' de ' . $dt->format('Y');
 
-    // Histórico dos últimos 6 meses para o gráfico (todas as queries toleram tabelas ausentes)
+    // Histórico para o gráfico — gera do primeiro mês com movimento até a competência atual.
+    // O JS filtra por período (1m / 3m / 6m / 1a / tudo). Queries toleram tabelas ausentes.
     $cur_dt = DateTimeImmutable::createFromFormat('Y-m', $competencia);
+    // Descobre o mês mais antigo com movimento
+    $datas_min = [];
+    try {
+        $d = $db->query("SELECT MIN(data_pagamento) FROM pagamentos_cliente")->fetchColumn();
+        if ($d) $datas_min[] = $d;
+    } catch (PDOException $e) {}
+    try {
+        $d = $db->query("SELECT MIN(competencia_mes) FROM cobrancas")->fetchColumn();
+        if ($d) $datas_min[] = $d . '-01';
+    } catch (PDOException $e) {}
+    try {
+        $d = $db->query("SELECT MIN(data_inicio) FROM despesas WHERE ativo=1")->fetchColumn();
+        if ($d) $datas_min[] = $d;
+    } catch (PDOException $e) {}
+    try {
+        $d = $db->query("SELECT MIN(data_pagamento) FROM pagamentos_funcionario")->fetchColumn();
+        if ($d) $datas_min[] = $d;
+    } catch (PDOException $e) {}
+    $mes_inicial = $datas_min ? substr(min($datas_min), 0, 7) : (clone $cur_dt)->modify('-5 months')->format('Y-m');
+    // Garante no mínimo 6 meses de histórico (mesmo sem dados antigos)
+    $seis_atras = (clone $cur_dt)->modify('-5 months')->format('Y-m');
+    if ($mes_inicial > $seis_atras) $mes_inicial = $seis_atras;
+    // Calcula quantos meses do mes_inicial até cur_dt
+    $ini_dt = DateTimeImmutable::createFromFormat('Y-m', $mes_inicial);
+    $total_meses = ((int)$cur_dt->format('Y') - (int)$ini_dt->format('Y')) * 12
+                   + ((int)$cur_dt->format('n') - (int)$ini_dt->format('n')) + 1;
+    if ($total_meses > 60) $total_meses = 60; // teto de 5 anos pra não exagerar
     $historico = [];
-    for ($i = 5; $i >= 0; $i--) {
+    for ($i = $total_meses - 1; $i >= 0; $i--) {
         $mes = (clone $cur_dt)->modify("-{$i} months")->format('Y-m');
         $ini_m = $mes . '-01';
         $fim_m = date('Y-m-t', strtotime($ini_m));
@@ -185,12 +213,19 @@ require __DIR__ . '/includes/header.php';
 
 <div class="card">
   <div class="spaced mb-3">
-    <strong>📈 Saúde financeira (últimos 6 meses)</strong>
+    <strong>📈 Saúde financeira <span class="muted" style="font-weight:normal; font-size:12px;" id="chart-periodo-label">(últimos 6 meses)</span></strong>
     <div id="chart-moeda-tabs" class="btn-pair" style="gap:4px;">
       <button type="button" class="btn small btn-secondary" data-moeda="BRL" onclick="trocarMoedaGrafico('BRL')">R$</button>
       <button type="button" class="btn small btn-ghost" data-moeda="USD" onclick="trocarMoedaGrafico('USD')">$</button>
       <button type="button" class="btn small btn-ghost" data-moeda="EUR" onclick="trocarMoedaGrafico('EUR')">€</button>
     </div>
+  </div>
+  <div id="chart-periodo-tabs" class="btn-pair mb-3" style="gap:4px; flex-wrap:wrap;">
+    <button type="button" class="btn small btn-ghost" data-periodo="1"  onclick="trocarPeriodoGrafico(1)">1m</button>
+    <button type="button" class="btn small btn-ghost" data-periodo="3"  onclick="trocarPeriodoGrafico(3)">3m</button>
+    <button type="button" class="btn small btn-secondary" data-periodo="6"  onclick="trocarPeriodoGrafico(6)">6m</button>
+    <button type="button" class="btn small btn-ghost" data-periodo="12" onclick="trocarPeriodoGrafico(12)">1a</button>
+    <button type="button" class="btn small btn-ghost" data-periodo="0"  onclick="trocarPeriodoGrafico(0)">Tudo</button>
   </div>
   <div style="position:relative; height:240px;">
     <canvas id="chart_saude"></canvas>
@@ -202,6 +237,9 @@ require __DIR__ . '/includes/header.php';
 const HISTORICO = <?= json_encode($historico, JSON_UNESCAPED_UNICODE) ?>;
 let chart_saude = null;
 let moeda_atual = 'BRL';
+let periodo_atual = 6; // 0 = tudo
+
+const PERIODO_LABEL = {1:'(último mês)', 3:'(últimos 3 meses)', 6:'(últimos 6 meses)', 12:'(último ano)', 0:'(o tempo todo)'};
 
 function trocarMoedaGrafico(m) {
   moeda_atual = m;
@@ -212,11 +250,28 @@ function trocarMoedaGrafico(m) {
   renderChartSaude();
 }
 
+function trocarPeriodoGrafico(p) {
+  periodo_atual = p;
+  document.querySelectorAll('#chart-periodo-tabs button').forEach(b => {
+    const sel = parseInt(b.dataset.periodo) === p;
+    b.classList.toggle('btn-secondary', sel);
+    b.classList.toggle('btn-ghost', !sel);
+  });
+  document.getElementById('chart-periodo-label').textContent = PERIODO_LABEL[p] || '';
+  renderChartSaude();
+}
+
+function fatiarHistorico() {
+  if (periodo_atual === 0) return HISTORICO;
+  return HISTORICO.slice(-periodo_atual);
+}
+
 function renderChartSaude() {
-  const labels = HISTORICO.map(h => h.label);
-  const receitas = HISTORICO.map(h => h[moeda_atual]?.r ?? 0);
-  const despesas = HISTORICO.map(h => h[moeda_atual]?.d ?? 0);
-  const lucros   = HISTORICO.map(h => h[moeda_atual]?.l ?? 0);
+  const dados = fatiarHistorico();
+  const labels = dados.map(h => h.label);
+  const receitas = dados.map(h => h[moeda_atual]?.r ?? 0);
+  const despesas = dados.map(h => h[moeda_atual]?.d ?? 0);
+  const lucros   = dados.map(h => h[moeda_atual]?.l ?? 0);
 
   const ctx = document.getElementById('chart_saude').getContext('2d');
   if (chart_saude) chart_saude.destroy();
