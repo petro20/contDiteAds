@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/lib/audit.php';
+require_once __DIR__ . '/lib/hard_delete.php';
 $me = require_login();
 if ($me['role'] === 'cliente') { header('Location: ' . APP_BASE_URL . '/dashboard.php'); exit; }
 $func_view_only = $me['role'] === 'funcionario'; // funcionário vê só seus clientes, read-only
@@ -46,14 +47,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($op === 'apagar') {
+        if (!is_sadmin()) { http_response_code(403); exit('Apenas Super Admin pode apagar clientes em cascata.'); }
         $pid = (int)($_POST['id'] ?? 0);
         try {
-            $stmt = $db->prepare('DELETE FROM clientes WHERE id = ?');
-            $stmt->execute([$pid]);
-            audit_log('cliente.apagado', 'clientes', $pid);
+            hard_delete_cliente($db, $pid);
+            audit_log('cliente.apagado_cascade', 'clientes', $pid);
             header('Location: ' . APP_BASE_URL . '/clientes.php?ok=del'); exit;
-        } catch (PDOException $e) {
-            $flash = ['err', 'Não dá pra apagar: cliente tem cobranças/assinaturas vinculadas. Desative em vez disso.'];
+        } catch (Throwable $e) {
+            $flash = ['err', 'Erro ao apagar: ' . $e->getMessage()];
             $acao = 'editar'; $id = $pid;
         }
     }
@@ -137,15 +138,17 @@ if ($acao === 'novo' || $acao === 'editar') {
       <h2>Assinaturas</h2>
       <a class="btn btn-secondary block" href="<?= e(APP_BASE_URL) ?>/assinaturas.php?cliente_id=<?= (int)$c['id'] ?>">Ver e atribuir itens →</a>
 
+      <?php if (is_sadmin()): ?>
       <details class="mt-5">
         <summary class="muted" style="cursor:pointer; padding:var(--s-3);">⚠ Zona de perigo</summary>
-        <form method="post" class="mt-3" onsubmit="return confirm('APAGAR DEFINITIVAMENTE este cliente?\n\nSó funciona se não tiver cobranças/assinaturas vinculadas. Caso tenha, desative.\n\nConfirmar?');">
+        <form method="post" class="mt-3" onsubmit="return confirm('APAGAR DEFINITIVAMENTE este cliente?\n\n⚠ Vai apagar EM CASCATA tudo ligado a ele:\n  • todas as cobranças (e pagamentos recebidos)\n  • todas as assinaturas (e entregas)\n  • o login de cliente, se houver\n\nIsto NÃO pode ser desfeito. Para preservar histórico, desative em vez de apagar.\n\nConfirmar?');">
           <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
           <input type="hidden" name="op" value="apagar">
           <input type="hidden" name="id" value="<?= (int)$c['id'] ?>">
-          <button class="btn btn-danger block" type="submit">🗑 Apagar definitivamente</button>
+          <button class="btn btn-danger block" type="submit">🗑 Apagar em cascata</button>
         </form>
       </details>
+      <?php endif; ?>
 
       <h2>Acesso ao sistema</h2>
       <div class="card">

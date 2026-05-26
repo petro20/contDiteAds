@@ -2,7 +2,8 @@
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/lib/audit.php';
 require_once __DIR__ . '/lib/pagamentos.php';
-require_admin();
+require_once __DIR__ . '/lib/hard_delete.php';
+$me = require_admin();
 $db = db();
 
 $acao  = $_GET['acao'] ?? 'lista';
@@ -55,14 +56,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($pid === (int)$me['id']) {
             $flash = ['err', 'Você não pode apagar a si mesmo.'];
         } else {
-            try {
-                $stmt = $db->prepare('DELETE FROM usuarios WHERE id = ?');
-                $stmt->execute([$pid]);
-                audit_log('usuario.apagado', 'usuarios', $pid);
-                header('Location: ' . APP_BASE_URL . '/funcionarios.php?ok=del'); exit;
-            } catch (PDOException $e) {
-                $flash = ['err', 'Não dá pra apagar: este usuário tem dados vinculados (cobranças, pagamentos, etc.). Desative em vez disso.'];
+            // Trava: não dá pra apagar o último sadmin ativo
+            $stmt = $db->prepare('SELECT role, ativo FROM usuarios WHERE id = ?');
+            $stmt->execute([$pid]);
+            $alvo = $stmt->fetch();
+            if ($alvo && $alvo['role'] === 'sadmin' && (int)$alvo['ativo'] === 1) {
+                $count = (int)$db->query("SELECT COUNT(*) FROM usuarios WHERE role='sadmin' AND ativo=1")->fetchColumn();
+                if ($count <= 1) {
+                    $flash = ['err', 'Não dá pra apagar o único Super Admin. Crie outro sadmin primeiro.'];
+                    goto skip_delete;
+                }
             }
+            try {
+                hard_delete_usuario($db, $pid, (int)$me['id']);
+                audit_log('usuario.apagado_cascade', 'usuarios', $pid);
+                header('Location: ' . APP_BASE_URL . '/funcionarios.php?ok=del'); exit;
+            } catch (Throwable $e) {
+                $flash = ['err', 'Erro ao apagar: ' . $e->getMessage()];
+            }
+            skip_delete:;
         }
     }
 
@@ -202,7 +214,7 @@ if ($acao === 'novo' || $acao === 'editar') {
 
     <?php if ($func['id'] && is_sadmin() && (int)$func['id'] !== (int)$me['id']): ?>
       <h2>⚠ Zona de perigo</h2>
-      <form method="post" onsubmit="return confirm('APAGAR DEFINITIVAMENTE este usuário?\n\nSó funciona se ele NÃO tiver dados vinculados (cobranças, pagamentos, etc.). Caso tenha, prefira DESATIVAR.\n\nConfirmar?');">
+      <form method="post" onsubmit="return confirm('APAGAR DEFINITIVAMENTE este usuário?\n\n⚠ Vai apagar EM CASCATA tudo ligado a ele:\n  • pagamentos recebidos (funcionário e sócio)\n  • entregas que executou\n  • capacidade declarada e valores por item\n\nCobranças/pagamentos/despesas que ele CRIOU serão reatribuídas a você.\n\nConfirmar?');">
         <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
         <input type="hidden" name="op" value="apagar">
         <input type="hidden" name="id" value="<?= (int)$func['id'] ?>">
