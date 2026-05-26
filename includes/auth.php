@@ -8,7 +8,7 @@ function current_user(): ?array {
     if (empty($_SESSION['user_id'])) return null;
     static $cache = null;
     if ($cache !== null) return $cache;
-    $stmt = db()->prepare('SELECT id, nome, email, role, ativo FROM usuarios WHERE id = ? LIMIT 1');
+    $stmt = db()->prepare('SELECT id, nome, email, role, ativo, cliente_id, cpf, wisetag, pais, aceitando_clientes, percentual_comissao FROM usuarios WHERE id = ? LIMIT 1');
     $stmt->execute([$_SESSION['user_id']]);
     $u = $stmt->fetch() ?: null;
     if ($u && !$u['ativo']) {
