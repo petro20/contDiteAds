@@ -15,6 +15,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_check();
     $op = $_POST['op'] ?? '';
 
+    if ($op === 'apagar') {
+        $pid = (int)($_POST['id'] ?? 0);
+        try {
+            $stmt = $db->prepare('DELETE FROM assinaturas WHERE id = ?');
+            $stmt->execute([$pid]);
+            audit_log('assinatura.apagada', 'assinaturas', $pid);
+            header('Location: ' . APP_BASE_URL . '/assinaturas.php?ok=del'); exit;
+        } catch (PDOException $e) {
+            $flash = ['err', 'Não dá pra apagar: tem cobranças geradas vinculadas. Mude para "cancelada" se quiser parar de cobrar.'];
+            $acao = 'editar'; $id = $pid;
+        }
+    }
+
     if ($op === 'salvar') {
         $pid       = (int)($_POST['id'] ?? 0);
         $cliente   = (int)($_POST['cliente_id'] ?? 0);
@@ -190,6 +203,18 @@ if ($acao === 'novo' || $acao === 'editar') {
 
       <button class="btn block" type="submit">Salvar</button>
     </form>
+
+    <?php if ($a['id']): ?>
+      <details class="mt-5">
+        <summary class="muted" style="cursor:pointer; padding:var(--s-3);">⚠ Zona de perigo</summary>
+        <form method="post" class="mt-3" onsubmit="return confirm('APAGAR DEFINITIVAMENTE esta assinatura?\n\nSó funciona se NÃO tiver cobranças geradas. Caso tenha, mude o status para cancelada.\n\nConfirmar?');">
+          <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
+          <input type="hidden" name="op" value="apagar">
+          <input type="hidden" name="id" value="<?= (int)$a['id'] ?>">
+          <button class="btn btn-danger block" type="submit">🗑 Apagar definitivamente</button>
+        </form>
+      </details>
+    <?php endif; ?>
 
     <script>
     const ITENS = <?= json_encode($jsItens, JSON_UNESCAPED_UNICODE) ?>;

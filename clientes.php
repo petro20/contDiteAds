@@ -124,6 +124,16 @@ if ($acao === 'novo' || $acao === 'editar') {
       <h2>Assinaturas</h2>
       <a class="btn btn-secondary block" href="<?= e(APP_BASE_URL) ?>/assinaturas.php?cliente_id=<?= (int)$c['id'] ?>">Ver e atribuir itens →</a>
 
+      <details class="mt-5">
+        <summary class="muted" style="cursor:pointer; padding:var(--s-3);">⚠ Zona de perigo</summary>
+        <form method="post" class="mt-3" onsubmit="return confirm('APAGAR DEFINITIVAMENTE este cliente?\n\nSó funciona se não tiver cobranças/assinaturas vinculadas. Caso tenha, desative.\n\nConfirmar?');">
+          <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
+          <input type="hidden" name="op" value="apagar">
+          <input type="hidden" name="id" value="<?= (int)$c['id'] ?>">
+          <button class="btn btn-danger block" type="submit">🗑 Apagar definitivamente</button>
+        </form>
+      </details>
+
       <h2>Acesso ao sistema</h2>
       <div class="card">
         <?php if ($userCliente): ?>

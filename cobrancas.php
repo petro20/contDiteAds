@@ -105,6 +105,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header('Location: ' . APP_BASE_URL . '/cobrancas.php?id=' . $cid); exit;
     }
 
+    if ($op === 'apagar' && is_admin()) {
+        $cid = (int)($_POST['id'] ?? 0);
+        // Apaga arquivos de comprovante do disco antes
+        $stmt = $db->prepare('SELECT comprovante_path FROM pagamentos_cliente WHERE cobranca_id = ?');
+        $stmt->execute([$cid]);
+        foreach ($stmt->fetchAll() as $p) {
+            if ($p['comprovante_path']) {
+                $f = UPLOAD_DIR . '/' . $p['comprovante_path'];
+                if (is_file($f)) @unlink($f);
+            }
+        }
+        $stmt = $db->prepare('DELETE FROM cobrancas WHERE id = ?');
+        $stmt->execute([$cid]);
+        audit_log('cobranca.apagada', 'cobrancas', $cid);
+        header('Location: ' . APP_BASE_URL . '/cobrancas.php?ok=del'); exit;
+    }
+
     if ($op === 'enviar_comprovante') {
         // Cliente ou admin podem anexar
         $cid = (int)($_POST['id'] ?? 0);
@@ -415,20 +432,34 @@ if ($id) {
 
     <a class="btn btn-ghost block mt-5" href="<?= e(APP_BASE_URL) ?>/recibo.php?cobranca=<?= (int)$cob['id'] ?>" target="_blank">📄 Ver recibo (PDF)</a>
 
-    <?php if (is_admin() && $cob['status'] !== 'cancelada'): ?>
-      <form method="post" class="mt-3" onsubmit="return confirm('Cancelar esta cobrança?');">
-        <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
-        <input type="hidden" name="op" value="cancelar">
-        <input type="hidden" name="id" value="<?= (int)$cob['id'] ?>">
-        <button class="btn btn-ghost block" type="submit">Cancelar cobrança</button>
-      </form>
-    <?php elseif (is_admin() && $cob['status'] === 'cancelada'): ?>
-      <form method="post" class="mt-3">
-        <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
-        <input type="hidden" name="op" value="reabrir">
-        <input type="hidden" name="id" value="<?= (int)$cob['id'] ?>">
-        <button class="btn block" type="submit">Reabrir cobrança</button>
-      </form>
+    <?php if (is_admin()): ?>
+      <details class="mt-5">
+        <summary class="muted" style="cursor:pointer; padding:var(--s-3);">⚠ Zona de perigo</summary>
+        <div class="mt-3">
+          <?php if ($cob['status'] !== 'cancelada'): ?>
+            <form method="post" class="mb-3" onsubmit="return confirm('Cancelar esta cobrança? (Pode ser reaberta depois)');">
+              <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
+              <input type="hidden" name="op" value="cancelar">
+              <input type="hidden" name="id" value="<?= (int)$cob['id'] ?>">
+              <button class="btn btn-ghost block" type="submit">Cancelar cobrança</button>
+            </form>
+          <?php else: ?>
+            <form method="post" class="mb-3">
+              <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
+              <input type="hidden" name="op" value="reabrir">
+              <input type="hidden" name="id" value="<?= (int)$cob['id'] ?>">
+              <button class="btn block" type="submit">Reabrir cobrança</button>
+            </form>
+          <?php endif; ?>
+
+          <form method="post" onsubmit="return confirm('APAGAR DEFINITIVAMENTE esta cobrança?\n\nTodos os itens, pagamentos e comprovantes serão removidos. Não dá pra desfazer.\n\nConfirmar?');">
+            <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
+            <input type="hidden" name="op" value="apagar">
+            <input type="hidden" name="id" value="<?= (int)$cob['id'] ?>">
+            <button class="btn btn-danger block" type="submit">🗑 Apagar definitivamente</button>
+          </form>
+        </div>
+      </details>
     <?php endif; ?>
     <?php
     require __DIR__ . '/includes/footer.php';
