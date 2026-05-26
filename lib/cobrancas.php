@@ -150,15 +150,19 @@ function gerar_cobranca_mensal(PDO $db, int $cliente_id, string $competencia, ?s
 
     $moeda = $cli['moeda'] ?: 'BRL';
 
-    // Assinaturas ativas (NÃO únicas — únicas já viraram cobrança avulsa)
+    // Assinaturas ativas no mês da competência (respeita data_inicio e data_fim)
+    $primeiro_dia = $competencia . '-01';
+    $ultimo_dia = date('Y-m-t', strtotime($primeiro_dia));
     $sql = 'SELECT a.id, a.item_id, a.valor_cobrado, i.nome AS item_nome, i.tipo
             FROM assinaturas a
             JOIN itens_catalogo i ON i.id = a.item_id
             WHERE a.cliente_id = ?
               AND a.status = "ativa"
+              AND a.iniciada_em <= ?
+              AND (a.encerrada_em IS NULL OR a.encerrada_em >= ?)
               AND i.tipo IN ("mensal","por_unidade")';
     $stmt = $db->prepare($sql);
-    $stmt->execute([$cliente_id]);
+    $stmt->execute([$cliente_id, $ultimo_dia, $primeiro_dia]);
     $assinaturas = $stmt->fetchAll();
 
     if (!$assinaturas) return ['cobranca_id' => null, 'status' => 'empty'];
