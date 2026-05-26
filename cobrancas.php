@@ -105,6 +105,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header('Location: ' . APP_BASE_URL . '/cobrancas.php?id=' . $cid); exit;
     }
 
+    if ($op === 'remover_item' && is_admin()) {
+        $cid = (int)($_POST['id'] ?? 0);
+        $iid = (int)($_POST['item_id'] ?? 0);
+        $stmt = $db->prepare('SELECT subtotal FROM cobranca_itens WHERE id = ? AND cobranca_id = ?');
+        $stmt->execute([$iid, $cid]);
+        $sub = (float)$stmt->fetchColumn();
+        if ($sub > 0) {
+            $stmt = $db->prepare('DELETE FROM cobranca_itens WHERE id = ?');
+            $stmt->execute([$iid]);
+            $stmt = $db->prepare('UPDATE cobrancas SET valor_total = GREATEST(0, valor_total - ?) WHERE id = ?');
+            $stmt->execute([$sub, $cid]);
+            audit_log('cobranca.item_removido', 'cobranca_itens', $iid);
+        }
+        header('Location: ' . APP_BASE_URL . '/cobrancas.php?id=' . $cid); exit;
+    }
+
     if ($op === 'apagar' && is_admin()) {
         $cid = (int)($_POST['id'] ?? 0);
         // Apaga arquivos de comprovante do disco antes
@@ -295,14 +311,19 @@ if ($id) {
       <?php endif; ?>
     </div>
 
-    <div class="section-label">Itens cobrados<?= is_admin() ? ' <span class="muted" style="text-transform:none; letter-spacing:0;">(toque para editar a assinatura)</span>' : '' ?></div>
-    <?php foreach ($itens as $it):
-        $clickable = is_admin() && !empty($it['assinatura_id']);
-        $tag       = $clickable ? 'a' : 'div';
-        $href_attr = $clickable ? ' href="' . e(APP_BASE_URL) . '/assinaturas.php?acao=editar&id=' . (int)$it['assinatura_id'] . '"' : '';
-    ?>
-      <<?= $tag ?> class="card"<?= $href_attr ?>>
-        <div class="spaced">
+    <div class="section-label">Itens cobrados</div>
+    <?php foreach ($itens as $it): ?>
+      <div class="card" style="position:relative;">
+        <?php if (is_admin()): ?>
+          <form method="post" style="position:absolute; top:8px; right:8px; margin:0;" onsubmit="return confirm('Remover este item da cobrança?\n\nO valor total da cobrança vai ser ajustado automaticamente.');">
+            <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
+            <input type="hidden" name="op" value="remover_item">
+            <input type="hidden" name="id" value="<?= (int)$cob['id'] ?>">
+            <input type="hidden" name="item_id" value="<?= (int)$it['id'] ?>">
+            <button type="submit" title="Remover item" style="background:transparent; border:0; color:var(--c-danger); cursor:pointer; font-size:18px; line-height:1; padding:4px 8px; border-radius:6px;">✕</button>
+          </form>
+        <?php endif; ?>
+        <div class="spaced" style="<?= is_admin() ? 'padding-right:32px;' : '' ?>">
           <div class="info" style="flex:1; min-width:0;">
             <div class="title" style="color:var(--txt-1);"><?= e($it['descricao']) ?></div>
             <div class="sub muted">
@@ -313,7 +334,10 @@ if ($id) {
           </div>
           <div class="money md"><?= e(money_fmt((float)$it['subtotal'], $cob['moeda'])) ?></div>
         </div>
-      </<?= $tag ?>>
+        <?php if (is_admin() && !empty($it['assinatura_id'])): ?>
+          <a class="btn btn-ghost small mt-3" href="<?= e(APP_BASE_URL) ?>/assinaturas.php?acao=editar&id=<?= (int)$it['assinatura_id'] ?>" style="display:inline-block;">✏ Editar assinatura</a>
+        <?php endif; ?>
+      </div>
     <?php endforeach; ?>
 
     <?php if (is_admin() && $cob['status'] === 'aberta'):
