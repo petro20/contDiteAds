@@ -158,10 +158,16 @@ if ($acao === 'novo' || $acao === 'editar') {
     $back_to = APP_BASE_URL . '/funcionarios.php';
     $func = ['id'=>0,'nome'=>'','email'=>'','role'=>'funcionario','ativo'=>1,'cpf'=>'','wisetag'=>'','pais'=>'','aceitando_clientes'=>1,'telefone'=>''];
     if ($acao === 'editar' && $id) {
-        $stmt = $db->prepare("SELECT id, nome, email, role, ativo, cpf, wisetag, pais, aceitando_clientes FROM usuarios WHERE id=? AND role IN ('admin','funcionario')");
+        $stmt = $db->prepare("SELECT id, nome, email, role, ativo, cpf, wisetag, pais, aceitando_clientes FROM usuarios WHERE id=? AND role IN ('sadmin','admin','funcionario')");
         $stmt->execute([$id]);
         $row = $stmt->fetch();
-        if ($row) $func = array_merge($func, $row);
+        if ($row) {
+            // Admin comum não pode abrir form de outro admin/sadmin
+            if (!is_sadmin() && in_array($row['role'], ['admin','sadmin'], true)) {
+                header('Location: ' . APP_BASE_URL . '/funcionarios.php?err=denied'); exit;
+            }
+            $func = array_merge($func, $row);
+        }
     }
     $page = $func['id'] ? 'Editar funcionário' : 'Novo funcionário';
     require __DIR__ . '/includes/header.php';
