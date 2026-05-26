@@ -22,15 +22,17 @@ $nav_active   = $nav_active   ?? '';
 <header class="topbar">
   <?php if ($show_back): ?>
     <a class="back-btn" href="<?= e($back_to ?? (APP_BASE_URL . '/dashboard.php')) ?>" aria-label="Voltar">←</a>
+  <?php else: ?>
+    <a class="brand-link" href="<?= e(APP_BASE_URL) ?>/dashboard.php" aria-label="Início">
+      <img src="<?= e(APP_BASE_URL) ?>/assets/img/logo.png" alt="Dite Ads" class="brand-logo">
+    </a>
   <?php endif; ?>
-  <div class="titles">
+  <div class="titles<?= $show_back ? '' : ' centered' ?>">
     <?php if ($show_back): ?>
       <h1><?= e($page) ?></h1>
       <?php if ($page_sub): ?><div class="sub"><?= e($page_sub) ?></div><?php endif; ?>
     <?php else: ?>
-      <a class="brand-link" href="<?= e(APP_BASE_URL) ?>/dashboard.php" aria-label="Início">
-        <img src="<?= e(APP_BASE_URL) ?>/assets/img/logo.png" alt="Dite Ads" class="brand-logo">
-      </a>
+      <span class="topbar-title">Controle Gerencial</span>
     <?php endif; ?>
   </div>
   <div class="actions">
