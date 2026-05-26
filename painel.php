@@ -18,11 +18,11 @@ require __DIR__ . '/includes/header.php';
 ?>
 <h1 class="page-title">Painel</h1>
 
-<div class="btn-pair mb-3">
-  <a class="btn <?= $aba==='agenda'?'':'btn-ghost' ?>" href="?aba=agenda&mes=<?= e($competencia) ?>">Agenda</a>
-  <a class="btn <?= $aba==='clientes'?'':'btn-ghost' ?>" href="?aba=clientes&mes=<?= e($competencia) ?>">Por cliente</a>
-  <a class="btn <?= $aba==='servicos'?'':'btn-ghost' ?>" href="?aba=servicos&mes=<?= e($competencia) ?>">Por serviço</a>
-</div>
+<nav class="tabs-bar">
+  <a class="<?= $aba==='agenda'?'active':'' ?>" href="?aba=agenda&mes=<?= e($competencia) ?>">Agenda</a>
+  <a class="<?= $aba==='clientes'?'active':'' ?>" href="?aba=clientes&mes=<?= e($competencia) ?>">Por cliente</a>
+  <a class="<?= $aba==='servicos'?'active':'' ?>" href="?aba=servicos&mes=<?= e($competencia) ?>">Por serviço</a>
+</nav>
 
 <?php if ($aba === 'agenda'):
     // Cobranças vencidas

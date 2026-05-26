@@ -269,12 +269,12 @@ if ($id) {
                     : ($cob['status'] === 'cancelada' ? 'info'
                     : ($vencido ? 'vencida' : 'aberta'));
     ?>
-    <div class="card" style="text-align:center; padding: var(--s-6) var(--s-4);">
-      <div class="muted" style="font-size:12px; letter-spacing:.08em;">VALOR TOTAL</div>
-      <div class="money lg" style="font-size:32px; margin: var(--s-2) 0 var(--s-3);"><?= e(money_fmt((float)$cob['valor_total'], $cob['moeda'])) ?></div>
+    <div class="card hero">
+      <div class="label">Valor total</div>
+      <div class="value"><?= e(money_fmt((float)$cob['valor_total'], $cob['moeda'])) ?></div>
       <span class="status status-<?= e($status_class) ?>"><?= e($status_label) ?></span>
       <?php if ($pago > 0 && $cob['status'] !== 'paga'): ?>
-        <div class="muted mt-3" style="font-size:13px;">Pago: <?= e(money_fmt($pago, $cob['moeda'])) ?> · Saldo: <?= e(money_fmt($saldo, $cob['moeda'])) ?></div>
+        <div class="sub">Pago: <?= e(money_fmt($pago, $cob['moeda'])) ?> · Saldo: <?= e(money_fmt($saldo, $cob['moeda'])) ?></div>
       <?php endif; ?>
     </div>
 

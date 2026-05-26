@@ -60,15 +60,14 @@ if ($acao === 'detalhe') {
     require __DIR__ . '/includes/header.php';
     ?>
     <?php if (isset($_GET['ok'])): ?><div class="flash ok">Pagamento registrado. Email enviado ao funcionário.</div><?php endif; ?>
-    <div class="card success">
-      <div class="muted" style="font-size:12px;">VALOR PAGO</div>
-      <div class="money lg">$<?= e(number_format((float)$pag['valor_usd'], 2, '.', ',')) ?> <span class="muted" style="font-size:14px;">USD</span></div>
-      <div class="mt-3">
-        <strong><?= e($pag['func_nome']) ?></strong><br>
-        <?php if ($pag['wisetag']): ?>WiseTag: <?= e($pag['wisetag']) ?><br><?php endif; ?>
-        Email: <?= e($pag['email']) ?><br>
-        Data do pagamento: <?= e(date('d/m/Y', strtotime($pag['data_pagamento']))) ?>
-      </div>
+    <div class="card hero success">
+      <div class="label">Valor pago</div>
+      <div class="value">$<?= e(number_format((float)$pag['valor_usd'], 2, '.', ',')) ?></div>
+      <div class="sub"><?= e($pag['func_nome']) ?> · <?= e(date('d/m/Y', strtotime($pag['data_pagamento']))) ?></div>
+    </div>
+    <div class="card">
+      <?php if ($pag['wisetag']): ?><div class="info-pair"><span class="l">WiseTag</span><span class="v"><?= e($pag['wisetag']) ?></span></div><?php endif; ?>
+      <div class="info-pair"><span class="l">Email</span><span class="v"><?= e($pag['email']) ?></span></div>
     </div>
 
     <h2>Detalhamento</h2>
