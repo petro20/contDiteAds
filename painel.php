@@ -176,7 +176,14 @@ require __DIR__ . '/includes/header.php';
                     $pf = (float)$stmt->fetchColumn();
                 } catch (PDOException $e) {}
             }
-            $h[$cur] = ['r'=>$r, 'd'=>$d + $pf, 'l'=>$r - $d - $pf];
+            // Pagamento aos sócios no mês (por moeda)
+            $ps = 0;
+            try {
+                $stmt = $db->prepare("SELECT COALESCE(SUM(valor),0) FROM pagamentos_socio WHERE competencia_mes = ? AND moeda = ?");
+                $stmt->execute([$mes, $cur]);
+                $ps = (float)$stmt->fetchColumn();
+            } catch (PDOException $e) {}
+            $h[$cur] = ['r'=>$r, 'd'=>$d + $pf, 's'=>$ps, 'l'=>$r - $d - $pf];
         }
         $historico[] = $h;
     }
@@ -272,6 +279,7 @@ function renderChartSaude() {
   const labels = dados.map(h => h.label);
   const receitas = dados.map(h => h[moeda_atual]?.r ?? 0);
   const despesas = dados.map(h => h[moeda_atual]?.d ?? 0);
+  const socios   = dados.map(h => h[moeda_atual]?.s ?? 0);
   const lucros   = dados.map(h => h[moeda_atual]?.l ?? 0);
 
   const ctx = document.getElementById('chart_saude').getContext('2d');
@@ -283,6 +291,7 @@ function renderChartSaude() {
       datasets: [
         { label: 'Receita',  data: receitas, backgroundColor: '#10B981', borderRadius: 4 },
         { label: 'Despesa',  data: despesas, backgroundColor: '#DC2626', borderRadius: 4 },
+        { label: 'Pago sócios', data: socios, backgroundColor: '#A855F7', borderRadius: 4 },
         { label: 'Lucro',    data: lucros,   backgroundColor: '#2563EB', borderRadius: 4, type: 'line', borderColor: '#3B82F6', borderWidth: 2, tension: 0.3, fill: false, pointBackgroundColor: '#3B82F6', pointRadius: 4 }
       ]
     },
