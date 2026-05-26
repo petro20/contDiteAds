@@ -105,10 +105,58 @@ require __DIR__ . '/includes/header.php';
   </a>
 
 <?php elseif ($u['role'] === 'funcionario'): ?>
-  <div class="card">
-    <div class="title">Bem-vindo!</div>
-    <div class="desc">A agenda de entregas (Sprint 3) e seus pagamentos (Sprint 4) ainda estão sendo construídos. Sua conta já está ativa.</div>
+  <?php
+    require_once __DIR__ . '/lib/pagamentos.php';
+    $competencia_now = date('Y-m');
+
+    $stmt = $db->prepare("SELECT COUNT(DISTINCT cliente_id) FROM assinaturas WHERE funcionario_id=? AND status='ativa'");
+    $stmt->execute([(int)$u['id']]);
+    $tot_clientes = (int)$stmt->fetchColumn();
+
+    $stmt = $db->prepare("SELECT COUNT(*) FROM assinaturas WHERE funcionario_id=? AND status='ativa'");
+    $stmt->execute([(int)$u['id']]);
+    $tot_assin = (int)$stmt->fetchColumn();
+
+    $pendentes = itens_pendentes_funcionario($db, (int)$u['id']);
+    $a_receber = (float)array_sum(array_column($pendentes, 'subtotal_usd'));
+
+    $stmt = $db->prepare("SELECT COALESCE(SUM(valor_usd),0) FROM pagamentos_funcionario WHERE funcionario_id=? AND YEAR(data_pagamento)=YEAR(CURDATE()) AND MONTH(data_pagamento)=MONTH(CURDATE())");
+    $stmt->execute([(int)$u['id']]);
+    $recebido_mes = (float)$stmt->fetchColumn();
+
+    $stmt = $db->prepare("SELECT COUNT(*) FROM entregas WHERE funcionario_id=? AND competencia_mes=?");
+    $stmt->execute([(int)$u['id'], $competencia_now]);
+    $tot_entregas = (int)$stmt->fetchColumn();
+  ?>
+  <div class="grid-2">
+    <div class="kpi"><div class="v"><?= $tot_clientes ?></div><div class="l">Clientes que atendo</div></div>
+    <div class="kpi"><div class="v"><?= $tot_assin ?></div><div class="l">Serviços ativos</div></div>
+    <div class="kpi"><div class="v"><?= $tot_entregas ?></div><div class="l">Entregas este mês</div></div>
+    <div class="kpi" <?= $a_receber>0?'style="border-color:var(--c-success);"':'' ?>>
+      <div class="v">$<?= e(number_format($a_receber, 2, '.', ',')) ?></div>
+      <div class="l">A receber (USD)</div>
+    </div>
   </div>
+
+  <?php if ($recebido_mes > 0): ?>
+    <div class="card success">
+      <div class="title">💵 $<?= e(number_format($recebido_mes, 2, '.', ',')) ?> USD recebidos este mês</div>
+    </div>
+  <?php endif; ?>
+
+  <div class="section-label">Acesso rápido</div>
+  <a class="card" href="<?= e(APP_BASE_URL) ?>/agenda.php">
+    <div class="title">📅 Minha agenda</div>
+    <div class="desc">Marcar entregas dos meus clientes</div>
+  </a>
+  <a class="card" href="<?= e(APP_BASE_URL) ?>/clientes.php">
+    <div class="title">👥 Meus clientes</div>
+    <div class="desc">Lista de quem eu atendo</div>
+  </a>
+  <a class="card" href="<?= e(APP_BASE_URL) ?>/meus_pagamentos.php">
+    <div class="title">💵 Meus pagamentos</div>
+    <div class="desc">A receber + histórico em USD</div>
+  </a>
 
 <?php else: /* cliente */ ?>
   <?php
