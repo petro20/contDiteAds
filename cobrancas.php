@@ -80,6 +80,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header('Location: ' . APP_BASE_URL . '/cobrancas.php?id=' . $cid); exit;
     }
 
+    if ($op === 'marcar_paga' && is_admin()) {
+        // Ação rápida: registra pagamento com saldo completo, hoje, sem método/obs
+        $cid = (int)($_POST['id'] ?? 0);
+        $stmt = $db->prepare('SELECT valor_total FROM cobrancas WHERE id = ?');
+        $stmt->execute([$cid]);
+        $valor_total = (float)$stmt->fetchColumn();
+        $stmt = $db->prepare('SELECT COALESCE(SUM(valor_pago),0) FROM pagamentos_cliente WHERE cobranca_id = ?');
+        $stmt->execute([$cid]);
+        $pago = (float)$stmt->fetchColumn();
+        $saldo = $valor_total - $pago;
+        if ($saldo > 0) {
+            registrar_pagamento_cliente($db, $cid, $saldo, date('Y-m-d'), null, 'Marcado pago pelo admin', null, (int)$me['id']);
+            audit_log('cobranca.marcada_paga', 'cobrancas', $cid);
+        }
+        header('Location: ' . APP_BASE_URL . '/cobrancas.php?id=' . $cid . '&ok=pag'); exit;
+    }
+
+    if ($op === 'silenciar_toggle' && is_admin()) {
+        $cid = (int)($_POST['id'] ?? 0);
+        $stmt = $db->prepare('UPDATE cobrancas SET silenciada = 1 - silenciada WHERE id = ?');
+        $stmt->execute([$cid]);
+        audit_log('cobranca.silenciada_toggle', 'cobrancas', $cid);
+        header('Location: ' . APP_BASE_URL . '/cobrancas.php?id=' . $cid); exit;
+    }
+
     if ($op === 'enviar_comprovante') {
         // Cliente ou admin podem anexar
         $cid = (int)($_POST['id'] ?? 0);
@@ -193,9 +218,32 @@ if ($id) {
         require __DIR__ . '/includes/footer.php';
         exit;
     }
-    $stmt = $db->prepare('SELECT ci.*, a.funcionario_id, u.nome AS func_nome FROM cobranca_itens ci LEFT JOIN assinaturas a ON a.id = ci.assinatura_id LEFT JOIN usuarios u ON u.id = a.funcionario_id WHERE ci.cobranca_id = ? ORDER BY ci.id');
+    $stmt = $db->prepare('SELECT ci.*, a.funcionario_id, a.variante, u.nome AS func_nome, i.tipo AS item_tipo, i.e_pacote
+                          FROM cobranca_itens ci
+                          LEFT JOIN assinaturas a ON a.id = ci.assinatura_id
+                          LEFT JOIN itens_catalogo i ON i.id = a.item_id
+                          LEFT JOIN usuarios u ON u.id = a.funcionario_id
+                          WHERE ci.cobranca_id = ? ORDER BY ci.id');
     $stmt->execute([$id]);
     $itens = $stmt->fetchAll();
+
+    // Pra cada item, conta entregas no mês (se aplicável)
+    foreach ($itens as &$it) {
+        $it['progresso'] = '';
+        if ($it['assinatura_id']) {
+            if ($it['item_tipo'] === 'por_unidade' && (int)$it['quantidade'] > 0) {
+                $it['progresso'] = (int)$it['quantidade'] . ' entregas';
+            } elseif ($it['e_pacote']) {
+                $stmt2 = $db->prepare('SELECT COUNT(*) FROM entregas WHERE assinatura_id = ? AND competencia_mes = ?');
+                $stmt2->execute([(int)$it['assinatura_id'], $cob['competencia_mes']]);
+                $marcadas = (int)$stmt2->fetchColumn();
+                $it['progresso'] = $marcadas . '/' . (int)$it['quantidade'] . ' entregas';
+            } else {
+                $it['progresso'] = 'ativo';
+            }
+        }
+    }
+    unset($it);
 
     $stmt = $db->prepare('SELECT p.*, u.nome AS registrado_por_nome FROM pagamentos_cliente p JOIN usuarios u ON u.id = p.registrado_por WHERE p.cobranca_id = ? ORDER BY p.data_pagamento DESC');
     $stmt->execute([$id]);
@@ -211,102 +259,97 @@ if ($id) {
     ?>
     <?php if ($flash): ?><div class="flash <?= e($flash[0]) ?>"><?= e($flash[1]) ?></div><?php endif; ?>
 
-    <div class="card <?= $vencido ? 'danger' : ($cob['status']==='paga' ? 'success' : '') ?>">
-      <div class="spaced">
-        <div>
-          <div class="muted" style="font-size:12px; text-transform:uppercase;">Total</div>
-          <div class="money lg"><?= e(money_fmt((float)$cob['valor_total'], $cob['moeda'])) ?></div>
-        </div>
-        <span class="status status-<?= e($cob['status']) ?>"><?= e($cob['status']) ?><?= $vencido?' · vencida':'' ?></span>
-      </div>
-      <div class="grid-2 mt-3">
-        <div><div class="muted" style="font-size:12px;">Vencimento</div><strong><?= e(date('d/m/Y', strtotime($cob['vencimento']))) ?></strong></div>
-        <div><div class="muted" style="font-size:12px;">Pago</div><strong><?= e(money_fmt($pago, $cob['moeda'])) ?></strong></div>
-        <div><div class="muted" style="font-size:12px;">Saldo</div><strong><?= e(money_fmt($saldo, $cob['moeda'])) ?></strong></div>
-        <div><div class="muted" style="font-size:12px;">Competência</div><strong><?= e($cob['competencia_mes']) ?></strong></div>
-      </div>
+    <?php
+      // KPI total
+      $status_label = $cob['status'] === 'paga' ? 'PAGA'
+                    : ($cob['status'] === 'cancelada' ? 'CANCELADA'
+                    : ($vencido ? 'VENCIDA · ' . date('d/m', strtotime($cob['vencimento']))
+                                : 'PENDENTE · vence ' . date('d/m', strtotime($cob['vencimento']))));
+      $status_class = $cob['status'] === 'paga' ? 'success'
+                    : ($cob['status'] === 'cancelada' ? 'info'
+                    : ($vencido ? 'vencida' : 'aberta'));
+    ?>
+    <div class="card" style="text-align:center; padding: var(--s-6) var(--s-4);">
+      <div class="muted" style="font-size:12px; letter-spacing:.08em;">VALOR TOTAL</div>
+      <div class="money lg" style="font-size:32px; margin: var(--s-2) 0 var(--s-3);"><?= e(money_fmt((float)$cob['valor_total'], $cob['moeda'])) ?></div>
+      <span class="status status-<?= e($status_class) ?>"><?= e($status_label) ?></span>
+      <?php if ($pago > 0 && $cob['status'] !== 'paga'): ?>
+        <div class="muted mt-3" style="font-size:13px;">Pago: <?= e(money_fmt($pago, $cob['moeda'])) ?> · Saldo: <?= e(money_fmt($saldo, $cob['moeda'])) ?></div>
+      <?php endif; ?>
     </div>
 
-    <h2>Itens</h2>
+    <div class="section-label">Itens cobrados</div>
     <?php foreach ($itens as $it): ?>
       <div class="card">
         <div class="spaced">
-          <div>
-            <div class="title"><?= e($it['descricao']) ?></div>
-            <div class="sub muted"><?= (int)$it['quantidade'] ?>× <?= e(money_fmt((float)$it['valor_unitario'], $cob['moeda'])) ?><?= $it['func_nome'] ? ' · ' . e($it['func_nome']) : '' ?></div>
+          <div class="info" style="flex:1; min-width:0;">
+            <div class="title" style="color:var(--txt-1);"><?= e($it['descricao']) ?></div>
+            <div class="sub muted">
+              <?php if ($it['func_nome']): ?><?= e($it['func_nome']) ?><?php endif; ?>
+              <?php if ($it['progresso']): ?><?= $it['func_nome'] ? ' · ' : '' ?><?= e($it['progresso']) ?><?php endif; ?>
+              <?php if (!$it['func_nome'] && !$it['progresso']): ?><?= (int)$it['quantidade'] ?>× <?= e(money_fmt((float)$it['valor_unitario'], $cob['moeda'])) ?><?php endif; ?>
+            </div>
           </div>
           <div class="money md"><?= e(money_fmt((float)$it['subtotal'], $cob['moeda'])) ?></div>
         </div>
       </div>
     <?php endforeach; ?>
 
-    <h2>Pagamentos</h2>
-    <?php if (!$pagamentos): ?>
-      <p class="muted">Nenhum pagamento registrado.</p>
-    <?php else: ?>
-      <?php foreach ($pagamentos as $p): ?>
-        <div class="card">
-          <div class="spaced">
-            <div>
-              <div class="title"><?= e(date('d/m/Y', strtotime($p['data_pagamento']))) ?> · <?= e($p['metodo'] ?? '—') ?></div>
-              <div class="sub muted">
-                Por <?= e($p['registrado_por_nome']) ?>
-                <?php if ($p['observacao']): ?> · <?= e($p['observacao']) ?><?php endif; ?>
-              </div>
-            </div>
-            <div class="right">
-              <div class="money md"><?= e(money_fmt((float)$p['valor_pago'], $cob['moeda'])) ?></div>
-            </div>
-          </div>
-          <?php if ($p['comprovante_path']): ?>
-          <div class="mt-3">
-            <a class="btn small btn-ghost" href="?baixar_comprovante=<?= (int)$p['id'] ?>" target="_blank">📎 Ver comprovante</a>
-          </div>
-          <?php endif; ?>
-          <?php if (is_admin()): ?>
-          <form method="post" class="mt-3" onsubmit="return confirm('Remover este pagamento? O comprovante também será apagado.');">
-            <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
-            <input type="hidden" name="op" value="remover_pagamento">
-            <input type="hidden" name="pagamento_id" value="<?= (int)$p['id'] ?>">
-            <button class="btn btn-ghost small" type="submit">✕ Remover pagamento</button>
-          </form>
-          <?php endif; ?>
-        </div>
-      <?php endforeach; ?>
-    <?php endif; ?>
+    <?php if (is_admin() && $cob['status'] === 'aberta'):
+      $vars = wa_vars_cobranca($db, (int)$cob['id']);
+      $tem_tel = !empty($vars['_telefone']);
+      $codigo_tpl = $vencido ? 'lembrete_vencida' : 'cobranca_nova';
+      $tpl = wa_template($db, $codigo_tpl, 'whatsapp');
+      $wa_link = '';
+      if ($tem_tel && $tpl) $wa_link = wa_link($vars['_telefone'], wa_render($tpl['corpo'], $vars));
 
-    <?php if ($cob['status'] === 'aberta'): ?>
-      <?php if ($me['role'] === 'cliente'): ?>
-        <h2>Enviar comprovante</h2>
-        <div class="card">
-          <form method="post" enctype="multipart/form-data">
-            <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
-            <input type="hidden" name="op" value="enviar_comprovante">
-            <input type="hidden" name="id" value="<?= (int)$cob['id'] ?>">
-            <div class="field">
-              <label>Arquivo (PDF, JPG ou PNG até 5MB)</label>
-              <input type="file" name="comprovante" required accept=".pdf,.jpg,.jpeg,.png">
-            </div>
-            <div class="grid-2">
-              <div class="field"><label>Data do pagamento</label><input type="date" name="data" required value="<?= e(date('Y-m-d')) ?>"></div>
-              <div class="field"><label>Valor pago (<?= e($cob['moeda']) ?>)</label><input type="number" step="0.01" min="0.01" name="valor" required value="<?= e(number_format($saldo, 2, '.', '')) ?>"></div>
-            </div>
-            <div class="field"><label>Método</label>
-              <select name="metodo"><option value="">—</option><option>Pix</option><option>Transferência</option><option>Boleto</option><option>Outro</option></select>
-            </div>
-            <div class="field"><label>Observação</label><input name="observacao" placeholder="opcional"></div>
-            <button class="btn block" type="submit">Enviar comprovante</button>
-          </form>
-        </div>
-      <?php elseif (is_admin()): ?>
-        <h2>Registrar pagamento</h2>
-        <div class="card">
+      $stmt_em = $db->prepare('SELECT email FROM clientes WHERE id = ?');
+      $stmt_em->execute([(int)$cob['cliente_id']]);
+      $cli_email = (string)$stmt_em->fetchColumn();
+      $tpl_em = wa_template($db, $codigo_tpl, 'email');
+      $mailto = '';
+      if ($cli_email && $tpl_em) {
+          $assunto = rawurlencode(wa_render($tpl_em['assunto'] ?: 'Cobrança', $vars));
+          $corpo   = rawurlencode(wa_render($tpl_em['corpo'], $vars));
+          $mailto  = 'mailto:' . $cli_email . '?subject=' . $assunto . '&body=' . $corpo;
+      }
+    ?>
+      <div class="btn-pair mt-3">
+        <?php if ($wa_link): ?>
+          <a class="btn btn-whatsapp" href="<?= e($wa_link) ?>" target="_blank">💬 WhatsApp</a>
+        <?php else: ?>
+          <button class="btn btn-ghost" disabled title="<?= $tem_tel ? 'Template não encontrado' : 'Cliente sem telefone' ?>">💬 WhatsApp</button>
+        <?php endif; ?>
+        <?php if ($mailto): ?>
+          <a class="btn btn-secondary" href="<?= e($mailto) ?>">✉ Email</a>
+        <?php else: ?>
+          <button class="btn btn-ghost" disabled title="Cliente sem email ou template ausente">✉ Email</button>
+        <?php endif; ?>
+      </div>
+
+      <form method="post" class="mt-3" onsubmit="return confirm('Marcar esta cobrança como totalmente paga?');">
+        <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
+        <input type="hidden" name="op" value="marcar_paga">
+        <input type="hidden" name="id" value="<?= (int)$cob['id'] ?>">
+        <button class="btn block" type="submit">✓ Marcar como paga</button>
+      </form>
+
+      <form method="post" class="mt-3">
+        <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
+        <input type="hidden" name="op" value="silenciar_toggle">
+        <input type="hidden" name="id" value="<?= (int)$cob['id'] ?>">
+        <button class="btn btn-ghost block" type="submit">🔕 <?= $cob['silenciada'] ? 'Reativar lembretes' : 'Silenciar lembretes' ?></button>
+      </form>
+
+      <details class="mt-5">
+        <summary class="muted" style="cursor:pointer; padding:var(--s-3);">Pagamento detalhado (parcial, com comprovante, etc.)</summary>
+        <div class="card mt-3">
           <form method="post" enctype="multipart/form-data">
             <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
             <input type="hidden" name="op" value="registrar_pagamento_admin">
             <input type="hidden" name="id" value="<?= (int)$cob['id'] ?>">
             <div class="grid-2">
-              <div class="field"><label>Valor pago (<?= e($cob['moeda']) ?>)</label><input type="number" step="0.01" min="0.01" name="valor" required value="<?= e(number_format($saldo, 2, '.', '')) ?>"></div>
+              <div class="field"><label>Valor (<?= e($cob['moeda']) ?>)</label><input type="number" step="0.01" min="0.01" name="valor" required value="<?= e(number_format($saldo, 2, '.', '')) ?>"></div>
               <div class="field"><label>Data</label><input type="date" name="data" required value="<?= e(date('Y-m-d')) ?>"></div>
             </div>
             <div class="field"><label>Método</label>
@@ -314,56 +357,78 @@ if ($id) {
             </div>
             <div class="field"><label>Observação</label><input name="observacao"></div>
             <div class="field"><label>Comprovante (opcional)</label><input type="file" name="comprovante" accept=".pdf,.jpg,.jpeg,.png"></div>
-            <button class="btn block" type="submit">Confirmar pagamento</button>
+            <button class="btn block" type="submit">Registrar pagamento</button>
           </form>
         </div>
-      <?php endif; ?>
+      </details>
     <?php endif; ?>
 
-    <h2>Ações</h2>
-    <a class="btn btn-secondary block" href="<?= e(APP_BASE_URL) ?>/recibo.php?cobranca=<?= (int)$cob['id'] ?>" target="_blank">📄 Ver recibo (imprimir/PDF)</a>
+    <?php if ($me['role'] === 'cliente' && $cob['status'] === 'aberta'): ?>
+      <h2 class="mt-5">Enviar comprovante</h2>
+      <div class="card">
+        <form method="post" enctype="multipart/form-data">
+          <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
+          <input type="hidden" name="op" value="enviar_comprovante">
+          <input type="hidden" name="id" value="<?= (int)$cob['id'] ?>">
+          <div class="field"><label>Arquivo (PDF/JPG/PNG ≤5MB)</label><input type="file" name="comprovante" required accept=".pdf,.jpg,.jpeg,.png"></div>
+          <div class="grid-2">
+            <div class="field"><label>Data</label><input type="date" name="data" required value="<?= e(date('Y-m-d')) ?>"></div>
+            <div class="field"><label>Valor (<?= e($cob['moeda']) ?>)</label><input type="number" step="0.01" min="0.01" name="valor" required value="<?= e(number_format($saldo, 2, '.', '')) ?>"></div>
+          </div>
+          <div class="field"><label>Método</label>
+            <select name="metodo"><option value="">—</option><option>Pix</option><option>Transferência</option><option>Boleto</option><option>Outro</option></select>
+          </div>
+          <button class="btn block" type="submit">Enviar comprovante</button>
+        </form>
+      </div>
+    <?php endif; ?>
 
-    <?php if (is_admin()):
-      $vars = wa_vars_cobranca($db, (int)$cob['id']);
-      $tem_tel = !empty($vars['_telefone']);
-      // Determina template padrão por status
-      if ($cob['status'] === 'paga')             $codigo_tpl = 'pagamento_confirmado';
-      elseif (strtotime($cob['vencimento']) < strtotime(date('Y-m-d'))) $codigo_tpl = 'lembrete_vencida';
-      else                                       $codigo_tpl = 'cobranca_nova';
-      $tpl = wa_template($db, $codigo_tpl, 'whatsapp');
-      if ($tem_tel && $tpl) {
-        $msg = wa_render($tpl['corpo'], $vars);
-        $link = wa_link($vars['_telefone'], $msg);
-      }
-    ?>
-      <?php if ($tem_tel && $tpl): ?>
-        <a class="btn btn-whatsapp block mt-3" href="<?= e($link) ?>" target="_blank">💬 Enviar pelo WhatsApp ({{<?= e($codigo_tpl) ?>}})</a>
-      <?php else: ?>
-        <div class="card attention mt-3">
-          <div class="title">⚠ WhatsApp indisponível</div>
-          <div class="desc">
-            <?= !$tem_tel ? 'Cliente sem telefone cadastrado.' : 'Template ' . e($codigo_tpl) . ' não encontrado/ativo.' ?>
+    <?php if ($pagamentos): ?>
+    <details class="mt-5">
+      <summary class="muted" style="cursor:pointer; padding:var(--s-3);">Pagamentos registrados (<?= count($pagamentos) ?>)</summary>
+      <?php foreach ($pagamentos as $p): ?>
+        <div class="card mt-3">
+          <div class="spaced">
+            <div>
+              <div class="title"><?= e(date('d/m/Y', strtotime($p['data_pagamento']))) ?> · <?= e($p['metodo'] ?? '—') ?></div>
+              <div class="sub muted">Por <?= e($p['registrado_por_nome']) ?><?= $p['observacao'] ? ' · ' . e($p['observacao']) : '' ?></div>
+            </div>
+            <div class="money md"><?= e(money_fmt((float)$p['valor_pago'], $cob['moeda'])) ?></div>
+          </div>
+          <div class="btn-pair mt-3">
+            <?php if ($p['comprovante_path']): ?>
+              <a class="btn btn-ghost small" href="?baixar_comprovante=<?= (int)$p['id'] ?>" target="_blank">📎 Ver comprovante</a>
+            <?php endif; ?>
+            <?php if (is_admin()): ?>
+              <form method="post" style="display:inline;" onsubmit="return confirm('Remover este pagamento?');">
+                <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
+                <input type="hidden" name="op" value="remover_pagamento">
+                <input type="hidden" name="pagamento_id" value="<?= (int)$p['id'] ?>">
+                <button class="btn btn-ghost small" type="submit">✕ Remover</button>
+              </form>
+            <?php endif; ?>
           </div>
         </div>
-      <?php endif; ?>
+      <?php endforeach; ?>
+    </details>
+    <?php endif; ?>
 
-      <div class="btn-pair mt-5">
-        <?php if ($cob['status'] !== 'cancelada'): ?>
-          <form method="post" style="flex:1; margin:0;" onsubmit="return confirm('Cancelar esta cobrança?');">
-            <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
-            <input type="hidden" name="op" value="cancelar">
-            <input type="hidden" name="id" value="<?= (int)$cob['id'] ?>">
-            <button class="btn btn-danger block" type="submit">Cancelar cobrança</button>
-          </form>
-        <?php else: ?>
-          <form method="post" style="flex:1; margin:0;">
-            <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
-            <input type="hidden" name="op" value="reabrir">
-            <input type="hidden" name="id" value="<?= (int)$cob['id'] ?>">
-            <button class="btn block" type="submit">Reabrir</button>
-          </form>
-        <?php endif; ?>
-      </div>
+    <a class="btn btn-ghost block mt-5" href="<?= e(APP_BASE_URL) ?>/recibo.php?cobranca=<?= (int)$cob['id'] ?>" target="_blank">📄 Ver recibo (PDF)</a>
+
+    <?php if (is_admin() && $cob['status'] !== 'cancelada'): ?>
+      <form method="post" class="mt-3" onsubmit="return confirm('Cancelar esta cobrança?');">
+        <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
+        <input type="hidden" name="op" value="cancelar">
+        <input type="hidden" name="id" value="<?= (int)$cob['id'] ?>">
+        <button class="btn btn-ghost block" type="submit">Cancelar cobrança</button>
+      </form>
+    <?php elseif (is_admin() && $cob['status'] === 'cancelada'): ?>
+      <form method="post" class="mt-3">
+        <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
+        <input type="hidden" name="op" value="reabrir">
+        <input type="hidden" name="id" value="<?= (int)$cob['id'] ?>">
+        <button class="btn block" type="submit">Reabrir cobrança</button>
+      </form>
     <?php endif; ?>
     <?php
     require __DIR__ . '/includes/footer.php';
