@@ -639,7 +639,7 @@ if ($me['role'] === 'cliente') {
     $where[] = 'c.id IN (SELECT ci.cobranca_id FROM cobranca_itens ci JOIN assinaturas a ON a.id = ci.assinatura_id WHERE a.funcionario_id = ?)';
     $params[] = (int)$me['id'];
 }
-if (in_array($f_status, ['aberta','paga','cancelada'], true)) {
+if (in_array($f_status, ['aberta','em_analise','paga','cancelada'], true)) {
     $where[] = 'c.status = ?'; $params[] = $f_status;
 }
 if (is_admin() && $f_cliente) {
@@ -725,9 +725,10 @@ $cls = is_admin() ? $db->query('SELECT id, nome_empresa FROM clientes WHERE ativ
       <div class="field"><label>Status</label>
         <select name="status" onchange="this.form.submit()">
           <option value="">Todos</option>
-          <option value="aberta"    <?= $f_status==='aberta'?'selected':'' ?>>Aberta</option>
-          <option value="paga"      <?= $f_status==='paga'?'selected':'' ?>>Paga</option>
-          <option value="cancelada" <?= $f_status==='cancelada'?'selected':'' ?>>Cancelada</option>
+          <option value="aberta"     <?= $f_status==='aberta'?'selected':'' ?>>Aberta</option>
+          <option value="em_analise" <?= $f_status==='em_analise'?'selected':'' ?>>Em análise</option>
+          <option value="paga"       <?= $f_status==='paga'?'selected':'' ?>>Paga</option>
+          <option value="cancelada"  <?= $f_status==='cancelada'?'selected':'' ?>>Cancelada</option>
         </select>
       </div>
       <div class="field"><label>Cliente</label>

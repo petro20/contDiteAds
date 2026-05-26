@@ -12,12 +12,25 @@ require __DIR__ . '/includes/header.php';
 
 <?php if (is_admin()): ?>
   <?php
-  // Conta básica — só tabelas que existem após migration_002
+  // Conta básica
   $totClientes = (int)$db->query('SELECT COUNT(*) FROM clientes WHERE ativo=1')->fetchColumn();
   $totFunc     = (int)$db->query("SELECT COUNT(*) FROM usuarios WHERE role='funcionario' AND ativo=1")->fetchColumn();
   $totItens    = 0;
   try { $totItens = (int)$db->query('SELECT COUNT(*) FROM itens_catalogo WHERE ativo=1')->fetchColumn(); } catch (Throwable $e) {}
+
+  // Comprovantes pendentes (cliente enviou, aguardando admin aceitar/rejeitar)
+  $tot_em_analise = 0;
+  try {
+    $tot_em_analise = (int)$db->query("SELECT COUNT(*) FROM cobrancas WHERE status='em_analise'")->fetchColumn();
+  } catch (Throwable $e) {}
   ?>
+
+  <?php if ($tot_em_analise > 0): ?>
+    <a class="card attention" href="<?= e(APP_BASE_URL) ?>/cobrancas.php?status=em_analise">
+      <div class="title" style="color:var(--c-orange);">🔔 <?= $tot_em_analise ?> comprovante<?= $tot_em_analise>1?'s':'' ?> aguardando verificação</div>
+      <div class="desc">Cliente enviou comprovante de pagamento. Aceite ou rejeite para concluir o ciclo.</div>
+    </a>
+  <?php endif; ?>
   <div class="grid-2">
     <div class="kpi"><div class="v"><?= $totClientes ?></div><div class="l">Clientes ativos</div></div>
     <div class="kpi"><div class="v"><?= $totFunc ?></div><div class="l">Funcionários ativos</div></div>
