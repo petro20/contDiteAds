@@ -225,7 +225,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $data  = trim((string)($_POST['data'] ?? '')) ?: date('Y-m-d');
             $metodo = trim((string)($_POST['metodo'] ?? '')) ?: null;
 
-            registrar_pagamento_cliente($db, $cid, $valor, $data, $metodo, $obs, $path, (int)$me['id']);
+            // pendente=true: aguarda confirmação do admin
+            registrar_pagamento_cliente($db, $cid, $valor, $data, $metodo, $obs, $path, (int)$me['id'], true);
             audit_log('pagamento.comprovante_enviado', 'cobrancas', $cid);
             header('Location: ' . APP_BASE_URL . '/cobrancas.php?id=' . $cid . '&ok=comp'); exit;
         } catch (Throwable $e) {
@@ -252,6 +253,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 audit_log('pagamento.registrado', 'cobrancas', $cid);
                 header('Location: ' . APP_BASE_URL . '/cobrancas.php?id=' . $cid . '&ok=pag'); exit;
             }
+        }
+    }
+
+    if ($op === 'aceitar_comprovante' && is_admin()) {
+        $pid = (int)($_POST['pagamento_id'] ?? 0);
+        $stmt = $db->prepare('SELECT cobranca_id FROM pagamentos_cliente WHERE id = ?');
+        $stmt->execute([$pid]);
+        $cid = (int)$stmt->fetchColumn();
+        if ($cid) {
+            try {
+                $stmt = $db->prepare('UPDATE pagamentos_cliente SET pendente = 0 WHERE id = ?');
+                $stmt->execute([$pid]);
+            } catch (PDOException $e) { /* schema antigo, ignora */ }
+            atualiza_status_cobranca($db, $cid);
+            audit_log('pagamento.comprovante_aceito', 'pagamentos_cliente', $pid);
+            header('Location: ' . APP_BASE_URL . '/cobrancas.php?id=' . $cid); exit;
+        }
+    }
+
+    if ($op === 'rejeitar_comprovante' && is_admin()) {
+        $pid = (int)($_POST['pagamento_id'] ?? 0);
+        $stmt = $db->prepare('SELECT cobranca_id, comprovante_path FROM pagamentos_cliente WHERE id = ?');
+        $stmt->execute([$pid]);
+        $row = $stmt->fetch();
+        if ($row) {
+            $stmt = $db->prepare('DELETE FROM pagamentos_cliente WHERE id = ?');
+            $stmt->execute([$pid]);
+            if ($row['comprovante_path']) {
+                $f = UPLOAD_DIR . '/' . $row['comprovante_path'];
+                if (is_file($f)) @unlink($f);
+            }
+            atualiza_status_cobranca($db, (int)$row['cobranca_id']);
+            audit_log('pagamento.comprovante_rejeitado', 'pagamentos_cliente', $pid);
+            header('Location: ' . APP_BASE_URL . '/cobrancas.php?id=' . (int)$row['cobranca_id']); exit;
         }
     }
 
@@ -358,13 +393,11 @@ if ($id) {
 
     <?php
       // KPI total
-      $status_label = $cob['status'] === 'paga' ? 'PAGA'
-                    : ($cob['status'] === 'cancelada' ? 'CANCELADA'
-                    : ($vencido ? 'VENCIDA · ' . date('d/m', strtotime($cob['vencimento']))
-                                : 'PENDENTE · vence ' . date('d/m', strtotime($cob['vencimento']))));
-      $status_class = $cob['status'] === 'paga' ? 'success'
-                    : ($cob['status'] === 'cancelada' ? 'info'
-                    : ($vencido ? 'vencida' : 'aberta'));
+      if ($cob['status'] === 'paga')          { $status_label = 'PAGA';        $status_class = 'success'; }
+      elseif ($cob['status'] === 'em_analise'){ $status_label = 'EM ANÁLISE';  $status_class = 'destaque'; }
+      elseif ($cob['status'] === 'cancelada') { $status_label = 'CANCELADA';   $status_class = 'info'; }
+      elseif ($vencido)                       { $status_label = 'VENCIDA · ' . date('d/m', strtotime($cob['vencimento'])); $status_class = 'vencida'; }
+      else                                    { $status_label = 'PENDENTE · vence ' . date('d/m', strtotime($cob['vencimento'])); $status_class = 'aberta'; }
     ?>
     <div class="card hero">
       <div class="label">Valor total</div>
@@ -511,11 +544,16 @@ if ($id) {
     <?php if ($pagamentos): ?>
     <details class="mt-5">
       <summary class="muted" style="cursor:pointer; padding:var(--s-3);">Pagamentos registrados (<?= count($pagamentos) ?>)</summary>
-      <?php foreach ($pagamentos as $p): ?>
-        <div class="card mt-3">
+      <?php foreach ($pagamentos as $p):
+        $is_pendente = isset($p['pendente']) && (int)$p['pendente'] === 1;
+      ?>
+        <div class="card mt-3<?= $is_pendente ? ' attention' : '' ?>">
           <div class="spaced">
             <div>
-              <div class="title"><?= e(date('d/m/Y', strtotime($p['data_pagamento']))) ?> · <?= e($p['metodo'] ?? '—') ?></div>
+              <div class="title">
+                <?= e(date('d/m/Y', strtotime($p['data_pagamento']))) ?> · <?= e($p['metodo'] ?? '—') ?>
+                <?php if ($is_pendente): ?><span class="status status-destaque">aguardando confirmação</span><?php endif; ?>
+              </div>
               <div class="sub muted">Por <?= e($p['registrado_por_nome']) ?><?= $p['observacao'] ? ' · ' . e($p['observacao']) : '' ?></div>
             </div>
             <div class="money md"><?= e(money_fmt((float)$p['valor_pago'], $cob['moeda'])) ?></div>
@@ -524,15 +562,30 @@ if ($id) {
             <?php if ($p['comprovante_path']): ?>
               <a class="btn btn-ghost small" href="?baixar_comprovante=<?= (int)$p['id'] ?>" target="_blank">📎 Ver comprovante</a>
             <?php endif; ?>
-            <?php if (is_admin()): ?>
-              <form method="post" style="display:inline;" onsubmit="return confirm('Remover este pagamento?');">
-                <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
-                <input type="hidden" name="op" value="remover_pagamento">
-                <input type="hidden" name="pagamento_id" value="<?= (int)$p['id'] ?>">
-                <button class="btn btn-ghost small" type="submit">✕ Remover</button>
-              </form>
-            <?php endif; ?>
           </div>
+          <?php if (is_admin() && $is_pendente): ?>
+            <div class="btn-pair mt-3">
+              <form method="post" style="flex:1;" onsubmit="return confirm('Aceitar este comprovante e marcar a cobrança como paga?');">
+                <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
+                <input type="hidden" name="op" value="aceitar_comprovante">
+                <input type="hidden" name="pagamento_id" value="<?= (int)$p['id'] ?>">
+                <button class="btn btn-success block" type="submit">✓ Aceitar comprovante</button>
+              </form>
+              <form method="post" style="flex:1;" onsubmit="return confirm('Rejeitar este comprovante? O arquivo será apagado.');">
+                <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
+                <input type="hidden" name="op" value="rejeitar_comprovante">
+                <input type="hidden" name="pagamento_id" value="<?= (int)$p['id'] ?>">
+                <button class="btn btn-danger block" type="submit">✕ Rejeitar</button>
+              </form>
+            </div>
+          <?php elseif (is_admin() && !$is_pendente): ?>
+            <form method="post" class="mt-3" onsubmit="return confirm('Remover este pagamento?');">
+              <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
+              <input type="hidden" name="op" value="remover_pagamento">
+              <input type="hidden" name="pagamento_id" value="<?= (int)$p['id'] ?>">
+              <button class="btn btn-ghost small" type="submit">✕ Remover pagamento</button>
+            </form>
+          <?php endif; ?>
         </div>
       <?php endforeach; ?>
     </details>

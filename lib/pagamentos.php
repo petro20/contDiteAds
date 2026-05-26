@@ -23,10 +23,34 @@ function atualiza_status_cobranca(PDO $db, int $cobranca_id): void {
     $stmt->execute([$cobranca_id]);
     $c = $stmt->fetch();
     if (!$c || $c['status'] === 'cancelada') return;
-    $stmt = $db->prepare('SELECT COALESCE(SUM(valor_pago), 0) FROM pagamentos_cliente WHERE cobranca_id = ?');
-    $stmt->execute([$cobranca_id]);
-    $pago = (float)$stmt->fetchColumn();
-    $novo = $pago >= (float)$c['valor_total'] ? 'paga' : 'aberta';
+
+    // Só conta pagamentos CONFIRMADOS (pendente=0). Tolera schema antigo sem coluna pendente.
+    try {
+        $stmt = $db->prepare('SELECT COALESCE(SUM(valor_pago), 0) FROM pagamentos_cliente WHERE cobranca_id = ? AND pendente = 0');
+        $stmt->execute([$cobranca_id]);
+    } catch (PDOException $e) {
+        $stmt = $db->prepare('SELECT COALESCE(SUM(valor_pago), 0) FROM pagamentos_cliente WHERE cobranca_id = ?');
+        $stmt->execute([$cobranca_id]);
+    }
+    $pago_confirmado = (float)$stmt->fetchColumn();
+
+    // Tem comprovante pendente? Se sim e não está paga ainda, status = em_analise
+    try {
+        $stmt = $db->prepare('SELECT COUNT(*) FROM pagamentos_cliente WHERE cobranca_id = ? AND pendente = 1');
+        $stmt->execute([$cobranca_id]);
+        $tem_pendente = (int)$stmt->fetchColumn() > 0;
+    } catch (PDOException $e) {
+        $tem_pendente = false;
+    }
+
+    if ($pago_confirmado >= (float)$c['valor_total']) {
+        $novo = 'paga';
+    } elseif ($tem_pendente) {
+        $novo = 'em_analise';
+    } else {
+        $novo = 'aberta';
+    }
+
     if ($novo !== $c['status']) {
         $stmt = $db->prepare('UPDATE cobrancas SET status = ? WHERE id = ?');
         $stmt->execute([$novo, $cobranca_id]);
@@ -45,10 +69,17 @@ function registrar_pagamento_cliente(
     ?string $metodo,
     ?string $observacao,
     ?string $comprovante_path,
-    int $registrado_por
+    int $registrado_por,
+    bool $pendente = false
 ): int {
-    $stmt = $db->prepare('INSERT INTO pagamentos_cliente (cobranca_id, valor_pago, data_pagamento, metodo, observacao, comprovante_path, registrado_por) VALUES (?,?,?,?,?,?,?)');
-    $stmt->execute([$cobranca_id, $valor, $data, $metodo, $observacao, $comprovante_path, $registrado_por]);
+    try {
+        $stmt = $db->prepare('INSERT INTO pagamentos_cliente (cobranca_id, valor_pago, data_pagamento, metodo, observacao, comprovante_path, registrado_por, pendente) VALUES (?,?,?,?,?,?,?,?)');
+        $stmt->execute([$cobranca_id, $valor, $data, $metodo, $observacao, $comprovante_path, $registrado_por, $pendente ? 1 : 0]);
+    } catch (PDOException $e) {
+        // Schema antigo sem coluna pendente
+        $stmt = $db->prepare('INSERT INTO pagamentos_cliente (cobranca_id, valor_pago, data_pagamento, metodo, observacao, comprovante_path, registrado_por) VALUES (?,?,?,?,?,?,?)');
+        $stmt->execute([$cobranca_id, $valor, $data, $metodo, $observacao, $comprovante_path, $registrado_por]);
+    }
     $pid = (int)$db->lastInsertId();
     atualiza_status_cobranca($db, $cobranca_id);
     // Notifica cliente quando cobrança fica totalmente paga
