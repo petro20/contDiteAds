@@ -32,8 +32,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             try {
                 if ($pid) {
-                    $stmt = $db->prepare('UPDATE assinaturas SET funcionario_id=?, variante=?, valor_cobrado=?, status=? WHERE id=?');
-                    $stmt->execute([$func, $variante, $valor, $status, $pid]);
+                    $stmt = $db->prepare('UPDATE assinaturas SET item_id=?, funcionario_id=?, variante=?, valor_cobrado=?, status=?, iniciada_em=? WHERE id=?');
+                    $stmt->execute([$item, $func, $variante, $valor, $status, $iniciada, $pid]);
                     audit_log('assinatura.editada', 'assinaturas', $pid);
                     header('Location: ' . APP_BASE_URL . '/assinaturas.php?id=' . $pid . '&ok=upd'); exit;
                 } else {
@@ -133,7 +133,7 @@ if ($acao === 'novo' || $acao === 'editar') {
 
         <div class="field">
           <label>Item do catálogo *</label>
-          <select name="item_id" id="item_id" required <?= $a['id']?'disabled':'' ?>>
+          <select name="item_id" id="item_id" required>
             <option value="">— selecione —</option>
             <?php foreach ($itens as $it): ?>
               <option value="<?= (int)$it['id'] ?>" <?= $a['item_id']==$it['id']?'selected':'' ?>>
@@ -141,7 +141,6 @@ if ($acao === 'novo' || $acao === 'editar') {
               </option>
             <?php endforeach; ?>
           </select>
-          <?php if ($a['id']): ?><input type="hidden" name="item_id" value="<?= (int)$a['item_id'] ?>"><?php endif; ?>
         </div>
 
         <div class="field" id="field_variante" style="display:none;">
@@ -173,8 +172,8 @@ if ($acao === 'novo' || $acao === 'editar') {
 
         <div class="field">
           <label>Data de início *</label>
-          <input type="date" name="iniciada_em" required value="<?= e($a['iniciada_em']) ?>" <?= $a['id']?'disabled':'' ?>>
-          <?php if ($a['id']): ?><input type="hidden" name="iniciada_em" value="<?= e($a['iniciada_em']) ?>"><?php endif; ?>
+          <input type="date" name="iniciada_em" required value="<?= e($a['iniciada_em']) ?>">
+          <?php if ($a['id']): ?><div class="hint">Mudar a data afeta de quais meses essa assinatura entra em cobrança.</div><?php endif; ?>
         </div>
 
         <?php if ($a['id']): ?>
