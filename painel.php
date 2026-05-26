@@ -269,22 +269,13 @@ renderChartSaude();
       <div class="info-pair"><span class="l">⏳ A receber</span><span class="v"><?= e(money_fmt($ar, $m)) ?></span></div>
     <?php endif; ?>
 
-    <?php if ($d > 0 || $extra_func > 0 || $dist > 0): ?>
+    <?php if ($d > 0 || $extra_func > 0): ?>
       <div class="section-label" style="margin-top:var(--s-3);">Saídas</div>
       <?php if ($d > 0): ?>
         <div class="info-pair"><span class="l">💸 Despesas</span><span class="v" style="color:var(--c-danger);">− <?= e(money_fmt($d, $m)) ?></span></div>
       <?php endif; ?>
       <?php if ($extra_func > 0): ?>
         <div class="info-pair"><span class="l">💵 Pagos a funcionários</span><span class="v" style="color:var(--c-danger);">− <?= e(money_fmt($extra_func, $m)) ?></span></div>
-      <?php endif; ?>
-      <?php if ($dist > 0): ?>
-        <div class="info-pair" style="margin-top:var(--s-2);"><span class="l"><strong>💼 Pagamento de sócios</strong></span><span class="v" style="color:var(--c-danger);">− <?= e(money_fmt($dist, $m)) ?></span></div>
-        <?php foreach ($pag_socios_det[$m] as $ps): ?>
-          <div class="info-pair muted" style="font-size:13px; padding-left:var(--s-3);">
-            <span class="l">• <?= e($ps['nome']) ?></span>
-            <span class="v" style="color:var(--c-danger);">− <?= e(money_fmt($ps['valor'], $m)) ?></span>
-          </div>
-        <?php endforeach; ?>
       <?php endif; ?>
     <?php endif; ?>
 
@@ -297,6 +288,17 @@ renderChartSaude();
     <?php endif; ?>
 
     <?php if ($dist > 0): ?>
+      <div class="section-label" style="margin-top:var(--s-3);">Distribuição já paga</div>
+      <?php foreach ($pag_socios_det[$m] as $ps): ?>
+        <div class="info-pair" style="font-size:14px;">
+          <span class="l">💼 <?= e($ps['nome']) ?></span>
+          <span class="v" style="color:var(--c-danger);">− <?= e(money_fmt($ps['valor'], $m)) ?></span>
+        </div>
+      <?php endforeach; ?>
+      <div class="info-pair muted" style="font-size:13px;">
+        <span>Total distribuído</span>
+        <span style="color:var(--c-danger);">− <?= e(money_fmt($dist, $m)) ?></span>
+      </div>
       <div class="info-pair" style="border-top:1px solid var(--border); padding-top:var(--s-3); margin-top:var(--s-2);">
         <strong style="font-size:15px;">💰 Saldo após distribuição</strong>
         <strong style="font-size:18px; color:<?= $saldo >= 0 ? 'var(--c-success)' : 'var(--c-danger)' ?>;"><?= e(money_fmt($saldo, $m)) ?></strong>
