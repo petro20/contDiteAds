@@ -334,17 +334,6 @@ renderChartSaude();
 
 <?php else: /* servicos */
     $stmt = $db->prepare("
-        SELECT i.id, i.nome, i.tipo,
-               COUNT(DISTINCT CASE WHEN a.status = 'ativa' THEN a.cliente_id END) AS qtd_clientes,
-               COUNT(DISTINCT a.id) FILTER (WHERE 1=1) AS qtd_assin
-        FROM itens_catalogo i
-        LEFT JOIN assinaturas a ON a.item_id = i.id AND a.status = 'ativa'
-        WHERE i.ativo = 1
-        GROUP BY i.id
-        ORDER BY qtd_clientes DESC, i.nome
-    ");
-    // MySQL não suporta FILTER WHERE — usar sub-query
-    $stmt = $db->prepare("
         SELECT i.id, i.nome, i.tipo, i.e_pacote,
                (SELECT COUNT(DISTINCT cliente_id) FROM assinaturas WHERE item_id = i.id AND status = 'ativa') AS qtd_clientes,
                (SELECT COUNT(*) FROM assinaturas WHERE item_id = i.id AND status = 'ativa') AS qtd_assin
