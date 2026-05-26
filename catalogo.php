@@ -230,17 +230,27 @@ $stmt = $db->prepare($sql);
 $stmt->execute($params);
 $itens = $stmt->fetchAll();
 ?>
+<?php
+$f_moeda = $_GET['moeda'] ?? 'BRL';
+if (!in_array($f_moeda, ['BRL','USD','EUR'], true)) $f_moeda = 'BRL';
+?>
 <h1 class="page-title">Catálogo</h1>
 <?php if ($flash): ?><div class="flash <?= e($flash[0]) ?>"><?= e($flash[1]) ?></div><?php endif; ?>
 
 <a href="?acao=novo" class="btn btn-brand block">+ Novo item</a>
 
-<div class="section-label">Filtrar</div>
+<nav class="tabs-bar mt-3">
+  <?php foreach (['BRL'=>'R$ BRL','USD'=>'$ USD','EUR'=>'€ EUR'] as $m => $lbl): ?>
+    <a class="<?= $f_moeda===$m?'active':'' ?>" href="?moeda=<?= $m ?><?= $f_tipo?'&tipo='.e($f_tipo):'' ?>"><?= e($lbl) ?></a>
+  <?php endforeach; ?>
+</nav>
+
 <form method="get" class="card">
+  <input type="hidden" name="moeda" value="<?= e($f_moeda) ?>">
   <div class="field" style="margin:0;">
     <label>Tipo</label>
     <select name="tipo" onchange="this.form.submit()">
-      <option value="">Todos</option>
+      <option value="">Todos os tipos</option>
       <option value="unico"       <?= $f_tipo==='unico'?'selected':'' ?>>Únicos</option>
       <option value="mensal"      <?= $f_tipo==='mensal'?'selected':'' ?>>Mensais</option>
       <option value="por_unidade" <?= $f_tipo==='por_unidade'?'selected':'' ?>>Por unidade</option>
@@ -265,12 +275,15 @@ $itens = $stmt->fetchAll();
     </div>
     <div class="right">
       <?php
-        $precos = [];
-        if ($it['preco_brl'] !== null) $precos[] = money_fmt((float)$it['preco_brl'], 'BRL');
-        if ($it['preco_usd'] !== null) $precos[] = money_fmt((float)$it['preco_usd'], 'USD');
-        if ($it['preco_eur'] !== null) $precos[] = money_fmt((float)$it['preco_eur'], 'EUR');
+        $col = 'preco_' . strtolower($f_moeda);
+        $col_ia = 'preco_ia_' . strtolower($f_moeda);
+        $val = $it[$col] ?? null;
+        $val_ia = $it[$col_ia] ?? null;
       ?>
-      <div class="money md"><?= e(implode(' / ', $precos) ?: '—') ?></div>
+      <div class="money md"><?= $val !== null ? e(money_fmt((float)$val, $f_moeda)) : '—' ?></div>
+      <?php if ($it['tem_variante_ia'] && $val_ia !== null): ?>
+        <div class="muted" style="font-size:11px;">IA: <?= e(money_fmt((float)$val_ia, $f_moeda)) ?></div>
+      <?php endif; ?>
     </div>
   </a>
 <?php endforeach; ?>
