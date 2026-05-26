@@ -203,12 +203,12 @@ function gerar_cobranca_mensal(PDO $db, int $cliente_id, string $competencia, ?s
     if ($vencimento_override) {
         $vencimento = $vencimento_override;
     } else {
-        // Data da geração ≈ dia_cobranca dentro do mês competencia
+        // Padrão: vencimento = dia_cobranca do cliente no mês da competência
+        // (Para geração manual; o cron passa override = data exata do ciclo)
         $dia = max(1, min(31, (int)($cli['dia_cobranca'] ?: 1)));
         $base = DateTime::createFromFormat('Y-m-d', $competencia . '-01');
         $eff = min($dia, (int)$base->format('t'));
         $base->setDate((int)$base->format('Y'), (int)$base->format('m'), $eff);
-        $base->modify('+5 days');
         $vencimento = $base->format('Y-m-d');
     }
 
@@ -235,24 +235,34 @@ function gerar_cobranca_mensal(PDO $db, int $cliente_id, string $competencia, ?s
  * Roda a geração para TODOS os clientes elegíveis numa data específica.
  * Usado pelo cron diário.
  *
+ * Regra: cobrança é EMITIDA 7 dias antes da data de cobrança do cliente.
+ *  - Hoje + 7 dias = data alvo (será o vencimento)
+ *  - Se hoje+7 cai no dia_cobranca efetivo do cliente, gera agora
+ *  - Vencimento da cobrança = hoje + 7 dias
+ *
  * @return array Log de execução com contagens.
  */
 function executar_geracao_diaria(PDO $db, DateTimeImmutable $hoje): array {
-    $dia_hoje = (int)$hoje->format('d');
-    $days_in_month = (int)$hoje->format('t');
-    $competencia = $hoje->format('Y-m');
+    $target = $hoje->modify('+7 days'); // emitir 7 dias antes do vencimento
+    $target_month = $target->format('Y-m');
+    $target_day = (int)$target->format('d');
 
-    // Clientes cujo dia_cobranca (ou último dia do mês, se >dia_cobranca) == hoje
     $sql = 'SELECT id, dia_cobranca FROM clientes WHERE ativo = 1 AND dia_cobranca IS NOT NULL';
     $clientes = $db->query($sql)->fetchAll();
 
-    $log = ['data' => $hoje->format('Y-m-d'), 'avaliados' => count($clientes), 'criadas' => 0, 'puladas' => 0, 'vazias' => 0, 'erros' => 0, 'detalhes' => []];
+    $log = [
+        'data' => $hoje->format('Y-m-d'),
+        'alvo_vencimento' => $target->format('Y-m-d'),
+        'avaliados' => count($clientes),
+        'criadas' => 0, 'puladas' => 0, 'vazias' => 0, 'erros' => 0,
+        'detalhes' => []
+    ];
 
     foreach ($clientes as $c) {
-        $eff = dia_cobranca_efetivo((int)$c['dia_cobranca'], $hoje);
-        if ($eff !== $dia_hoje) continue;
+        $eff = dia_cobranca_efetivo((int)$c['dia_cobranca'], $target);
+        if ($eff !== $target_day) continue; // não é o cliente desse ciclo
         try {
-            $r = gerar_cobranca_mensal($db, (int)$c['id'], $competencia);
+            $r = gerar_cobranca_mensal($db, (int)$c['id'], $target_month, $target->format('Y-m-d'));
             $log['detalhes'][] = ['cliente_id' => (int)$c['id'], 'status' => $r['status'], 'cobranca_id' => $r['cobranca_id']];
             if ($r['status'] === 'created') $log['criadas']++;
             elseif ($r['status'] === 'exists') $log['puladas']++;
