@@ -1,6 +1,8 @@
 <?php
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/lib/money.php';
+require_once __DIR__ . '/lib/despesas.php';
+require_once __DIR__ . '/lib/distribuicao.php';
 require_admin();
 $db = db();
 
@@ -25,7 +27,52 @@ require __DIR__ . '/includes/header.php';
 </nav>
 
 <?php if ($aba === 'agenda'):
-    // Cobranças vencidas
+    $ini = $competencia . '-01';
+    $fim = date('Y-m-t', strtotime($ini));
+
+    // RECEITA: pagamentos confirmados no mês
+    $stmt = $db->prepare("SELECT c.moeda, COALESCE(SUM(p.valor_pago),0) AS total
+                          FROM pagamentos_cliente p JOIN cobrancas c ON c.id = p.cobranca_id
+                          WHERE p.data_pagamento BETWEEN ? AND ? AND COALESCE(p.pendente,0) = 0
+                          GROUP BY c.moeda");
+    $stmt->execute([$ini, $fim]);
+    $rec = ['BRL'=>0.0,'USD'=>0.0,'EUR'=>0.0];
+    foreach ($stmt->fetchAll() as $r) $rec[$r['moeda']] = (float)$r['total'];
+
+    // EM ANÁLISE no mês de competência
+    $stmt = $db->prepare("SELECT moeda, COALESCE(SUM(valor_total),0) AS total
+                          FROM cobrancas WHERE competencia_mes = ? AND status = 'em_analise' GROUP BY moeda");
+    $stmt->execute([$competencia]);
+    $analise = ['BRL'=>0.0,'USD'=>0.0,'EUR'=>0.0];
+    foreach ($stmt->fetchAll() as $r) $analise[$r['moeda']] = (float)$r['total'];
+
+    // A RECEBER no mês de competência
+    $stmt = $db->prepare("SELECT moeda, COALESCE(SUM(valor_total),0) AS total
+                          FROM cobrancas WHERE competencia_mes = ? AND status = 'aberta' GROUP BY moeda");
+    $stmt->execute([$competencia]);
+    $a_receber = ['BRL'=>0.0,'USD'=>0.0,'EUR'=>0.0];
+    foreach ($stmt->fetchAll() as $r) $a_receber[$r['moeda']] = (float)$r['total'];
+
+    // DESPESAS do mês
+    $desp_mes = despesas_do_mes($db, $competencia);
+
+    // PAGAMENTOS a funcionários no mês
+    $stmt = $db->prepare("SELECT COALESCE(SUM(valor_usd),0) FROM pagamentos_funcionario
+                          WHERE data_pagamento BETWEEN ? AND ?");
+    $stmt->execute([$ini, $fim]);
+    $pag_func_usd = (float)$stmt->fetchColumn();
+
+    // LUCRO LÍQUIDO (recebido - despesas; USD também desconta pag. funcionário)
+    $lucro = [];
+    foreach (['BRL','USD','EUR'] as $m) {
+        $lucro[$m] = $rec[$m] - ($desp_mes['totais'][$m] ?? 0);
+        if ($m === 'USD') $lucro[$m] -= $pag_func_usd;
+    }
+
+    // Quotas pra distribuição
+    $qts = quotas_total($db);
+
+    // Cobranças vencidas (qualquer mês)
     $stmt = $db->prepare("SELECT c.id, c.valor_total, c.moeda, c.vencimento, cl.nome_empresa
                           FROM cobrancas c JOIN clientes cl ON cl.id = c.cliente_id
                           WHERE c.status = 'aberta' AND c.vencimento < CURDATE()
@@ -40,6 +87,12 @@ require __DIR__ . '/includes/header.php';
                           ORDER BY c.vencimento ASC LIMIT 20");
     $stmt->execute();
     $proximas = $stmt->fetchAll();
+
+    // Navegação de mês
+    $dt = DateTime::createFromFormat('Y-m', $competencia);
+    $mes_ant = (clone $dt)->modify('-1 month')->format('Y-m');
+    $mes_prox = (clone $dt)->modify('+1 month')->format('Y-m');
+    $nome_mes_pt = ['','janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'][(int)$dt->format('n')] . ' de ' . $dt->format('Y');
 
     // Resumo por moeda (mês competencia)
     $stmt = $db->prepare("SELECT moeda, status, SUM(valor_total) AS total
@@ -66,42 +119,58 @@ require __DIR__ . '/includes/header.php';
         elseif ($r['status'] === 'em_analise') $por_moeda_total[$m]['analise']  += (float)$r['total'];
     }
 ?>
-<div class="section-label">Resumo do mês (<?= e($competencia) ?>)</div>
+<div class="spaced mb-3">
+  <a class="btn btn-ghost small" href="?aba=agenda&mes=<?= e($mes_ant) ?>">← <?= e($mes_ant) ?></a>
+  <strong><?= e($nome_mes_pt) ?></strong>
+  <a class="btn btn-ghost small" href="?aba=agenda&mes=<?= e($mes_prox) ?>"><?= e($mes_prox) ?> →</a>
+</div>
+
 <?php foreach (['BRL','USD','EUR'] as $m):
-    $rec = $por_moeda[$m]['recebido']; $rcv = $por_moeda[$m]['receber']; $ana = $por_moeda[$m]['analise'];
-    if ($rec == 0 && $rcv == 0 && $ana == 0) continue;
+    $r = $rec[$m]; $a = $analise[$m]; $ar = $a_receber[$m];
+    $d = $desp_mes['totais'][$m] ?? 0;
+    $extra_func = ($m === 'USD') ? $pag_func_usd : 0;
+    $luc = $lucro[$m];
+    if ($r == 0 && $a == 0 && $ar == 0 && $d == 0 && $extra_func == 0) continue;
 ?>
   <div class="card">
-    <div class="title"><?= $m ?> · este mês</div>
-    <div class="info-pair"><span class="l">Recebido</span><span class="v" style="color:var(--c-success);"><?= e(money_fmt($rec, $m)) ?></span></div>
-    <?php if ($ana > 0): ?>
-      <div class="info-pair"><span class="l">Em análise</span><span class="v" style="color:var(--c-orange);"><?= e(money_fmt($ana, $m)) ?></span></div>
+    <div class="title" style="font-size:18px;"><?= $m ?></div>
+
+    <div class="section-label" style="margin-top:var(--s-3);">Entradas</div>
+    <?php if ($r > 0): ?>
+      <div class="info-pair"><span class="l">✅ Recebido</span><span class="v" style="color:var(--c-success);"><?= e(money_fmt($r, $m)) ?></span></div>
     <?php endif; ?>
-    <div class="info-pair"><span class="l">A receber</span><span class="v"><?= e(money_fmt($rcv, $m)) ?></span></div>
+    <?php if ($a > 0): ?>
+      <div class="info-pair"><span class="l">🟠 Em análise</span><span class="v" style="color:var(--c-orange);"><?= e(money_fmt($a, $m)) ?></span></div>
+    <?php endif; ?>
+    <?php if ($ar > 0): ?>
+      <div class="info-pair"><span class="l">⏳ A receber</span><span class="v"><?= e(money_fmt($ar, $m)) ?></span></div>
+    <?php endif; ?>
+
+    <?php if ($d > 0 || $extra_func > 0): ?>
+      <div class="section-label" style="margin-top:var(--s-3);">Saídas</div>
+      <?php if ($d > 0): ?>
+        <div class="info-pair"><span class="l">💸 Despesas</span><span class="v" style="color:var(--c-danger);">− <?= e(money_fmt($d, $m)) ?></span></div>
+      <?php endif; ?>
+      <?php if ($extra_func > 0): ?>
+        <div class="info-pair"><span class="l">💵 Pagos a funcionários</span><span class="v" style="color:var(--c-danger);">− <?= e(money_fmt($extra_func, $m)) ?></span></div>
+      <?php endif; ?>
+    <?php endif; ?>
+
+    <div class="info-pair" style="border-top:2px solid var(--border); padding-top:var(--s-3); margin-top:var(--s-3);">
+      <strong style="font-size:15px;">💎 Lucro líquido</strong>
+      <strong style="font-size:18px; color:<?= $luc >= 0 ? 'var(--c-success)' : 'var(--c-danger)' ?>;"><?= e(money_fmt($luc, $m)) ?></strong>
+    </div>
+    <?php if ($qts > 0 && $luc != 0): ?>
+      <div class="info-pair muted" style="font-size:13px;"><span>Por quota (÷ <?= $qts ?>)</span><span><?= e(money_fmt($luc / $qts, $m)) ?></span></div>
+    <?php endif; ?>
   </div>
 <?php endforeach; ?>
 
 <?php
-  $tem_total = false;
-  foreach (['BRL','USD','EUR'] as $m) {
-      if ($por_moeda_total[$m]['recebido'] + $por_moeda_total[$m]['receber'] + $por_moeda_total[$m]['analise'] > 0) { $tem_total = true; break; }
-  }
+  $vazio_total = (array_sum($rec) + array_sum($analise) + array_sum($a_receber) + array_sum($desp_mes['totais']) + $pag_func_usd) == 0;
+  if ($vazio_total):
 ?>
-<?php if ($tem_total): ?>
-  <div class="section-label">Acumulado total (todas as cobranças até hoje)</div>
-  <?php foreach (['BRL','USD','EUR'] as $m):
-      $rec = $por_moeda_total[$m]['recebido']; $rcv = $por_moeda_total[$m]['receber']; $ana = $por_moeda_total[$m]['analise'];
-      if ($rec == 0 && $rcv == 0 && $ana == 0) continue;
-  ?>
-    <div class="card">
-      <div class="title"><?= $m ?> · total</div>
-      <div class="info-pair"><span class="l">Recebido</span><span class="v" style="color:var(--c-success);"><?= e(money_fmt($rec, $m)) ?></span></div>
-      <?php if ($ana > 0): ?>
-        <div class="info-pair"><span class="l">Em análise</span><span class="v" style="color:var(--c-orange);"><?= e(money_fmt($ana, $m)) ?></span></div>
-      <?php endif; ?>
-      <div class="info-pair"><span class="l">A receber</span><span class="v"><?= e(money_fmt($rcv, $m)) ?></span></div>
-    </div>
-  <?php endforeach; ?>
+  <p class="muted center mt-5">Sem movimentação financeira em <?= e($nome_mes_pt) ?>.</p>
 <?php endif; ?>
 
 <?php if ($vencidas): ?>
