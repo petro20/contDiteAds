@@ -157,7 +157,7 @@ require __DIR__ . '/includes/header.php';
                 <form method="post" class="mt-3" onsubmit="return confirm('Confirmar pagamento de <?= e(money_fmt($pendente[$m], $m)) ?>?');">
                   <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
                   <input type="hidden" name="op" value="pagar_socio">
-                  <input type="hidden" name="socio_id" value="<?= e((string)($is_empresa ? 'empresa' : $key)) ?>">
+                  <input type="hidden" name="socio_id" value="<?= e((string)($is_empresa ? 'empresa' : (int)str_replace('socio_', '', $key))) ?>">
                   <input type="hidden" name="competencia" value="<?= e($competencia) ?>">
                   <input type="hidden" name="moeda" value="<?= e($m) ?>">
                   <div class="grid-2">
