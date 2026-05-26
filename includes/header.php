@@ -28,7 +28,9 @@ $nav_active   = $nav_active   ?? '';
       <h1><?= e($page) ?></h1>
       <?php if ($page_sub): ?><div class="sub"><?= e($page_sub) ?></div><?php endif; ?>
     <?php else: ?>
-      <span class="brand">Dite Ads</span>
+      <a class="brand-link" href="<?= e(APP_BASE_URL) ?>/dashboard.php" aria-label="Início">
+        <img src="<?= e(APP_BASE_URL) ?>/assets/img/logo.png" alt="Dite Ads" class="brand-logo">
+      </a>
     <?php endif; ?>
   </div>
   <div class="actions">

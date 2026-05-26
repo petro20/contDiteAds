@@ -108,6 +108,20 @@ a:active { opacity: 0.7; }
     -webkit-text-fill-color: transparent;
     background-clip: text;
 }
+.topbar .brand-link {
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
+    line-height: 0;
+}
+.topbar .brand-logo {
+    height: 36px;
+    width: auto;
+    display: block;
+    transition: transform 0.15s ease, opacity 0.15s ease;
+}
+.topbar .brand-link:hover .brand-logo { transform: scale(1.05); }
+.topbar .brand-link:active .brand-logo { opacity: 0.7; }
 .topbar .actions { display: flex; gap: var(--s-2); }
 .topbar .actions a, .topbar .actions button {
     width: 40px; height: 40px;
