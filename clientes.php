@@ -43,13 +43,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $extra_query = '';
             if ($moeda_antiga && $moeda_antiga !== $moeda) {
-                // Recalcula valor_cobrado de todas as assinaturas ativas usando o preço
-                // do catálogo na nova moeda (considerando a variante normal/ia).
+                // USD é a moeda mestre do Dite Ads. Pra outras moedas, converte
+                // preco_usd do catálogo usando a cotação do dia.
+                require_once __DIR__ . '/lib/cotacao.php';
+                $cot = cotacao_atual($db);
                 $stmt = $db->prepare("
-                    SELECT a.id, a.variante, a.valor_cobrado,
-                           i.nome AS item_nome,
-                           i.preco_brl, i.preco_usd, i.preco_eur,
-                           i.preco_ia_brl, i.preco_ia_usd, i.preco_ia_eur
+                    SELECT a.id, a.variante, i.nome AS item_nome, i.preco_usd, i.preco_ia_usd
                     FROM assinaturas a
                     JOIN itens_catalogo i ON i.id = a.item_id
                     WHERE a.cliente_id = ? AND a.status = 'ativa'
@@ -58,19 +57,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $atualizadas = 0; $sem_preco = [];
                 $upd = $db->prepare('UPDATE assinaturas SET valor_cobrado = ? WHERE id = ?');
                 foreach ($stmt->fetchAll() as $a) {
-                    $col = $a['variante'] === 'ia' ? 'preco_ia_' : 'preco_';
-                    $col .= strtolower($moeda);
-                    $novo = $a[$col] !== null ? (float)$a[$col] : null;
-                    if ($novo !== null && $novo > 0) {
-                        $upd->execute([$novo, (int)$a['id']]);
-                        $atualizadas++;
-                    } else {
+                    $preco_usd = $a['variante'] === 'ia'
+                        ? ($a['preco_ia_usd'] !== null ? (float)$a['preco_ia_usd'] : null)
+                        : ($a['preco_usd']    !== null ? (float)$a['preco_usd']    : null);
+                    if ($preco_usd === null || $preco_usd <= 0) {
                         $sem_preco[] = $a['item_nome'];
+                        continue;
                     }
+                    $novo = $moeda === 'USD' ? $preco_usd : usd_para($db, $preco_usd, $moeda);
+                    $upd->execute([$novo, (int)$a['id']]);
+                    $atualizadas++;
                 }
                 $msg_parts = [];
-                if ($atualizadas) $msg_parts[] = $atualizadas . ' assinatura(s) com valor atualizado';
-                if ($sem_preco)   $msg_parts[] = count($sem_preco) . ' sem preço configurado em ' . $moeda . ': ' . implode(', ', $sem_preco);
+                if ($atualizadas) {
+                    $info_cot = $moeda === 'USD' ? '' : sprintf(' (cotação USD→%s: %.4f de %s)', $moeda, $cot[$moeda] ?? 0, $cot['data'] ?? '?');
+                    $msg_parts[] = $atualizadas . ' assinatura(s) com valor atualizado' . $info_cot;
+                }
+                if ($sem_preco)   $msg_parts[] = count($sem_preco) . ' sem preço USD no catálogo: ' . implode(', ', $sem_preco);
                 if ($msg_parts)   $extra_query = '&moeda_msg=' . urlencode(implode(' · ', $msg_parts));
                 audit_log('cliente.moeda_alterada', 'clientes', $pid);
             }

@@ -3,12 +3,22 @@ require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/grupos.php';
 require_once __DIR__ . '/lib/audit.php';
 require_once __DIR__ . '/lib/configuracoes.php';
+require_once __DIR__ . '/lib/cotacao.php';
 require_sadmin();
 $db = db();
 $flash = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_check();
+    if (($_POST['op'] ?? '') === 'atualizar_cotacao') {
+        $c = cotacao_atual($db, true); // forcar refresh
+        audit_log('cotacao.atualizada', 'configuracoes', 0);
+        if ($c['fonte'] === 'api') {
+            $flash = ['ok', sprintf('Cotação atualizada. USD→BRL %.4f · USD→EUR %.4f (de %s)', $c['BRL'], $c['EUR'], $c['data'])];
+        } else {
+            $flash = ['err', 'API de cotação indisponível. Usando último valor: USD→BRL ' . number_format($c['BRL'],4) . ' · USD→EUR ' . number_format($c['EUR'],4) . ' (' . $c['data'] . ')'];
+        }
+    }
     if (($_POST['op'] ?? '') === 'remover_qr') {
         $atual = config_get($db, 'pagamento_zelle_qr');
         if ($atual) {
@@ -90,6 +100,31 @@ require __DIR__ . '/includes/header.php';
 <p class="muted">Configure os métodos de pagamento que serão exibidos nas cobranças e disponibilizados nas mensagens (templates).</p>
 
 <?php if ($flash): ?><div class="flash <?= e($flash[0]) ?>"><?= e($flash[1]) ?></div><?php endif; ?>
+
+<?php
+  $cot = cotacao_atual($db);
+  $hoje = date('Y-m-d');
+  $atualizada_hoje = ($cot['data'] === $hoje);
+?>
+<div class="card brand">
+  <div class="title" style="color:var(--c-primary-2);">💱 Cotação USD (moeda mestre)</div>
+  <p class="muted" style="font-size:13px;">Dite Ads cobra todos os serviços em USD. Pra clientes em BRL/EUR, o sistema converte automaticamente usando a cotação do dia.</p>
+  <div class="info-pair"><span class="l">USD → BRL</span><span class="v"><strong>R$ <?= e(number_format($cot['BRL'], 4)) ?></strong></span></div>
+  <div class="info-pair"><span class="l">USD → EUR</span><span class="v"><strong>€ <?= e(number_format($cot['EUR'], 4)) ?></strong></span></div>
+  <div class="info-pair muted" style="font-size:12px;">
+    <span class="l">Atualizada em <?= e($cot['data']) ?></span>
+    <span class="v">
+      <?php if ($cot['fonte'] === 'api'): ?><span class="status status-paga">api</span>
+      <?php elseif ($cot['fonte'] === 'cache' && $atualizada_hoje): ?><span class="status status-info">do dia</span>
+      <?php else: ?><span class="status status-vencida">defasada</span><?php endif; ?>
+    </span>
+  </div>
+  <form method="post" class="mt-3">
+    <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
+    <input type="hidden" name="op" value="atualizar_cotacao">
+    <button type="submit" class="btn btn-secondary block">🔄 Atualizar cotação agora</button>
+  </form>
+</div>
 
 <?php $qr_path = config_get($db, 'pagamento_zelle_qr'); ?>
 

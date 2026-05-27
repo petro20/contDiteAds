@@ -12,4 +12,7 @@ INSERT IGNORE INTO configuracoes (chave, valor) VALUES
   ('pagamento_zelle_email',   ''),
   ('pagamento_zelle_qr',      ''),
   ('pagamento_wise_link',     ''),
-  ('pagamento_instrucoes',    '');
+  ('pagamento_instrucoes',    ''),
+  ('cotacao_usd_brl',         '0'),
+  ('cotacao_usd_eur',         '0'),
+  ('cotacao_data',            '');
