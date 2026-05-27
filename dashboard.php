@@ -401,12 +401,8 @@ require __DIR__ . '/includes/header.php';
   </a>
   <?php if (is_sadmin()): ?>
   <a class="card" href="<?= e(APP_BASE_URL) ?>/regua.php">
-    <div class="title">⏰ Régua de cobrança</div>
-    <div class="desc">Etapas automáticas + tarefas WhatsApp pendentes <span class="status status-destaque">sadmin</span></div>
-  </a>
-  <a class="card" href="<?= e(APP_BASE_URL) ?>/templates.php">
-    <div class="title">📝 Templates de mensagem</div>
-    <div class="desc">Editar textos de email e WhatsApp <span class="status status-destaque">sadmin</span></div>
+    <div class="title">💬 Comunicação</div>
+    <div class="desc">Régua automática · Tarefas WhatsApp · Templates de mensagem <span class="status status-destaque">sadmin</span></div>
   </a>
   <a class="card" href="<?= e(APP_BASE_URL) ?>/config_pagamento.php">
     <div class="title">💳 Formas de pagamento</div>
