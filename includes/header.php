@@ -3,7 +3,9 @@ require_once __DIR__ . '/auth.php';
 $u = current_user();
 $page         = $page ?? 'contDiteAds';
 $page_sub     = $page_sub     ?? null;
-$show_back    = $show_back    ?? false;
+// Por padrão, mostra botão de voltar em toda página exceto na raiz (dashboard)
+$is_dashboard = (basename($_SERVER['SCRIPT_NAME'] ?? '') === 'dashboard.php');
+$show_back    = $show_back    ?? !$is_dashboard;
 $back_to      = $back_to      ?? null;
 $hide_nav     = $hide_nav     ?? false;
 $nav_active   = $nav_active   ?? '';
