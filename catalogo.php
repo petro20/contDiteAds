@@ -81,6 +81,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header('Location: ' . APP_BASE_URL . '/catalogo.php?acao=editar&id=' . $pacote_id . '#composicao'); exit;
     }
 
+    if ($op === 'apagar_item') {
+        $pid = (int)($_POST['id'] ?? 0);
+        if ($pid > 0) {
+            try {
+                // Conta vínculos antes
+                $n_assin = (int)$db->query('SELECT COUNT(*) FROM assinaturas WHERE item_id = ' . $pid)->fetchColumn();
+                $n_comp  = 0;
+                try { $n_comp = (int)$db->query('SELECT COUNT(*) FROM itens_pacote_composicao WHERE componente_id = ' . $pid)->fetchColumn(); } catch (Throwable $e) {}
+                if ($n_assin > 0) {
+                    $flash = ['err', "Não dá pra apagar: tem $n_assin assinatura(s) ativa(s) usando esse item. Desative o item (desmarque 'Item ativo') ou cancele as assinaturas antes."];
+                    $acao = 'editar'; $id = $pid;
+                } else {
+                    // Composição de pacote e func_servico_pagamento já têm CASCADE/SET NULL
+                    $db->prepare('DELETE FROM itens_catalogo WHERE id = ?')->execute([$pid]);
+                    audit_log('catalogo.apagado', 'itens_catalogo', $pid);
+                    $extra = $n_comp > 0 ? " (estava em $n_comp pacote(s))" : '';
+                    header('Location: ' . APP_BASE_URL . '/catalogo.php?ok=apagado&extra=' . urlencode($extra)); exit;
+                }
+            } catch (PDOException $e) {
+                $flash = ['err', 'Erro ao apagar: ' . $e->getMessage()];
+                $acao = 'editar'; $id = $pid;
+            }
+        }
+    }
+
     if ($op === 'comp_remove') {
         $pacote_id = (int)($_POST['pacote_id'] ?? 0);
         $componente = (int)($_POST['componente_id'] ?? 0);
@@ -127,6 +152,8 @@ if (isset($_GET['ok'])) {
             break;
         case 'recalc_erro':
             $flash = ['err', 'Não foi possível buscar a cotação. Tente novamente em alguns minutos.']; break;
+        case 'apagado':
+            $flash = ['ok', 'Item apagado.' . ($_GET['extra'] ?? '')]; break;
         default:
             $flash = ['ok', 'Item atualizado.'];
     }
@@ -259,6 +286,36 @@ if ($acao === 'novo' || $acao === 'editar') {
 
       <button class="btn block" type="submit">Salvar item</button>
     </form>
+
+    <?php if ($item['id']): ?>
+    <h2 class="mt-5">⚠ Zona de perigo</h2>
+    <?php
+      // Conta vínculos pra avisar
+      $n_assin_v = (int)$db->query('SELECT COUNT(*) FROM assinaturas WHERE item_id = ' . (int)$item['id'])->fetchColumn();
+      $n_pkg_v = 0;
+      try { $n_pkg_v = (int)$db->query('SELECT COUNT(*) FROM itens_pacote_composicao WHERE componente_id = ' . (int)$item['id'])->fetchColumn(); } catch (Throwable $e) {}
+    ?>
+    <div class="card">
+      <p class="muted" style="font-size:13px;">
+        Vínculos atuais:
+        <strong><?= $n_assin_v ?></strong> assinatura(s)<?= $n_assin_v?' (ativas/pausadas/canceladas)':'' ?>
+        · <strong><?= $n_pkg_v ?></strong> pacote(s) usando este como componente.
+      </p>
+      <?php if ($n_assin_v > 0): ?>
+        <div class="hint" style="color:var(--c-orange);">⚠ Item com assinaturas vinculadas. Pra apagar definitivamente, primeiro desative o item (desmarque "Item ativo" e salve) — assim ele não aparece pra contratar novos, e o histórico fica preservado. Apagar só funciona se NÃO houver assinaturas.</div>
+      <?php else: ?>
+        <div class="hint">Sem assinaturas — pode apagar com segurança. Composições de pacotes serão desfeitas (CASCADE).</div>
+      <?php endif; ?>
+      <form method="post" class="mt-3" onsubmit="return confirm('APAGAR DEFINITIVAMENTE este item do catálogo?\n\nNão pode ser desfeito. Se houver pacotes usando este item como componente, eles vão perder essa composição.\n\nConfirmar?');">
+        <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
+        <input type="hidden" name="op" value="apagar_item">
+        <input type="hidden" name="id" value="<?= (int)$item['id'] ?>">
+        <button class="btn btn-danger block" type="submit" <?= $n_assin_v > 0 ? 'disabled title="Tem assinaturas vinculadas — desative em vez de apagar"' : '' ?>>
+          🗑 Apagar este item definitivamente
+        </button>
+      </form>
+    </div>
+    <?php endif; ?>
 
     <?php if ($item['id'] && $item['e_pacote']):
         $stmt = $db->prepare('SELECT c.componente_id, c.quantidade, c.variante, i.nome FROM itens_pacote_composicao c JOIN itens_catalogo i ON i.id = c.componente_id WHERE c.pacote_id = ? ORDER BY c.variante, i.nome');
