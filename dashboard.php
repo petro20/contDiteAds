@@ -389,6 +389,10 @@ require __DIR__ . '/includes/header.php';
     <div class="title">💳 Cobranças</div>
     <div class="desc">Ver e gerar cobranças</div>
   </a>
+  <a class="card" href="<?= e(APP_BASE_URL) ?>/agenda_geral.php">
+    <div class="title">📋 Acompanhamento geral</div>
+    <div class="desc">Visão consolidada do que cada funcionário está executando no mês</div>
+  </a>
   <?php if (is_sadmin()): ?>
   <a class="card" href="<?= e(APP_BASE_URL) ?>/catalogo.php">
     <div class="title">📦 Catálogo</div>
