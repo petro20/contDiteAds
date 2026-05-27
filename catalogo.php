@@ -88,10 +88,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->execute([$pacote_id, $componente, $var]);
         header('Location: ' . APP_BASE_URL . '/catalogo.php?acao=editar&id=' . $pacote_id . '#composicao'); exit;
     }
+
+    if ($op === 'recalcular_todos') {
+        $cot = cotacao_atual($db, true); // refresh
+        if ($cot['fonte'] === 'erro') {
+            header('Location: ' . APP_BASE_URL . '/catalogo.php?ok=recalc_erro'); exit;
+        }
+        $stmt = $db->query('SELECT id, preco_usd, preco_ia_usd FROM itens_catalogo');
+        $upd = $db->prepare('UPDATE itens_catalogo SET preco_brl=?, preco_eur=?, preco_ia_brl=?, preco_ia_eur=? WHERE id=?');
+        $n = 0;
+        foreach ($stmt->fetchAll() as $row) {
+            $u  = $row['preco_usd']    !== null && $row['preco_usd']    !== '' ? (float)$row['preco_usd']    : null;
+            $ui = $row['preco_ia_usd'] !== null && $row['preco_ia_usd'] !== '' ? (float)$row['preco_ia_usd'] : null;
+            $brl    = $u  !== null && $u  > 0 ? (float)ceil($u  * $cot['BRL']) : null;
+            $eur    = $u  !== null && $u  > 0 ? (float)ceil($u  * $cot['EUR']) : null;
+            $ia_brl = $ui !== null && $ui > 0 ? (float)ceil($ui * $cot['BRL']) : null;
+            $ia_eur = $ui !== null && $ui > 0 ? (float)ceil($ui * $cot['EUR']) : null;
+            if ($u !== null || $ui !== null) {
+                $upd->execute([$brl, $eur, $ia_brl, $ia_eur, (int)$row['id']]);
+                $n++;
+            }
+        }
+        audit_log('catalogo.recalculado', 'itens_catalogo', $n);
+        header('Location: ' . APP_BASE_URL . '/catalogo.php?ok=recalc&n=' . $n . '&brl=' . $cot['BRL'] . '&eur=' . $cot['EUR']); exit;
+    }
 }
 
 if (isset($_GET['ok'])) {
-    $flash = ['ok', $_GET['ok'] === 'add' ? 'Item criado.' : 'Item atualizado.'];
+    switch ($_GET['ok']) {
+        case 'add':
+            $flash = ['ok', 'Item criado.']; break;
+        case 'recalc':
+            $n = (int)($_GET['n'] ?? 0);
+            $brl = (float)($_GET['brl'] ?? 0);
+            $eur = (float)($_GET['eur'] ?? 0);
+            $flash = ['ok', sprintf('%d item(s) recalculados. Cotação usada: USD→BRL %.4f · USD→EUR %.4f', $n, $brl, $eur)];
+            break;
+        case 'recalc_erro':
+            $flash = ['err', 'Não foi possível buscar a cotação. Tente novamente em alguns minutos.']; break;
+        default:
+            $flash = ['ok', 'Item atualizado.'];
+    }
 }
 
 $page = 'Catálogo';
@@ -272,7 +309,14 @@ if (!in_array($f_moeda, ['BRL','USD','EUR'], true)) $f_moeda = 'BRL';
 <h1 class="page-title">Catálogo</h1>
 <?php if ($flash): ?><div class="flash <?= e($flash[0]) ?>"><?= e($flash[1]) ?></div><?php endif; ?>
 
-<a href="?acao=novo" class="btn btn-brand block">+ Novo item</a>
+<div class="btn-pair">
+  <a href="?acao=novo" class="btn btn-brand">+ Novo item</a>
+  <form method="post" style="margin:0; flex:1;" onsubmit="return confirm('Recalcular BRL e EUR de TODOS os itens usando a cotação do dia?\n\nUsa o preco_usd como base e aplica ceil() pra arredondar pra cima.');">
+    <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
+    <input type="hidden" name="op" value="recalcular_todos">
+    <button type="submit" class="btn btn-secondary block">🔄 Recalcular preços (cotação)</button>
+  </form>
+</div>
 
 <nav class="tabs-bar mt-3">
   <?php foreach (['BRL'=>'R$ BRL','USD'=>'$ USD','EUR'=>'€ EUR'] as $m => $lbl): ?>
