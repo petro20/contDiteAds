@@ -10,5 +10,6 @@ CREATE TABLE IF NOT EXISTS configuracoes (
 -- Seeds iniciais
 INSERT IGNORE INTO configuracoes (chave, valor) VALUES
   ('pagamento_zelle_email',   ''),
+  ('pagamento_zelle_qr',      ''),
   ('pagamento_wise_link',     ''),
   ('pagamento_instrucoes',    '');

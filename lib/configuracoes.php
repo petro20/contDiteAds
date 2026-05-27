@@ -22,8 +22,11 @@ function config_set(PDO $db, string $chave, string $valor): void {
 
 /** Retorna as configs de pagamento como array. */
 function config_pagamento(PDO $db): array {
+    $qr = config_get($db, 'pagamento_zelle_qr');
     return [
         'zelle_email' => config_get($db, 'pagamento_zelle_email'),
+        'zelle_qr'    => $qr,
+        'zelle_qr_url'=> $qr ? (APP_BASE_URL . '/uploads/' . $qr) : '',
         'wise_link'   => config_get($db, 'pagamento_wise_link'),
         'instrucoes'  => config_get($db, 'pagamento_instrucoes'),
     ];

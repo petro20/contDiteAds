@@ -530,11 +530,20 @@ if ($id) {
         if ($tem_metodo):
     ?>
       <h2 class="mt-5">💳 Formas de pagamento</h2>
-      <?php if ($cfg_pag['zelle_email']): ?>
+      <?php if ($cfg_pag['zelle_email'] || $cfg_pag['zelle_qr']): ?>
         <div class="card">
           <div class="title">💜 Zelle</div>
-          <div class="info-pair"><span class="l">Email</span><span class="v"><strong><?= e($cfg_pag['zelle_email']) ?></strong></span></div>
-          <div class="desc muted" style="font-size:12px;">Abra o app do seu banco e envie pra esse email.</div>
+          <?php if ($cfg_pag['zelle_email']): ?>
+            <div class="info-pair"><span class="l">Email</span><span class="v"><strong><?= e($cfg_pag['zelle_email']) ?></strong></span></div>
+          <?php endif; ?>
+          <?php if ($cfg_pag['zelle_qr']): ?>
+            <div style="text-align:center; padding:var(--s-3); background:#fff; border-radius:8px; margin-top:var(--s-3);">
+              <img src="<?= e($cfg_pag['zelle_qr_url']) ?>" alt="QR Code Zelle" style="max-width:240px; width:100%; height:auto;">
+            </div>
+            <div class="desc muted" style="font-size:12px; margin-top:var(--s-2); text-align:center;">📱 Escaneie o QR Code com o app do seu banco</div>
+          <?php else: ?>
+            <div class="desc muted" style="font-size:12px;">Abra o app do seu banco e envie pra esse email.</div>
+          <?php endif; ?>
         </div>
       <?php endif; ?>
       <?php if ($cfg_pag['wise_link']): ?>
