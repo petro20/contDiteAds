@@ -161,11 +161,17 @@ require __DIR__ . '/includes/header.php';
   } catch (Throwable $e) {}
   $pag_func_previsto = $pag_func_mes_usd + $a_pagar_func + $prev_pag_func_assin;
 
-  // Previsão de lucro = previsão de faturamento − despesas − pag func previsto (USD apenas)
+  // Previsão de pagamento = despesas + pag funcionários previsto (USD)
+  $prev_pagamento = [
+      'BRL' => ($desp_mes_data['totais']['BRL'] ?? 0),
+      'USD' => ($desp_mes_data['totais']['USD'] ?? 0) + $pag_func_previsto,
+      'EUR' => ($desp_mes_data['totais']['EUR'] ?? 0),
+  ];
+  // Previsão de lucro = recebimento − pagamento
   $prev_lucro = [
-      'BRL' => $prev_faturamento['BRL'] - ($desp_mes_data['totais']['BRL'] ?? 0),
-      'USD' => $prev_faturamento['USD'] - ($desp_mes_data['totais']['USD'] ?? 0) - $pag_func_previsto,
-      'EUR' => $prev_faturamento['EUR'] - ($desp_mes_data['totais']['EUR'] ?? 0),
+      'BRL' => $prev_faturamento['BRL'] - $prev_pagamento['BRL'],
+      'USD' => $prev_faturamento['USD'] - $prev_pagamento['USD'],
+      'EUR' => $prev_faturamento['EUR'] - $prev_pagamento['EUR'],
   ];
 
   // 4. Lucro do mês pendente de distribuir (se já passou dia 5 e tem sócio pendente)
@@ -183,42 +189,51 @@ require __DIR__ . '/includes/header.php';
   ?>
 
   <a class="card brand" href="<?= e(APP_BASE_URL) ?>/painel.php" style="text-decoration:none;">
-    <div class="title" style="color:var(--c-primary-2);">🔮 Previsão de faturamento <span class="muted" style="font-weight:normal; font-size:12px;">(<?= e(date('M/y')) ?>)</span></div>
-    <div class="desc" style="margin-top:6px;">
-      <?php
-        $partes_prev = [];
-        foreach ($prev_faturamento as $m => $v) {
-            if ($v > 0) $partes_prev[] = '<strong style="color:var(--txt-1);">' . e(money_fmt($v, $m)) . '</strong>';
-        }
-        if ($partes_prev) {
-            echo implode(' · ', $partes_prev);
-        } else {
-            echo '<strong class="muted">Nada previsto pra este mês ainda</strong>';
-        }
-      ?>
-    </div>
-    <div class="desc muted" style="font-size:12px; margin-top:4px;">recebido + a receber + em análise + assinaturas ativas</div>
-  </a>
+    <div class="title" style="color:var(--c-primary-2);">🔮 Previsão do mês <span class="muted" style="font-weight:normal; font-size:12px;">(<?= e(date('M/y')) ?>)</span></div>
 
-  <a class="card brand" href="<?= e(APP_BASE_URL) ?>/painel.php" style="text-decoration:none;">
-    <div class="title" style="color:var(--c-primary-2);">💎 Previsão de lucro <span class="muted" style="font-weight:normal; font-size:12px;">(<?= e(date('M/y')) ?>)</span></div>
-    <div class="desc" style="margin-top:6px;">
-      <?php
-        $partes_lucro = [];
-        foreach ($prev_lucro as $m => $v) {
-            if ($v != 0) {
-                $cor = $v >= 0 ? 'var(--c-success)' : 'var(--c-danger)';
-                $partes_lucro[] = '<strong style="color:' . $cor . ';">' . e(money_fmt($v, $m)) . '</strong>';
-            }
-        }
-        if ($partes_lucro) {
-            echo implode(' · ', $partes_lucro);
-        } else {
-            echo '<strong class="muted">—</strong>';
-        }
-      ?>
+    <div class="info-pair" style="margin-top:var(--s-3);">
+      <span class="l">📥 Recebimento</span>
+      <span class="v" style="text-align:right;">
+        <?php
+          $partes_prev = [];
+          foreach ($prev_faturamento as $m => $v) {
+              if ($v > 0) $partes_prev[] = '<strong style="color:var(--c-success);">' . e(money_fmt($v, $m)) . '</strong>';
+          }
+          echo $partes_prev ? implode('<br>', $partes_prev) : '<span class="muted">—</span>';
+        ?>
+      </span>
     </div>
-    <div class="desc muted" style="font-size:12px; margin-top:4px;">faturamento previsto − despesas − pag. funcionários (USD)</div>
+
+    <div class="info-pair">
+      <span class="l">📤 Pagamento</span>
+      <span class="v" style="text-align:right;">
+        <?php
+          $partes_pag = [];
+          foreach ($prev_pagamento as $m => $v) {
+              if ($v > 0) $partes_pag[] = '<strong style="color:var(--c-danger);">− ' . e(money_fmt($v, $m)) . '</strong>';
+          }
+          echo $partes_pag ? implode('<br>', $partes_pag) : '<span class="muted">—</span>';
+        ?>
+      </span>
+    </div>
+
+    <div class="info-pair" style="border-top:1px solid var(--border); padding-top:var(--s-3); margin-top:var(--s-2);">
+      <strong style="font-size:15px;">💎 Lucro previsto</strong>
+      <span class="v" style="text-align:right;">
+        <?php
+          $partes_lucro = [];
+          foreach ($prev_lucro as $m => $v) {
+              if ($v != 0) {
+                  $cor = $v >= 0 ? 'var(--c-success)' : 'var(--c-danger)';
+                  $partes_lucro[] = '<strong style="font-size:15px; color:' . $cor . ';">' . e(money_fmt($v, $m)) . '</strong>';
+              }
+          }
+          echo $partes_lucro ? implode('<br>', $partes_lucro) : '<span class="muted">—</span>';
+        ?>
+      </span>
+    </div>
+
+    <div class="desc muted" style="font-size:11px; margin-top:var(--s-3);">recebido/aberto/análise + assinaturas · despesas + funcionários (pago/fila/assin)</div>
   </a>
 
   <?php if ($tot_em_analise > 0): ?>
