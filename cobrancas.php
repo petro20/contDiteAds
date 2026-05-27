@@ -530,34 +530,79 @@ if ($id) {
         if ($tem_metodo):
     ?>
       <h2 class="mt-5">💳 Formas de pagamento</h2>
+      <p class="muted" style="font-size:13px;">Escolha uma das opções abaixo. Após pagar, envie o comprovante pelo botão no fim da página.</p>
+
       <?php if ($cfg_pag['zelle_email'] || $cfg_pag['zelle_qr']): ?>
         <div class="card">
-          <div class="title">💜 Zelle</div>
-          <?php if ($cfg_pag['zelle_email']): ?>
-            <div class="info-pair"><span class="l">Email</span><span class="v"><strong><?= e($cfg_pag['zelle_email']) ?></strong></span></div>
-          <?php endif; ?>
+          <div class="title">💜 Pagar via Zelle</div>
+          <div class="desc" style="margin-bottom:var(--s-3);">Use o app do <strong>seu banco</strong> (Bank of America, Chase, Wells Fargo, etc.) e procure pela opção <em>Zelle</em>.</div>
+
           <?php if ($cfg_pag['zelle_qr']): ?>
-            <div style="text-align:center; padding:var(--s-3); background:#fff; border-radius:8px; margin-top:var(--s-3);">
+            <div style="text-align:center; padding:var(--s-3); background:#fff; border-radius:8px; margin:var(--s-3) 0;">
               <img src="<?= e($cfg_pag['zelle_qr_url']) ?>" alt="QR Code Zelle" style="max-width:240px; width:100%; height:auto;">
             </div>
-            <div class="desc muted" style="font-size:12px; margin-top:var(--s-2); text-align:center;">📱 Escaneie o QR Code com o app do seu banco</div>
-          <?php else: ?>
-            <div class="desc muted" style="font-size:12px;">Abra o app do seu banco e envie pra esse email.</div>
+            <div class="desc muted" style="font-size:13px; text-align:center; margin-bottom:var(--s-3);">📱 <strong>Opção 1:</strong> escaneie o QR Code com o app do banco</div>
           <?php endif; ?>
+
+          <?php if ($cfg_pag['zelle_email']): ?>
+            <div class="desc" style="font-size:13px; margin-bottom:var(--s-2);"><strong>Opção 2:</strong> envie pra este email no Zelle:</div>
+            <div class="spaced" style="gap:8px; background:var(--bg-input); border-radius:6px; padding:10px;">
+              <code id="zelle_email_txt" style="flex:1; font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"><?= e($cfg_pag['zelle_email']) ?></code>
+              <button type="button" class="btn small btn-brand" onclick="copiarTxt('zelle_email_txt', this)">📋 Copiar</button>
+            </div>
+            <div class="desc muted" style="font-size:11px; margin-top:var(--s-2);">Valor: <strong><?= e(money_fmt((float)$saldo, $cob['moeda'])) ?></strong></div>
+          <?php endif; ?>
+
+          <details style="margin-top:var(--s-3);">
+            <summary style="cursor:pointer; color:var(--c-primary-2); font-size:13px;">Como pagar com Zelle passo a passo</summary>
+            <ol style="padding-left:20px; color:var(--txt-2); font-size:13px; margin-top:var(--s-2);">
+              <li>Abra o app do seu banco</li>
+              <li>Procure a opção <strong>Zelle</strong> ou <em>Send Money with Zelle</em></li>
+              <li>Adicione o destinatário usando o QR Code ou o email acima</li>
+              <li>Digite o valor: <strong><?= e(money_fmt((float)$saldo, $cob['moeda'])) ?></strong></li>
+              <li>Confirme e envie</li>
+              <li>Envie o comprovante pelo botão no fim desta página</li>
+            </ol>
+          </details>
         </div>
       <?php endif; ?>
+
       <?php if ($cfg_pag['wise_link']): ?>
-        <a class="card" href="<?= e($cfg_pag['wise_link']) ?>" target="_blank" rel="noopener" style="text-decoration:none;">
-          <div class="title">🌍 Wise</div>
-          <div class="desc" style="color:var(--c-primary-2);"><?= e($cfg_pag['wise_link']) ?> ↗</div>
-          <div class="desc muted" style="font-size:12px;">Clique pra abrir o link e pagar pelo Wise.</div>
-        </a>
+        <div class="card">
+          <div class="title">🌍 Pagar via Wise</div>
+          <div class="desc" style="margin-bottom:var(--s-3);">O Wise aceita pagamento internacional em várias moedas, com taxa mais baixa. Clique no botão pra abrir a página de pagamento.</div>
+          <a class="btn btn-brand block" href="<?= e($cfg_pag['wise_link']) ?>" target="_blank" rel="noopener">🌍 Abrir Wise (<?= e(money_fmt((float)$saldo, $cob['moeda'])) ?>) ↗</a>
+          <details style="margin-top:var(--s-3);">
+            <summary style="cursor:pointer; color:var(--c-primary-2); font-size:13px;">Como pagar com Wise passo a passo</summary>
+            <ol style="padding-left:20px; color:var(--txt-2); font-size:13px; margin-top:var(--s-2);">
+              <li>Clique no botão "Abrir Wise" acima</li>
+              <li>Faça login (ou crie conta gratuita)</li>
+              <li>Digite o valor: <strong><?= e(money_fmt((float)$saldo, $cob['moeda'])) ?></strong></li>
+              <li>Escolha o método de pagamento (cartão, débito, transferência)</li>
+              <li>Confirme</li>
+              <li>Envie o comprovante pelo botão no fim desta página</li>
+            </ol>
+          </details>
+        </div>
       <?php endif; ?>
+
       <?php if ($cfg_pag['instrucoes']): ?>
         <div class="card">
+          <div class="title">📝 Observações</div>
           <div class="desc"><?= nl2br(e($cfg_pag['instrucoes'])) ?></div>
         </div>
       <?php endif; ?>
+
+      <script>
+      function copiarTxt(elementId, btn) {
+        const txt = document.getElementById(elementId).textContent.trim();
+        navigator.clipboard.writeText(txt).then(() => {
+          const orig = btn.innerHTML;
+          btn.innerHTML = '✅ Copiado!';
+          setTimeout(() => btn.innerHTML = orig, 2000);
+        });
+      }
+      </script>
     <?php endif; endif; ?>
 
     <?php if ($me['role'] === 'cliente' && $cob['status'] === 'aberta'): ?>
