@@ -139,8 +139,11 @@ require __DIR__ . '/includes/header.php';
   } catch (Throwable $e) {}
   $tem_prev = ($prev_faturamento['BRL'] + $prev_faturamento['USD'] + $prev_faturamento['EUR']) > 0;
 
-  // Previsão de pagamentos a funcionários (USD) = já pago + fila + previsão das assinaturas sem cobrança
-  $prev_pag_func_assin = 0.0;
+  // Previsão de pagamento a funcionários (USD): total do que a empresa vai
+  // pagar este mês considerando TODAS as assinaturas ativas mensais com
+  // funcionário designado — independente de já ter cobrança gerada/paga ou não.
+  // Lógica do user: "se tem assinatura, já se sabe quanto vai pagar".
+  $pag_func_previsto = 0.0;
   try {
       $stmt = $db->prepare("
           SELECT COALESCE(SUM(COALESCE(fsp.valor_usd, 0)), 0)
@@ -151,15 +154,10 @@ require __DIR__ . '/includes/header.php';
           WHERE a.status='ativa' AND i.tipo='mensal'
             AND a.funcionario_id IS NOT NULL
             AND a.iniciada_em <= ?
-            AND (a.encerrada_em IS NULL OR a.encerrada_em >= ?)
-            AND NOT EXISTS (
-              SELECT 1 FROM cobranca_itens ci JOIN cobrancas cb ON cb.id = ci.cobranca_id
-              WHERE ci.assinatura_id = a.id AND cb.competencia_mes = ?
-            )");
-      $stmt->execute([$fim_mes, $ini_mes, $competencia_now]);
-      $prev_pag_func_assin = (float)$stmt->fetchColumn();
+            AND (a.encerrada_em IS NULL OR a.encerrada_em >= ?)");
+      $stmt->execute([$fim_mes, $ini_mes]);
+      $pag_func_previsto = (float)$stmt->fetchColumn();
   } catch (Throwable $e) {}
-  $pag_func_previsto = $pag_func_mes_usd + $a_pagar_func + $prev_pag_func_assin;
 
   // Previsão de pagamento = despesas + pag funcionários previsto (USD)
   $prev_pagamento = [
