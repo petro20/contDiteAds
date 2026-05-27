@@ -161,12 +161,22 @@ require __DIR__ . '/includes/header.php';
 
   // Contagens pra ajudar o usuário a entender as previsões
   $qtd_assin_func = 0;
+  $qtd_assin_sem_valor = 0;
   try {
-      $stmt = $db->prepare("SELECT COUNT(*) FROM assinaturas a JOIN itens_catalogo i ON i.id = a.item_id
-                            WHERE a.status='ativa' AND i.tipo='mensal' AND a.funcionario_id IS NOT NULL
-                              AND a.iniciada_em <= ? AND (a.encerrada_em IS NULL OR a.encerrada_em >= ?)");
+      $stmt = $db->prepare("
+          SELECT
+            COUNT(*) AS total,
+            SUM(CASE WHEN fsp.valor_usd IS NULL OR fsp.valor_usd = 0 THEN 1 ELSE 0 END) AS sem_valor
+          FROM assinaturas a
+          JOIN itens_catalogo i ON i.id = a.item_id
+          LEFT JOIN func_servico_pagamento fsp
+                 ON fsp.funcionario_id = a.funcionario_id AND fsp.item_id = a.item_id
+          WHERE a.status='ativa' AND i.tipo='mensal' AND a.funcionario_id IS NOT NULL
+            AND a.iniciada_em <= ? AND (a.encerrada_em IS NULL OR a.encerrada_em >= ?)");
       $stmt->execute([$fim_mes, $ini_mes]);
-      $qtd_assin_func = (int)$stmt->fetchColumn();
+      $row = $stmt->fetch();
+      $qtd_assin_func = (int)($row['total'] ?? 0);
+      $qtd_assin_sem_valor = (int)($row['sem_valor'] ?? 0);
   } catch (Throwable $e) {}
   $qtd_despesas = count($desp_mes_data['detalhes'] ?? []);
 
@@ -245,6 +255,11 @@ require __DIR__ . '/includes/header.php';
       <span class="l">↳ 💵 Funcionários (<?= (int)$qtd_assin_func ?> assin.)</span>
       <span class="v"><?= $pag_func_previsto > 0 ? e(money_fmt($pag_func_previsto, 'USD')) : '—' ?></span>
     </div>
+    <?php if ($qtd_assin_sem_valor > 0): ?>
+      <div class="info-pair" style="font-size:12px; color:var(--c-orange);">
+        <span class="l">⚠ <?= (int)$qtd_assin_sem_valor ?> assinatura<?= $qtd_assin_sem_valor>1?'s':'' ?> sem valor USD configurado</span>
+      </div>
+    <?php endif; ?>
 
     <div class="info-pair" style="border-top:1px solid var(--border); padding-top:var(--s-3); margin-top:var(--s-3);">
       <strong style="font-size:15px;">💎 Lucro previsto</strong>
