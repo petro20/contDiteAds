@@ -13,17 +13,53 @@ require_once __DIR__ . '/configuracoes.php';
  * - Fallback: se API falhar, mantém o último valor conhecido.
  */
 
+/**
+ * HTTP GET com cURL (preferido) ou file_get_contents (fallback).
+ * Retorna corpo da resposta ou null em caso de erro.
+ */
+function cotacao_http_get(string $url): ?string {
+    if (function_exists('curl_init')) {
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_TIMEOUT        => 8,
+            CURLOPT_CONNECTTIMEOUT => 5,
+            CURLOPT_USERAGENT      => 'Dite Ads Cotacao/1.0',
+            CURLOPT_SSL_VERIFYPEER => true,
+        ]);
+        $resp = curl_exec($ch);
+        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        if ($resp === false || $code < 200 || $code >= 300) return null;
+        return (string)$resp;
+    }
+    if (ini_get('allow_url_fopen')) {
+        $ctx = stream_context_create(['http' => ['timeout' => 5]]);
+        $resp = @file_get_contents($url, false, $ctx);
+        return $resp === false ? null : $resp;
+    }
+    return null;
+}
+
 function cotacao_buscar_remoto(): ?array {
-    $url = 'https://economia.awesomeapi.com.br/json/last/USD-BRL,USD-EUR';
-    $ctx = stream_context_create(['http' => ['timeout' => 5]]);
-    $resp = @file_get_contents($url, false, $ctx);
-    if ($resp === false) return null;
-    $data = json_decode($resp, true);
-    if (!$data) return null;
-    $brl = isset($data['USDBRL']['bid']) ? (float)$data['USDBRL']['bid'] : null;
-    $eur = isset($data['USDEUR']['bid']) ? (float)$data['USDEUR']['bid'] : null;
-    if (!$brl || !$eur) return null;
-    return ['BRL' => $brl, 'EUR' => $eur];
+    // Tenta primeiro AwesomeAPI (Brasil, sem chave, tempo real)
+    $resp = cotacao_http_get('https://economia.awesomeapi.com.br/json/last/USD-BRL,USD-EUR');
+    if ($resp !== null) {
+        $data = json_decode($resp, true);
+        if ($data && isset($data['USDBRL']['bid'], $data['USDEUR']['bid'])) {
+            return ['BRL' => (float)$data['USDBRL']['bid'], 'EUR' => (float)$data['USDEUR']['bid']];
+        }
+    }
+    // Fallback: Frankfurter (ECB, sem chave, gratuita)
+    $resp = cotacao_http_get('https://api.frankfurter.dev/v1/latest?base=USD&symbols=BRL,EUR');
+    if ($resp !== null) {
+        $data = json_decode($resp, true);
+        if ($data && isset($data['rates']['BRL'], $data['rates']['EUR'])) {
+            return ['BRL' => (float)$data['rates']['BRL'], 'EUR' => (float)$data['rates']['EUR']];
+        }
+    }
+    return null;
 }
 
 /**
