@@ -125,12 +125,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 if (isset($_GET['ok'])) {
-    $msg = match($_GET['ok']) {
-        'seed' => 'Templates padrão de pagamento instalados.',
-        'del'  => $_GET['msg'] ?? 'Apagado.',
-        'tpl'  => 'Template salvo.',
-        default => 'Salvo.',
-    };
+    switch ($_GET['ok']) {
+        case 'seed': $msg = 'Templates padrão de pagamento instalados.'; break;
+        case 'del':  $msg = $_GET['msg'] ?? 'Apagado.'; break;
+        case 'tpl':  $msg = 'Template salvo.'; break;
+        default:     $msg = 'Salvo.';
+    }
     $flash = ['ok', $msg];
 }
 
@@ -155,10 +155,12 @@ $tpls_email = $db->query("SELECT id, codigo FROM templates_mensagem WHERE canal=
 $tpls_wa    = $db->query("SELECT id, codigo FROM templates_mensagem WHERE canal='whatsapp' AND ativo=1 ORDER BY codigo")->fetchAll();
 $todos_tpls = $db->query('SELECT * FROM templates_mensagem ORDER BY canal, codigo')->fetchAll();
 
-function formato_dias_etapa(int $d): string {
-    if ($d === 0)  return 'no dia do vencimento';
-    if ($d < 0)    return abs($d) . ' dia' . (abs($d)>1?'s':'') . ' antes do vencimento';
-    return $d . ' dia' . ($d>1?'s':'') . ' após vencimento';
+if (!function_exists('formato_dias_etapa')) {
+    function formato_dias_etapa(int $d): string {
+        if ($d === 0)  return 'no dia do vencimento';
+        if ($d < 0)    return abs($d) . ' dia' . (abs($d)>1?'s':'') . ' antes do vencimento';
+        return $d . ' dia' . ($d>1?'s':'') . ' após vencimento';
+    }
 }
 
 $page = 'Comunicação';
