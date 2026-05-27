@@ -327,8 +327,25 @@ require __DIR__ . '/includes/header.php';
     $stmt->execute([(int)$u['id'], $competencia_now]);
     $tot_entregas = (int)$stmt->fetchColumn();
 
-    // Previsão do funcionário: já recebido + a receber pelas entregas pendentes
-    $prev_func = $recebido_mes + $a_receber;
+    // Previsão MENSAL do funcionário:
+    //   já recebido no mês + a receber pelos itens pendentes DO MÊS CORRENTE
+    $a_receber_mes = 0.0;
+    try {
+        $stmt = $db->prepare("
+            SELECT COALESCE(SUM(ci.quantidade * COALESCE(fsp.valor_usd, 0)), 0)
+            FROM cobranca_itens ci
+            JOIN cobrancas c   ON c.id = ci.cobranca_id
+            JOIN assinaturas a ON a.id = ci.assinatura_id
+            LEFT JOIN func_servico_pagamento fsp
+                   ON fsp.funcionario_id = a.funcionario_id AND fsp.item_id = a.item_id
+            LEFT JOIN pagamento_funcionario_itens pfi ON pfi.cobranca_item_id = ci.id
+            WHERE c.status = 'paga' AND a.funcionario_id = ?
+              AND pfi.id IS NULL
+              AND c.competencia_mes = ?");
+        $stmt->execute([(int)$u['id'], $competencia_now]);
+        $a_receber_mes = (float)$stmt->fetchColumn();
+    } catch (Throwable $e) {}
+    $prev_func = $recebido_mes + $a_receber_mes;
   ?>
 
   <a class="card brand" href="<?= e(APP_BASE_URL) ?>/meus_pagamentos.php" style="text-decoration:none;">
@@ -392,7 +409,7 @@ require __DIR__ . '/includes/header.php';
   <?php if (!$cli): ?>
     <div class="card attention"><div class="title">⚠ Conta sem empresa vinculada</div><div class="desc">Avise o admin pra ligar sua conta a um cliente cadastrado.</div></div>
   <?php else:
-    // Previsão do cliente: já pago + em aberto + em análise no mês atual
+    // Previsão MENSAL do cliente: já pago + em aberto + em análise — só do mês corrente
     $competencia_cli = date('Y-m');
     $ja_pago_cli = 0.0;
     try {
@@ -402,13 +419,21 @@ require __DIR__ . '/includes/header.php';
         $stmt->execute([$cid, $competencia_cli]);
         $ja_pago_cli = (float)$stmt->fetchColumn();
     } catch (Throwable $e) {}
+    $em_aberto_mes = 0.0;
+    try {
+        $stmt = $db->prepare("SELECT COALESCE(SUM(valor_total),0) FROM cobrancas
+                              WHERE cliente_id = ? AND status='aberta' AND competencia_mes = ?");
+        $stmt->execute([$cid, $competencia_cli]);
+        $em_aberto_mes = (float)$stmt->fetchColumn();
+    } catch (Throwable $e) {}
     $em_analise_cli = 0.0;
     try {
-        $stmt = $db->prepare("SELECT COALESCE(SUM(valor_total),0) FROM cobrancas WHERE cliente_id = ? AND status='em_analise'");
-        $stmt->execute([$cid]);
+        $stmt = $db->prepare("SELECT COALESCE(SUM(valor_total),0) FROM cobrancas
+                              WHERE cliente_id = ? AND status='em_analise' AND competencia_mes = ?");
+        $stmt->execute([$cid, $competencia_cli]);
         $em_analise_cli = (float)$stmt->fetchColumn();
     } catch (Throwable $e) {}
-    $prev_cli = $ja_pago_cli + $em_aberto + $em_analise_cli;
+    $prev_cli = $ja_pago_cli + $em_aberto_mes + $em_analise_cli;
   ?>
     <a class="card brand" href="<?= e(APP_BASE_URL) ?>/cobrancas.php" style="text-decoration:none;">
       <div class="title" style="color:var(--c-primary-2);">🔮 Previsão de gastos <span class="muted" style="font-weight:normal; font-size:12px;">(<?= e(date('M/y')) ?>)</span></div>
