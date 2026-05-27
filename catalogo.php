@@ -218,14 +218,18 @@ if ($acao === 'novo' || $acao === 'editar') {
       <div class="card">
         <div class="field">
           <label>Nome do item *</label>
-          <input name="nome" required value="<?= e($item['nome']) ?>" placeholder="Ex: Meta ADS Pro, Edição de Vídeos">
+          <input name="nome" id="cat_nome" required value="<?= e($item['nome']) ?>" placeholder="Ex: Meta ADS Pro, Edição de Vídeos">
           <div class="hint">Aparece nas cobranças e telas dos clientes.</div>
         </div>
         <div class="field">
           <label>Descrição</label>
-          <textarea name="descricao" rows="4" placeholder="O que está incluso, frequência, ferramentas, exclusões..."><?= e($item['descricao'] ?? '') ?></textarea>
+          <textarea name="descricao" id="cat_descricao" rows="4" placeholder="O que está incluso, frequência, ferramentas, exclusões..."><?= e($item['descricao'] ?? '') ?></textarea>
           <div class="hint">Quanto mais detalhe, melhor o cliente entende o que está contratando.</div>
         </div>
+
+        <button type="button" class="btn btn-brand block mt-2" id="cat_btn_ia" onclick="iaCatalogo()">✨ Preencher/Refinar com IA</button>
+        <div id="cat_ia_msg" class="hint mt-2" style="text-align:center;"></div>
+        <div class="hint" style="font-size:12px; text-align:center;">Usa o nome + descrição acima pra gerar/refinar descrição detalhada, responsabilidades, tipo e período mínimo.</div>
       </div>
 
       <!-- PASSO 2 — Tipo de cobrança -->
@@ -241,7 +245,7 @@ if ($acao === 'novo' || $acao === 'editar') {
         </div>
         <div class="field" id="periodo_min_field" style="display:<?= $item['tipo']==='mensal'?'block':'none' ?>;">
           <label>Período mínimo de contrato (meses)</label>
-          <input type="number" name="periodo_minimo_meses" min="0" max="60" value="<?= (int)$item['periodo_minimo_meses'] ?>" placeholder="0 = sem mínimo">
+          <input type="number" name="periodo_minimo_meses" id="cat_periodo" min="0" max="60" value="<?= (int)$item['periodo_minimo_meses'] ?>" placeholder="0 = sem mínimo">
           <div class="hint">Quanto tempo o cliente é obrigado a ficar. 0 = pode cancelar quando quiser.</div>
         </div>
         <script>
@@ -308,15 +312,15 @@ if ($acao === 'novo' || $acao === 'editar') {
       <div class="card">
         <div class="field">
           <label>🏢 O que a Dite Ads entrega</label>
-          <textarea name="resp_agencia" rows="3" placeholder="• Setup das campanhas&#10;• Otimização semanal&#10;• Relatórios mensais"><?= e($item['resp_agencia'] ?? '') ?></textarea>
+          <textarea name="resp_agencia" id="cat_resp_a" rows="3" placeholder="• Setup das campanhas&#10;• Otimização semanal&#10;• Relatórios mensais"><?= e($item['resp_agencia'] ?? '') ?></textarea>
         </div>
         <div class="field">
           <label>💼 O que o funcionário responsável faz</label>
-          <textarea name="resp_funcionario" rows="3" placeholder="• Criação dos criativos&#10;• Programação das postagens"><?= e($item['resp_funcionario'] ?? '') ?></textarea>
+          <textarea name="resp_funcionario" id="cat_resp_f" rows="3" placeholder="• Criação dos criativos&#10;• Programação das postagens"><?= e($item['resp_funcionario'] ?? '') ?></textarea>
         </div>
         <div class="field">
           <label>🤝 O que o cliente precisa fornecer</label>
-          <textarea name="resp_cliente" rows="3" placeholder="• Acesso às contas&#10;• Briefing&#10;• Orçamento de mídia"><?= e($item['resp_cliente'] ?? '') ?></textarea>
+          <textarea name="resp_cliente" id="cat_resp_c" rows="3" placeholder="• Acesso às contas&#10;• Briefing&#10;• Orçamento de mídia"><?= e($item['resp_cliente'] ?? '') ?></textarea>
         </div>
       </div>
 
@@ -332,6 +336,55 @@ if ($acao === 'novo' || $acao === 'editar') {
 
       <button class="btn block mt-5" type="submit" style="font-size:16px; padding:var(--s-4);">💾 <?= $item['id'] ? 'Salvar alterações' : 'Criar item' ?></button>
     </form>
+
+    <script>
+    async function iaCatalogo() {
+      const btn = document.getElementById('cat_btn_ia');
+      const msg = document.getElementById('cat_ia_msg');
+      const nome = document.getElementById('cat_nome').value.trim();
+      const descricao = document.getElementById('cat_descricao').value.trim();
+      if (!nome && !descricao) {
+        msg.innerHTML = '<span style="color:var(--c-danger);">Preencha o nome ou a descrição primeiro.</span>';
+        return;
+      }
+      btn.disabled = true;
+      btn.innerHTML = '⏳ Analisando...';
+      msg.innerHTML = 'Consultando IA (~10s)...';
+      const fd = new FormData();
+      fd.append('csrf', '<?= e(csrf_token()) ?>');
+      fd.append('nome', nome);
+      fd.append('descricao', descricao);
+      try {
+        const resp = await fetch('<?= e(APP_BASE_URL) ?>/simulador_ia.php', { method: 'POST', body: fd });
+        const data = await resp.json();
+        if (!resp.ok || !data.ok) {
+          msg.innerHTML = '<span style="color:var(--c-danger);">' + (data.error || 'Erro') + '</span>';
+          return;
+        }
+        const s = data.sugestao;
+        // Aplica nos campos do catálogo (NÃO sobrescreve preço — admin define)
+        if (s.nome)             document.getElementById('cat_nome').value = s.nome;
+        if (s.descricao)        document.getElementById('cat_descricao').value = s.descricao;
+        if (s.tipo) {
+          document.getElementById('tipo_sel').value = s.tipo;
+          togglePeriodoMin();
+        }
+        if (s.periodo_minimo_meses != null) {
+          const p = document.getElementById('cat_periodo');
+          if (p) p.value = s.periodo_minimo_meses;
+        }
+        if (s.resp_agencia)     document.getElementById('cat_resp_a').value = s.resp_agencia;
+        if (s.resp_funcionario) document.getElementById('cat_resp_f').value = s.resp_funcionario;
+        if (s.resp_cliente)     document.getElementById('cat_resp_c').value = s.resp_cliente;
+        msg.innerHTML = '<span style="color:var(--c-success);">✓ Sugestão aplicada! Revise antes de salvar.</span>';
+      } catch (e) {
+        msg.innerHTML = '<span style="color:var(--c-danger);">Erro: ' + e.message + '</span>';
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '✨ Preencher/Refinar com IA';
+      }
+    }
+    </script>
 
     <?php if ($item['id']): ?>
     <h2 class="mt-5">⚠ Zona de perigo</h2>
