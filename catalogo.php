@@ -200,64 +200,87 @@ if ($acao === 'novo' || $acao === 'editar') {
     require __DIR__ . '/includes/header.php';
     ?>
     <?php if ($flash): ?><div class="flash <?= e($flash[0]) ?>"><?= e($flash[1]) ?></div><?php endif; ?>
+
+    <?php if (!$item['id']): ?>
+    <div class="card brand">
+      <div class="title">💡 Dica: use o Simulador primeiro</div>
+      <div class="desc">Antes de cadastrar manualmente, abra o <a href="<?= e(APP_BASE_URL) ?>/simulador_preco.php" style="color:var(--c-primary-2);"><strong>📊 Simulador de preço</strong></a> — você descreve o serviço e a IA preenche tudo (preço, descrição, responsabilidades). Depois é só clicar "Criar item no catálogo".</div>
+    </div>
+    <?php endif; ?>
+
     <form method="post">
       <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
       <input type="hidden" name="op" value="salvar">
       <input type="hidden" name="id" value="<?= (int)$item['id'] ?>">
 
+      <!-- PASSO 1 — Identificação -->
+      <h2 class="mt-3">1️⃣ Identificação</h2>
       <div class="card">
         <div class="field">
           <label>Nome do item *</label>
-          <input name="nome" required value="<?= e($item['nome']) ?>" placeholder="Ex: POSTAGEM 7D, Meta ADS">
+          <input name="nome" required value="<?= e($item['nome']) ?>" placeholder="Ex: Meta ADS Pro, Edição de Vídeos">
+          <div class="hint">Aparece nas cobranças e telas dos clientes.</div>
         </div>
         <div class="field">
           <label>Descrição</label>
-          <input name="descricao" value="<?= e($item['descricao'] ?? '') ?>">
+          <textarea name="descricao" rows="4" placeholder="O que está incluso, frequência, ferramentas, exclusões..."><?= e($item['descricao'] ?? '') ?></textarea>
+          <div class="hint">Quanto mais detalhe, melhor o cliente entende o que está contratando.</div>
         </div>
+      </div>
+
+      <!-- PASSO 2 — Tipo de cobrança -->
+      <h2 class="mt-5">2️⃣ Tipo de cobrança</h2>
+      <div class="card">
         <div class="field">
-          <label>Tipo de cobrança *</label>
+          <label>Como esse serviço é cobrado? *</label>
           <select name="tipo" id="tipo_sel" required onchange="togglePeriodoMin()">
-            <option value="unico"       <?= $item['tipo']==='unico'?'selected':'' ?>>Único (one-shot)</option>
-            <option value="mensal"      <?= $item['tipo']==='mensal'?'selected':'' ?>>Mensal (recorrente)</option>
-            <option value="por_unidade" <?= $item['tipo']==='por_unidade'?'selected':'' ?>>Por unidade</option>
+            <option value="unico"       <?= $item['tipo']==='unico'?'selected':'' ?>>📌 Único (one-shot) — pagamento em 1 vez só</option>
+            <option value="mensal"      <?= $item['tipo']==='mensal'?'selected':'' ?>>🔁 Mensal (recorrente) — cobra todo mês</option>
+            <option value="por_unidade" <?= $item['tipo']==='por_unidade'?'selected':'' ?>>📦 Por unidade — cobra conforme entregas</option>
           </select>
         </div>
         <div class="field" id="periodo_min_field" style="display:<?= $item['tipo']==='mensal'?'block':'none' ?>;">
           <label>Período mínimo de contrato (meses)</label>
           <input type="number" name="periodo_minimo_meses" min="0" max="60" value="<?= (int)$item['periodo_minimo_meses'] ?>" placeholder="0 = sem mínimo">
-          <div class="hint">Cliente precisa manter a assinatura ativa por este tempo. 0 = pode cancelar quando quiser.</div>
+          <div class="hint">Quanto tempo o cliente é obrigado a ficar. 0 = pode cancelar quando quiser.</div>
         </div>
         <script>
         function togglePeriodoMin() {
-          const tipo = document.getElementById('tipo_sel').value;
-          document.getElementById('periodo_min_field').style.display = tipo === 'mensal' ? 'block' : 'none';
+          document.getElementById('periodo_min_field').style.display = document.getElementById('tipo_sel').value === 'mensal' ? 'block' : 'none';
+        }
+        function toggleVarianteIA() {
+          document.getElementById('variante_ia_box').style.display = document.getElementById('check_variante_ia').checked ? 'block' : 'none';
         }
         </script>
-        <label class="check"><input type="checkbox" name="ativo" <?= $item['ativo']?'checked':'' ?>> Item ativo (aparece para contratar)</label>
-        <label class="check"><input type="checkbox" name="a_negociar" <?= $item['a_negociar']?'checked':'' ?>> Preço a negociar (cliente a cliente)</label>
-        <label class="check"><input type="checkbox" name="e_pacote" <?= $item['e_pacote']?'checked':'' ?>> Este item é um pacote (combo de outros)</label>
-        <label class="check"><input type="checkbox" name="tem_variante_ia" <?= $item['tem_variante_ia']?'checked':'' ?>> Tem variante "com IA" (preços alternativos)</label>
       </div>
 
+      <!-- PASSO 3 — Preço -->
       <?php $cot_view = cotacao_atual($db); ?>
-      <h2>Preço</h2>
+      <h2 class="mt-5">3️⃣ Preço</h2>
       <div class="card">
-        <p class="muted" style="font-size:13px;">Preencha em <strong>USD</strong>. BRL e EUR são calculados automaticamente pela cotação do dia (arredondado pra cima, sem centavos). Cotação atual: <strong>R$ <?= e(number_format($cot_view['BRL'], 4)) ?></strong> · <strong>€ <?= e(number_format($cot_view['EUR'], 4)) ?></strong></p>
-        <div class="section-label">Padrão</div>
-        <div class="field"><label>USD ($)</label><input type="number" step="0.01" min="0" name="preco_usd" id="preco_usd" value="<?= $item['preco_usd']!==null && $item['preco_usd']!==''?e(number_format((float)$item['preco_usd'],2,'.','')):'' ?>" placeholder="vazio = não vende" oninput="atualizarPreview()"></div>
+        <p class="muted" style="font-size:13px;">USD é a moeda mestre. BRL e EUR calculados pela cotação do dia (arredondado pra cima): <strong>R$ <?= e(number_format($cot_view['BRL'], 4)) ?></strong> · <strong>€ <?= e(number_format($cot_view['EUR'], 4)) ?></strong></p>
+
+        <div class="field">
+          <label>Preço em USD ($) *</label>
+          <input type="number" step="0.01" min="0" name="preco_usd" id="preco_usd" value="<?= $item['preco_usd']!==null && $item['preco_usd']!==''?e(number_format((float)$item['preco_usd'],2,'.','')):'' ?>" placeholder="vazio = não vende neste preço fixo" oninput="atualizarPreview()">
+        </div>
         <div class="grid-2">
           <div class="field"><label>BRL calculado</label><input type="text" id="prev_brl" value="<?= $item['preco_brl']!==null && $item['preco_brl']!==''?'R$ '.e(number_format((float)$item['preco_brl'],0,',','.')):'—' ?>" disabled></div>
           <div class="field"><label>EUR calculado</label><input type="text" id="prev_eur" value="<?= $item['preco_eur']!==null && $item['preco_eur']!==''?'€ '.e(number_format((float)$item['preco_eur'],0,',','.')):'—' ?>" disabled></div>
         </div>
 
-        <?php if ($item['tem_variante_ia']): ?>
-        <div class="section-label">Variante "com IA"</div>
-        <div class="field"><label>USD ($)</label><input type="number" step="0.01" min="0" name="preco_ia_usd" id="preco_ia_usd" value="<?= $item['preco_ia_usd']!==null && $item['preco_ia_usd']!==''?e(number_format((float)$item['preco_ia_usd'],2,'.','')):'' ?>" oninput="atualizarPreview()"></div>
-        <div class="grid-2">
-          <div class="field"><label>BRL calculado</label><input type="text" id="prev_ia_brl" value="<?= $item['preco_ia_brl']!==null && $item['preco_ia_brl']!==''?'R$ '.e(number_format((float)$item['preco_ia_brl'],0,',','.')):'—' ?>" disabled></div>
-          <div class="field"><label>EUR calculado</label><input type="text" id="prev_ia_eur" value="<?= $item['preco_ia_eur']!==null && $item['preco_ia_eur']!==''?'€ '.e(number_format((float)$item['preco_ia_eur'],0,',','.')):'—' ?>" disabled></div>
+        <label class="check mt-3"><input type="checkbox" name="a_negociar" <?= $item['a_negociar']?'checked':'' ?>> 💬 Preço a negociar (cada cliente fecha valor diferente)</label>
+
+        <label class="check"><input type="checkbox" name="tem_variante_ia" id="check_variante_ia" onchange="toggleVarianteIA()" <?= $item['tem_variante_ia']?'checked':'' ?>> 🤖 Tem variante "com IA" (preço alternativo)</label>
+
+        <div id="variante_ia_box" style="display:<?= $item['tem_variante_ia']?'block':'none' ?>; margin-top:var(--s-3); padding:var(--s-3); background:var(--bg-input); border-radius:6px;">
+          <div class="section-label">Preço da variante com IA</div>
+          <div class="field"><label>USD ($)</label><input type="number" step="0.01" min="0" name="preco_ia_usd" id="preco_ia_usd" value="<?= $item['preco_ia_usd']!==null && $item['preco_ia_usd']!==''?e(number_format((float)$item['preco_ia_usd'],2,'.','')):'' ?>" oninput="atualizarPreview()"></div>
+          <div class="grid-2">
+            <div class="field"><label>BRL calculado</label><input type="text" id="prev_ia_brl" value="<?= $item['preco_ia_brl']!==null && $item['preco_ia_brl']!==''?'R$ '.e(number_format((float)$item['preco_ia_brl'],0,',','.')):'—' ?>" disabled></div>
+            <div class="field"><label>EUR calculado</label><input type="text" id="prev_ia_eur" value="<?= $item['preco_ia_eur']!==null && $item['preco_ia_eur']!==''?'€ '.e(number_format((float)$item['preco_ia_eur'],0,',','.')):'—' ?>" disabled></div>
+          </div>
         </div>
-        <?php endif; ?>
       </div>
 
       <script>
@@ -280,14 +303,34 @@ if ($acao === 'novo' || $acao === 'editar') {
       }
       </script>
 
-      <h2>Responsabilidades</h2>
+      <!-- PASSO 4 — Responsabilidades -->
+      <h2 class="mt-5">4️⃣ Responsabilidades <span class="muted" style="font-size:13px; font-weight:normal;">(quem faz o quê)</span></h2>
       <div class="card">
-        <div class="field"><label>O que a agência entrega</label><textarea name="resp_agencia"><?= e($item['resp_agencia'] ?? '') ?></textarea></div>
-        <div class="field"><label>O que o funcionário faz</label><textarea name="resp_funcionario"><?= e($item['resp_funcionario'] ?? '') ?></textarea></div>
-        <div class="field"><label>O que o cliente fornece</label><textarea name="resp_cliente"><?= e($item['resp_cliente'] ?? '') ?></textarea></div>
+        <div class="field">
+          <label>🏢 O que a Dite Ads entrega</label>
+          <textarea name="resp_agencia" rows="3" placeholder="• Setup das campanhas&#10;• Otimização semanal&#10;• Relatórios mensais"><?= e($item['resp_agencia'] ?? '') ?></textarea>
+        </div>
+        <div class="field">
+          <label>💼 O que o funcionário responsável faz</label>
+          <textarea name="resp_funcionario" rows="3" placeholder="• Criação dos criativos&#10;• Programação das postagens"><?= e($item['resp_funcionario'] ?? '') ?></textarea>
+        </div>
+        <div class="field">
+          <label>🤝 O que o cliente precisa fornecer</label>
+          <textarea name="resp_cliente" rows="3" placeholder="• Acesso às contas&#10;• Briefing&#10;• Orçamento de mídia"><?= e($item['resp_cliente'] ?? '') ?></textarea>
+        </div>
       </div>
 
-      <button class="btn block" type="submit">Salvar item</button>
+      <!-- PASSO 5 — Opções avançadas -->
+      <h2 class="mt-5">5️⃣ Opções</h2>
+      <div class="card">
+        <label class="check"><input type="checkbox" name="ativo" <?= $item['ativo']?'checked':'' ?>> ✅ Item ativo (aparece para contratar)</label>
+        <div class="hint" style="margin-left:24px; margin-bottom:var(--s-2);">Desmarque pra remover do catálogo de vendas sem apagar (preserva histórico das assinaturas existentes).</div>
+
+        <label class="check"><input type="checkbox" name="e_pacote" <?= $item['e_pacote']?'checked':'' ?>> 📦 Este item é um pacote (combo de outros)</label>
+        <div class="hint" style="margin-left:24px;">Marque se for um combo. Você define a composição depois de salvar.</div>
+      </div>
+
+      <button class="btn block mt-5" type="submit" style="font-size:16px; padding:var(--s-4);">💾 <?= $item['id'] ? 'Salvar alterações' : 'Criar item' ?></button>
     </form>
 
     <?php if ($item['id']): ?>
