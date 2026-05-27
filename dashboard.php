@@ -408,6 +408,10 @@ require __DIR__ . '/includes/header.php';
     <div class="title">📝 Templates de mensagem</div>
     <div class="desc">Editar textos de email e WhatsApp <span class="status status-destaque">sadmin</span></div>
   </a>
+  <a class="card" href="<?= e(APP_BASE_URL) ?>/config_pagamento.php">
+    <div class="title">💳 Formas de pagamento</div>
+    <div class="desc">Zelle + Wise — aparecem nas cobranças e templates <span class="status status-destaque">sadmin</span></div>
+  </a>
   <?php endif; ?>
   <a class="card" href="<?= e(APP_BASE_URL) ?>/capacidade.php">
     <div class="title">📊 Capacidade da equipe</div>

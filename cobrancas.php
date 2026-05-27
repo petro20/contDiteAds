@@ -521,6 +521,36 @@ if ($id) {
       </details>
     <?php endif; ?>
 
+    <?php
+    // Mostra formas de pagamento configuradas (cliente E admin veem) — só quando ainda não foi paga
+    if (in_array($cob['status'], ['aberta','em_analise'], true)):
+        require_once __DIR__ . '/lib/configuracoes.php';
+        $cfg_pag = config_pagamento($db);
+        $tem_metodo = $cfg_pag['zelle_email'] || $cfg_pag['wise_link'];
+        if ($tem_metodo):
+    ?>
+      <h2 class="mt-5">💳 Formas de pagamento</h2>
+      <?php if ($cfg_pag['zelle_email']): ?>
+        <div class="card">
+          <div class="title">💜 Zelle</div>
+          <div class="info-pair"><span class="l">Email</span><span class="v"><strong><?= e($cfg_pag['zelle_email']) ?></strong></span></div>
+          <div class="desc muted" style="font-size:12px;">Abra o app do seu banco e envie pra esse email.</div>
+        </div>
+      <?php endif; ?>
+      <?php if ($cfg_pag['wise_link']): ?>
+        <a class="card" href="<?= e($cfg_pag['wise_link']) ?>" target="_blank" rel="noopener" style="text-decoration:none;">
+          <div class="title">🌍 Wise</div>
+          <div class="desc" style="color:var(--c-primary-2);"><?= e($cfg_pag['wise_link']) ?> ↗</div>
+          <div class="desc muted" style="font-size:12px;">Clique pra abrir o link e pagar pelo Wise.</div>
+        </a>
+      <?php endif; ?>
+      <?php if ($cfg_pag['instrucoes']): ?>
+        <div class="card">
+          <div class="desc"><?= nl2br(e($cfg_pag['instrucoes'])) ?></div>
+        </div>
+      <?php endif; ?>
+    <?php endif; endif; ?>
+
     <?php if ($me['role'] === 'cliente' && $cob['status'] === 'aberta'): ?>
       <h2 class="mt-5">Enviar comprovante</h2>
       <div class="card">
