@@ -135,16 +135,23 @@ require __DIR__ . '/includes/header.php';
   }
   ?>
 
-  <?php if ($tem_prev): ?>
-    <a class="card brand" href="<?= e(APP_BASE_URL) ?>/painel.php" style="text-decoration:none;">
-      <div class="title" style="color:var(--c-primary-2);">🔮 Previsão de faturamento <span class="muted" style="font-weight:normal; font-size:12px;">(<?= e(date('M/y')) ?>)</span></div>
-      <div class="desc" style="margin-top:6px;">
-        <?php $partes_prev = []; foreach ($prev_faturamento as $m => $v) if ($v > 0) $partes_prev[] = '<strong style="color:var(--txt-1);">' . e(money_fmt($v, $m)) . '</strong>';
-              echo implode(' · ', $partes_prev); ?>
-      </div>
-      <div class="desc muted" style="font-size:12px; margin-top:4px;">recebido + a receber + em análise · este mês</div>
-    </a>
-  <?php endif; ?>
+  <a class="card brand" href="<?= e(APP_BASE_URL) ?>/painel.php" style="text-decoration:none;">
+    <div class="title" style="color:var(--c-primary-2);">🔮 Previsão de faturamento <span class="muted" style="font-weight:normal; font-size:12px;">(<?= e(date('M/y')) ?>)</span></div>
+    <div class="desc" style="margin-top:6px;">
+      <?php
+        $partes_prev = [];
+        foreach ($prev_faturamento as $m => $v) {
+            if ($v > 0) $partes_prev[] = '<strong style="color:var(--txt-1);">' . e(money_fmt($v, $m)) . '</strong>';
+        }
+        if ($partes_prev) {
+            echo implode(' · ', $partes_prev);
+        } else {
+            echo '<strong class="muted">Nada previsto pra este mês ainda</strong>';
+        }
+      ?>
+    </div>
+    <div class="desc muted" style="font-size:12px; margin-top:4px;">recebido + a receber + em análise · este mês</div>
+  </a>
 
   <?php if ($tot_em_analise > 0): ?>
     <a class="card attention" href="<?= e(APP_BASE_URL) ?>/cobrancas.php?status=em_analise">
