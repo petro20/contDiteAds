@@ -108,6 +108,19 @@ require __DIR__ . '/includes/header.php';
       $sem_wisetag_com_grana = (int)$stmt->fetchColumn();
   } catch (Throwable $e) {}
 
+  // Previsão de faturamento do mês = recebido + a receber (aberta) + em análise — por moeda
+  $prev_faturamento = ['BRL'=>0.0,'USD'=>0.0,'EUR'=>0.0];
+  $prev_faturamento['BRL'] = $rec_brl + $val_abertas_brl;
+  $prev_faturamento['USD'] = $rec_usd + $val_abertas_usd;
+  $prev_faturamento['EUR'] = $rec_eur + $val_abertas_eur;
+  try {
+      $stmt = $db->prepare("SELECT moeda, COALESCE(SUM(valor_total),0) AS total
+                            FROM cobrancas WHERE status='em_analise' AND competencia_mes = ? GROUP BY moeda");
+      $stmt->execute([$competencia_now]);
+      foreach ($stmt->fetchAll() as $r) { $prev_faturamento[$r['moeda']] += (float)$r['total']; }
+  } catch (Throwable $e) {}
+  $tem_prev = ($prev_faturamento['BRL'] + $prev_faturamento['USD'] + $prev_faturamento['EUR']) > 0;
+
   // 4. Lucro do mês pendente de distribuir (se já passou dia 5 e tem sócio pendente)
   $dist_pendente = false;
   if ((int)date('j') >= 5 && ($lucro_brl > 0 || $lucro_usd > 0 || $lucro_eur > 0)) {
@@ -121,6 +134,17 @@ require __DIR__ . '/includes/header.php';
       } catch (Throwable $e) {}
   }
   ?>
+
+  <?php if ($tem_prev): ?>
+    <a class="card brand" href="<?= e(APP_BASE_URL) ?>/painel.php" style="text-decoration:none;">
+      <div class="title" style="color:var(--c-primary-2);">🔮 Previsão de faturamento <span class="muted" style="font-weight:normal; font-size:12px;">(<?= e(date('M/y')) ?>)</span></div>
+      <div class="desc" style="margin-top:6px;">
+        <?php $partes_prev = []; foreach ($prev_faturamento as $m => $v) if ($v > 0) $partes_prev[] = '<strong style="color:var(--txt-1);">' . e(money_fmt($v, $m)) . '</strong>';
+              echo implode(' · ', $partes_prev); ?>
+      </div>
+      <div class="desc muted" style="font-size:12px; margin-top:4px;">recebido + a receber + em análise · este mês</div>
+    </a>
+  <?php endif; ?>
 
   <?php if ($tot_em_analise > 0): ?>
     <a class="card attention" href="<?= e(APP_BASE_URL) ?>/cobrancas.php?status=em_analise">
