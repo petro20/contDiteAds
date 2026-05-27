@@ -322,7 +322,27 @@ if ($acao === 'novo' || $acao === 'editar') {
 }
 
 require __DIR__ . '/includes/header.php';
-$users = $db->query("SELECT id, nome, email, role, ativo, wisetag, aceitando_clientes FROM usuarios WHERE role IN ('sadmin','admin','funcionario') ORDER BY FIELD(role,'sadmin','admin','funcionario'), nome")->fetchAll();
+$users = $db->query("
+    SELECT u.id, u.nome, u.email, u.role, u.ativo, u.wisetag, u.aceitando_clientes,
+           u.trabalha_com_id, p.nome AS dupla_nome
+    FROM usuarios u
+    LEFT JOIN usuarios p ON p.id = u.trabalha_com_id
+    WHERE u.role IN ('sadmin','admin','funcionario')
+    ORDER BY FIELD(u.role,'sadmin','admin','funcionario'), u.nome
+")->fetchAll();
+
+// Lista de duplas pra overview
+$duplas = [];
+foreach ($users as $u) {
+    if ($u['trabalha_com_id']) {
+        $duplas[] = [
+            'subordinado_id' => $u['id'],
+            'subordinado_nome' => $u['nome'],
+            'principal_id' => $u['trabalha_com_id'],
+            'principal_nome' => $u['dupla_nome'],
+        ];
+    }
+}
 ?>
 <h1 class="page-title">Equipe</h1>
 <?php render_group_tabs('equipe', 'funcionarios'); ?>
@@ -331,6 +351,24 @@ $users = $db->query("SELECT id, nome, email, role, ativo, wisetag, aceitando_cli
   <a href="?acao=novo" class="btn btn-brand">+ Novo</a>
   <a href="<?= e(APP_BASE_URL) ?>/convites.php" class="btn btn-secondary">✉️ Convidar</a>
 </div>
+
+<?php if ($duplas): ?>
+  <details class="card mt-3">
+    <summary style="cursor:pointer; padding:8px 0;"><strong>👥 Duplas configuradas (<?= count($duplas) ?>)</strong></summary>
+    <p class="muted" style="font-size:13px; margin-top:8px;">Pessoas que compartilham agenda. O pagamento vai todo pro principal (à esquerda).</p>
+    <?php foreach ($duplas as $d): ?>
+      <div class="info-pair" style="padding:8px 0; border-bottom:1px solid var(--border);">
+        <span>
+          <a href="?acao=editar&id=<?= (int)$d['principal_id'] ?>" style="color:var(--c-success); font-weight:600;">💰 <?= e($d['principal_nome']) ?></a>
+          <span style="color:var(--txt-3); margin:0 8px;">+</span>
+          <a href="?acao=editar&id=<?= (int)$d['subordinado_id'] ?>" style="color:var(--c-primary-2);">👤 <?= e($d['subordinado_nome']) ?></a>
+        </span>
+      </div>
+    <?php endforeach; ?>
+    <p class="hint" style="margin-top:8px;">Pra desfazer uma dupla, clique no nome subordinado e mude "Trabalha em dupla com" pra "— sozinho —".</p>
+  </details>
+<?php endif; ?>
+
 <div class="section-label mt-5">Equipe (<?= count($users) ?>)</div>
 <?php foreach ($users as $u): ?>
   <a class="list-card" href="?acao=editar&id=<?= (int)$u['id'] ?>">
@@ -339,6 +377,7 @@ $users = $db->query("SELECT id, nome, email, role, ativo, wisetag, aceitando_cli
         <?= e($u['nome']) ?>
         <?php if ($u['role'] === 'sadmin'): ?><span class="status status-destaque">super admin</span><?php elseif ($u['role'] === 'admin'): ?><span class="status status-ia">admin</span><?php endif; ?>
         <?php if (!$u['ativo']): ?><span class="status status-info">inativo</span><?php endif; ?>
+        <?php if ($u['trabalha_com_id']): ?><span class="status status-info">👥 dupla com <?= e($u['dupla_nome']) ?></span><?php endif; ?>
       </div>
       <div class="sub">
         <?= e($u['email']) ?>
