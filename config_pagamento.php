@@ -10,7 +10,9 @@ $flash = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_check();
-    if (($_POST['op'] ?? '') === 'atualizar_cotacao') {
+    $op_post = $_POST['op'] ?? '';
+
+    if ($op_post === 'atualizar_cotacao') {
         $c = cotacao_atual($db, true); // forcar refresh
         audit_log('cotacao.atualizada', 'configuracoes', 0);
         if ($c['fonte'] === 'api') {
@@ -18,8 +20,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $flash = ['err', 'API de cotação indisponível. Usando último valor: USD→BRL ' . number_format($c['BRL'],4) . ' · USD→EUR ' . number_format($c['EUR'],4) . ' (' . $c['data'] . ')'];
         }
+        goto fim_post; // NÃO cai no save principal
     }
-    if (($_POST['op'] ?? '') === 'remover_qr') {
+    if ($op_post === 'remover_qr') {
         $atual = config_get($db, 'pagamento_zelle_qr');
         if ($atual) {
             $f = UPLOAD_DIR . '/' . $atual;
@@ -30,6 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header('Location: ' . APP_BASE_URL . '/config_pagamento.php?ok=qr_removido'); exit;
     }
 
+    // Save principal — só roda se o usuário clicou em "Salvar" (não em outros botões)
     $zelle = trim((string)($_POST['zelle_email'] ?? ''));
     $wise  = trim((string)($_POST['wise_link']   ?? ''));
     $instr = trim((string)($_POST['instrucoes']  ?? ''));
@@ -84,6 +88,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $flash = ['ok', 'Configurações de pagamento salvas.'];
         }
     }
+    fim_post:;
 }
 if (isset($_GET['ok']) && $_GET['ok'] === 'qr_removido') $flash = ['ok', 'QR Code removido.'];
 
