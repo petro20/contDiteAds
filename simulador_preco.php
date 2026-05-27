@@ -24,7 +24,7 @@ $cot = cotacao_atual($db);
 
 <h2 class="mt-5">💸 Custos (USD)</h2>
 <div class="card">
-  <p class="muted" style="font-size:13px;">Adicione cada componente: pagamento ao funcionário, software/licença, horas, etc.</p>
+  <p class="muted" style="font-size:13px;">Cada linha tem <strong>Valor total ÷ Dividir por = por unidade</strong>. Use o divisor pra rateio: ex. "Opus Clips $174 dividido por 36 vídeos" → $4.83 por vídeo. Pra custo direto, deixe divisor em 1.</p>
   <div id="lista_custos"></div>
   <button type="button" class="btn btn-secondary block mt-3" onclick="adicionarLinha()">+ Adicionar custo</button>
 
@@ -94,15 +94,29 @@ const COT_EUR = <?= json_encode($cot['EUR']) ?>;
 
 let counter = 0;
 
-function adicionarLinha(desc = '', val = '') {
+function adicionarLinha(desc = '', val = '', divisor = '') {
   counter++;
   const id = 'custo_' + counter;
   const html = `
-    <div class="grid-2" id="${id}" style="align-items:end; gap:8px; margin-bottom:8px;">
-      <input type="text" class="custo-desc" placeholder="ex: Pagto funcionário" value="${desc}">
-      <div style="display:flex; gap:6px;">
-        <input type="number" class="custo-val" placeholder="0.00" step="0.01" min="0" value="${val}" oninput="recalcular()" style="flex:1;">
+    <div id="${id}" style="border:1px solid var(--border); border-radius:8px; padding:10px; margin-bottom:8px;">
+      <div style="display:flex; gap:6px; align-items:center; margin-bottom:6px;">
+        <input type="text" class="custo-desc" placeholder="ex: Pagto funcionário, Software X" value="${desc}" style="flex:1;">
         <button type="button" class="btn btn-ghost small" onclick="removerLinha('${id}')" title="Remover" style="padding:6px 12px;">🗑</button>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr auto 1fr auto; gap:6px; align-items:center;">
+        <div>
+          <div class="hint" style="margin-bottom:2px;">Valor total (USD)</div>
+          <input type="number" class="custo-val" placeholder="0.00" step="0.01" min="0" value="${val}" oninput="recalcular()">
+        </div>
+        <div style="font-size:18px; padding-top:18px; color:var(--txt-2);">÷</div>
+        <div>
+          <div class="hint" style="margin-bottom:2px;">Dividir por (rateio)</div>
+          <input type="number" class="custo-div" placeholder="1" step="1" min="1" value="${divisor}" oninput="recalcular()">
+        </div>
+        <div style="text-align:right; padding-top:18px;">
+          <div class="hint" style="margin-bottom:2px;">= por unidade</div>
+          <strong class="custo-rateado" style="font-size:14px;">$ 0.00</strong>
+        </div>
       </div>
     </div>
   `;
@@ -117,7 +131,16 @@ function removerLinha(id) {
 
 function recalcular() {
   let total = 0;
-  document.querySelectorAll('.custo-val').forEach(i => total += parseFloat(i.value) || 0);
+  document.querySelectorAll('#lista_custos > div').forEach(linha => {
+    const valEl = linha.querySelector('.custo-val');
+    const divEl = linha.querySelector('.custo-div');
+    const rateadoEl = linha.querySelector('.custo-rateado');
+    const v = parseFloat(valEl?.value) || 0;
+    const d = Math.max(1, parseFloat(divEl?.value) || 1);
+    const r = v / d;
+    if (rateadoEl) rateadoEl.textContent = '$ ' + r.toFixed(2);
+    total += r;
+  });
   document.getElementById('total_custo').textContent = total.toFixed(2);
 
   const margem = parseFloat(document.getElementById('margem').value) || 0;
