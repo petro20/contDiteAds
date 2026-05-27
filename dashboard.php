@@ -410,6 +410,10 @@ require __DIR__ . '/includes/header.php';
     <div class="title">🔍 Auditoria</div>
     <div class="desc">Histórico de tudo no sistema <span class="status status-destaque">sadmin</span></div>
   </a>
+  <a class="card" href="<?= e(APP_BASE_URL) ?>/acessos_pdf.php" target="_blank">
+    <div class="title">🔐 Matriz de acesso (PDF)</div>
+    <div class="desc">Documento com quem pode o quê — abre em nova aba <span class="status status-destaque">sadmin</span></div>
+  </a>
   <?php else: // admin não-sadmin tem acesso a distribuição como sócio mas não às configs ?>
   <a class="card" href="<?= e(APP_BASE_URL) ?>/distribuicao.php">
     <div class="title">💎 Distribuição de lucro</div>
