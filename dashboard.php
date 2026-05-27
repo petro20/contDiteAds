@@ -349,6 +349,25 @@ require __DIR__ . '/includes/header.php';
     </a>
   </div>
 
+  <div class="section-label">Link do sistema (para enviar a clientes/funcionários)</div>
+  <div class="card">
+    <div class="spaced" style="gap:8px;">
+      <code id="link_sistema_txt" style="flex:1; padding:8px 12px; background:var(--bg-input); border-radius:6px; font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"><?= e(APP_BASE_URL) ?>/</code>
+      <button type="button" class="btn small btn-brand" onclick="copiarLinkSistema(this)">📋 Copiar</button>
+    </div>
+    <div class="hint">Use nas mensagens (WhatsApp, email). Nos templates use a variável <code>{link_sistema}</code>.</div>
+  </div>
+  <script>
+  function copiarLinkSistema(btn) {
+    const txt = document.getElementById('link_sistema_txt').textContent.trim();
+    navigator.clipboard.writeText(txt).then(() => {
+      const orig = btn.innerHTML;
+      btn.innerHTML = '✅ Copiado!';
+      setTimeout(() => btn.innerHTML = orig, 2000);
+    });
+  }
+  </script>
+
   <div class="section-label">Ações rápidas</div>
   <a class="card" href="<?= e(APP_BASE_URL) ?>/painel.php">
     <div class="title">📊 Painel financeiro</div>

@@ -73,6 +73,7 @@ function wa_vars_cobranca(PDO $db, int $cobranca_id): array {
         'itens'           => rtrim($itens_txt),
         'link_recibo'     => APP_BASE_URL . '/recibo.php?cobranca=' . (int)$cobranca_id,
         'link_comprovante'=> APP_BASE_URL . '/cobrancas.php?id=' . (int)$cobranca_id,
+        'link_sistema'    => APP_BASE_URL . '/',
         '_telefone'       => $cob['telefone'] ?: '',
     ];
 }

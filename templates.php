@@ -75,7 +75,7 @@ if ($id || $novo) {
         <div class="field">
           <label>Corpo</label>
           <textarea name="corpo" required rows="10"><?= e($t['corpo']) ?></textarea>
-          <div class="hint">Variáveis: <code>{nome_cliente}</code>, <code>{nome_empresa}</code>, <code>{valor}</code>, <code>{moeda}</code>, <code>{vencimento}</code>, <code>{mes_referencia}</code>, <code>{itens}</code>, <code>{link_recibo}</code>, <code>{link_comprovante}</code></div>
+          <div class="hint">Variáveis: <code>{nome_cliente}</code>, <code>{nome_empresa}</code>, <code>{valor}</code>, <code>{moeda}</code>, <code>{vencimento}</code>, <code>{mes_referencia}</code>, <code>{itens}</code>, <code>{link_recibo}</code>, <code>{link_comprovante}</code>, <code>{link_sistema}</code></div>
         </div>
         <label class="check"><input type="checkbox" name="ativo" <?= $t['ativo']?'checked':'' ?>> Ativo</label>
       </div>
