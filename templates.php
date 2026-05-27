@@ -7,6 +7,26 @@ $flash = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_check();
+    if (($_POST['op'] ?? '') === 'apagar') {
+        $pid = (int)($_POST['id'] ?? 0);
+        if ($pid > 0) {
+            try {
+                // Verifica se está sendo usado pela régua (FK SET NULL, mas avisa)
+                $usos = 0;
+                try {
+                    $stmt = $db->prepare('SELECT COUNT(*) FROM regua_etapas WHERE template_email_id = ? OR template_whatsapp_id = ?');
+                    $stmt->execute([$pid, $pid]);
+                    $usos = (int)$stmt->fetchColumn();
+                } catch (PDOException $e) {}
+                $db->prepare('DELETE FROM templates_mensagem WHERE id = ?')->execute([$pid]);
+                audit_log('template.apagado', 'templates_mensagem', $pid);
+                $msg = 'Template apagado.' . ($usos > 0 ? ' (estava em uso por ' . $usos . ' etapa(s) da régua — voltaram a usar texto padrão)' : '');
+                header('Location: ' . APP_BASE_URL . '/templates.php?ok=del&msg=' . urlencode($msg)); exit;
+            } catch (PDOException $e) {
+                $flash = ['err', 'Erro ao apagar: ' . $e->getMessage()];
+            }
+        }
+    }
     if (($_POST['op'] ?? '') === 'seed_pagamento') {
         $tpls = [
             [
@@ -68,9 +88,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 if (isset($_GET['ok'])) {
-    $flash = ['ok', $_GET['ok'] === 'seed'
-        ? 'Templates padrão de pagamento instalados (WhatsApp + Email).'
-        : 'Template salvo.'];
+    $flash = ['ok', match($_GET['ok']) {
+        'seed' => 'Templates padrão de pagamento instalados (WhatsApp + Email).',
+        'del'  => $_GET['msg'] ?? 'Template apagado.',
+        default => 'Template salvo.',
+    }];
 }
 
 $page = 'Templates de mensagem';
@@ -115,6 +137,16 @@ if ($id || $novo) {
       </div>
       <button class="btn block" type="submit">Salvar</button>
     </form>
+
+    <?php if ((int)$t['id'] > 0): ?>
+      <h2 class="mt-5">⚠ Zona de perigo</h2>
+      <form method="post" onsubmit="return confirm('APAGAR DEFINITIVAMENTE este template?\n\nSe alguma etapa da régua estiver usando ele, vai voltar a usar texto padrão.\n\nConfirmar?');">
+        <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
+        <input type="hidden" name="op" value="apagar">
+        <input type="hidden" name="id" value="<?= (int)$t['id'] ?>">
+        <button class="btn btn-danger block" type="submit">🗑 Apagar este template</button>
+      </form>
+    <?php endif; ?>
     <?php
     require __DIR__ . '/includes/footer.php';
     exit;
