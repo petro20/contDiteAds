@@ -33,10 +33,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $flash = ['err','Nome da empresa é obrigatório.'];
             $acao = $pid ? 'editar' : 'novo'; $id = $pid;
         } elseif ($pid) {
+            // Detecta mudança de moeda — vai recalcular valor_cobrado das assinaturas ativas
+            $stmt = $db->prepare('SELECT moeda FROM clientes WHERE id = ?');
+            $stmt->execute([$pid]);
+            $moeda_antiga = $stmt->fetchColumn();
             $stmt = $db->prepare('UPDATE clientes SET nome=?, nome_empresa=?, nome_contato=?, documento=?, email=?, moeda=?, telefone=?, endereco=?, link_grupo=?, observacoes=?, ativo=? WHERE id=?');
             $stmt->execute([$nome_emp, $nome_emp, $nome_cnt, $doc, $email, $moeda, $tel, $end, $link_grp, $obs, $ativo, $pid]);
             audit_log('cliente.editado', 'clientes', $pid);
-            header('Location: ' . APP_BASE_URL . '/clientes.php?acao=editar&id=' . $pid . '&ok=upd'); exit;
+
+            $extra_query = '';
+            if ($moeda_antiga && $moeda_antiga !== $moeda) {
+                // Recalcula valor_cobrado de todas as assinaturas ativas usando o preço
+                // do catálogo na nova moeda (considerando a variante normal/ia).
+                $stmt = $db->prepare("
+                    SELECT a.id, a.variante, a.valor_cobrado,
+                           i.nome AS item_nome,
+                           i.preco_brl, i.preco_usd, i.preco_eur,
+                           i.preco_ia_brl, i.preco_ia_usd, i.preco_ia_eur
+                    FROM assinaturas a
+                    JOIN itens_catalogo i ON i.id = a.item_id
+                    WHERE a.cliente_id = ? AND a.status = 'ativa'
+                ");
+                $stmt->execute([$pid]);
+                $atualizadas = 0; $sem_preco = [];
+                $upd = $db->prepare('UPDATE assinaturas SET valor_cobrado = ? WHERE id = ?');
+                foreach ($stmt->fetchAll() as $a) {
+                    $col = $a['variante'] === 'ia' ? 'preco_ia_' : 'preco_';
+                    $col .= strtolower($moeda);
+                    $novo = $a[$col] !== null ? (float)$a[$col] : null;
+                    if ($novo !== null && $novo > 0) {
+                        $upd->execute([$novo, (int)$a['id']]);
+                        $atualizadas++;
+                    } else {
+                        $sem_preco[] = $a['item_nome'];
+                    }
+                }
+                $msg_parts = [];
+                if ($atualizadas) $msg_parts[] = $atualizadas . ' assinatura(s) com valor atualizado';
+                if ($sem_preco)   $msg_parts[] = count($sem_preco) . ' sem preço configurado em ' . $moeda . ': ' . implode(', ', $sem_preco);
+                if ($msg_parts)   $extra_query = '&moeda_msg=' . urlencode(implode(' · ', $msg_parts));
+                audit_log('cliente.moeda_alterada', 'clientes', $pid);
+            }
+
+            header('Location: ' . APP_BASE_URL . '/clientes.php?acao=editar&id=' . $pid . '&ok=upd' . $extra_query); exit;
         } else {
             $stmt = $db->prepare('INSERT INTO clientes (nome, nome_empresa, nome_contato, documento, email, moeda, telefone, endereco, link_grupo, observacoes, ativo) VALUES (?,?,?,?,?,?,?,?,?,?,?)');
             $stmt->execute([$nome_emp, $nome_emp, $nome_cnt, $doc, $email, $moeda, $tel, $end, $link_grp, $obs, $ativo]);
@@ -79,7 +118,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 if (isset($_GET['ok'])) {
     $msgs = ['add'=>'Cliente criado.','upd'=>'Cliente atualizado.','login'=>'Login do cliente criado.'];
-    $flash = ['ok', $msgs[$_GET['ok']] ?? 'OK.'];
+    $msg = $msgs[$_GET['ok']] ?? 'OK.';
+    if (!empty($_GET['moeda_msg'])) $msg .= ' Moeda alterada: ' . $_GET['moeda_msg'];
+    $flash = ['ok', $msg];
 }
 
 $page = 'Clientes';
