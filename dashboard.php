@@ -12,17 +12,63 @@ require __DIR__ . '/includes/header.php';
 
 <?php if (is_admin()): ?>
   <?php
-  // Conta básica
-  $totClientes = (int)$db->query('SELECT COUNT(*) FROM clientes WHERE ativo=1')->fetchColumn();
-  $totFunc     = (int)$db->query("SELECT COUNT(*) FROM usuarios WHERE role='funcionario' AND ativo=1")->fetchColumn();
-  $totItens    = 0;
-  try { $totItens = (int)$db->query('SELECT COUNT(*) FROM itens_catalogo WHERE ativo=1')->fetchColumn(); } catch (Throwable $e) {}
+  require_once __DIR__ . '/lib/despesas.php';
+  $competencia_now = date('Y-m');
+  $ini_mes = $competencia_now . '-01';
+  $fim_mes = date('Y-m-t', strtotime($ini_mes));
 
-  // Comprovantes pendentes (cliente enviou, aguardando admin aceitar/rejeitar)
+  // Comprovantes em análise (cliente enviou, aguardando admin aceitar/rejeitar)
   $tot_em_analise = 0;
+  try { $tot_em_analise = (int)$db->query("SELECT COUNT(*) FROM cobrancas WHERE status='em_analise'")->fetchColumn(); } catch (Throwable $e) {}
+
+  // Cobranças abertas (a receber) — neste mês
+  $tot_abertas = 0; $val_abertas_brl = 0.0; $val_abertas_usd = 0.0; $val_abertas_eur = 0.0;
   try {
-    $tot_em_analise = (int)$db->query("SELECT COUNT(*) FROM cobrancas WHERE status='em_analise'")->fetchColumn();
+      $stmt = $db->prepare("SELECT moeda, COUNT(*) AS qtd, COALESCE(SUM(valor_total),0) AS total
+                            FROM cobrancas WHERE status='aberta' AND competencia_mes = ? GROUP BY moeda");
+      $stmt->execute([$competencia_now]);
+      foreach ($stmt->fetchAll() as $r) {
+          $tot_abertas += (int)$r['qtd'];
+          if ($r['moeda'] === 'BRL') $val_abertas_brl = (float)$r['total'];
+          elseif ($r['moeda'] === 'USD') $val_abertas_usd = (float)$r['total'];
+          elseif ($r['moeda'] === 'EUR') $val_abertas_eur = (float)$r['total'];
+      }
   } catch (Throwable $e) {}
+
+  // Recebido este mês (pagamentos confirmados)
+  $rec_brl = 0.0; $rec_usd = 0.0; $rec_eur = 0.0;
+  try {
+      $stmt = $db->prepare("SELECT c.moeda, COALESCE(SUM(p.valor_pago),0) AS total
+                            FROM pagamentos_cliente p JOIN cobrancas c ON c.id = p.cobranca_id
+                            WHERE p.data_pagamento BETWEEN ? AND ? AND COALESCE(p.pendente,0)=0
+                            GROUP BY c.moeda");
+      $stmt->execute([$ini_mes, $fim_mes]);
+      foreach ($stmt->fetchAll() as $r) {
+          if ($r['moeda'] === 'BRL') $rec_brl = (float)$r['total'];
+          elseif ($r['moeda'] === 'USD') $rec_usd = (float)$r['total'];
+          elseif ($r['moeda'] === 'EUR') $rec_eur = (float)$r['total'];
+      }
+  } catch (Throwable $e) {}
+
+  // A pagar funcionários (fila USD)
+  $a_pagar_func = 0.0;
+  try {
+      require_once __DIR__ . '/lib/pagamentos.php';
+      $fila = fila_pagamentos_funcionarios($db);
+      $a_pagar_func = (float)array_sum(array_column($fila, 'total_usd'));
+  } catch (Throwable $e) {}
+
+  // Lucro líquido do mês (receita - despesas - pag func USD)
+  $desp_mes_data = despesas_do_mes($db, $competencia_now);
+  $pag_func_mes_usd = 0.0;
+  try {
+      $stmt = $db->prepare("SELECT COALESCE(SUM(valor_usd),0) FROM pagamentos_funcionario WHERE data_pagamento BETWEEN ? AND ?");
+      $stmt->execute([$ini_mes, $fim_mes]);
+      $pag_func_mes_usd = (float)$stmt->fetchColumn();
+  } catch (Throwable $e) {}
+  $lucro_brl = $rec_brl - ($desp_mes_data['totais']['BRL'] ?? 0);
+  $lucro_usd = $rec_usd - ($desp_mes_data['totais']['USD'] ?? 0) - $pag_func_mes_usd;
+  $lucro_eur = $rec_eur - ($desp_mes_data['totais']['EUR'] ?? 0);
   ?>
 
   <?php if ($tot_em_analise > 0): ?>
@@ -32,10 +78,37 @@ require __DIR__ . '/includes/header.php';
     </a>
   <?php endif; ?>
   <div class="grid-2">
-    <div class="kpi"><div class="v"><?= $totClientes ?></div><div class="l">Clientes ativos</div></div>
-    <div class="kpi"><div class="v"><?= $totFunc ?></div><div class="l">Funcionários ativos</div></div>
-    <div class="kpi"><div class="v"><?= $totItens ?></div><div class="l">Itens no catálogo</div></div>
-    <div class="kpi"><div class="v brand">Sprint 1</div><div class="l">Painel financeiro completo: Sprint 3</div></div>
+    <a class="kpi" href="<?= e(APP_BASE_URL) ?>/painel.php" style="text-decoration:none;">
+      <div class="v" style="font-size:18px; color:var(--c-success);">
+        <?php if ($rec_brl > 0): ?><?= e(money_fmt($rec_brl, 'BRL')) ?><br><?php endif; ?>
+        <?php if ($rec_usd > 0): ?><?= e(money_fmt($rec_usd, 'USD')) ?><br><?php endif; ?>
+        <?php if ($rec_eur > 0): ?><?= e(money_fmt($rec_eur, 'EUR')) ?><?php endif; ?>
+        <?php if ($rec_brl == 0 && $rec_usd == 0 && $rec_eur == 0): ?>—<?php endif; ?>
+      </div>
+      <div class="l">✅ Recebido este mês</div>
+    </a>
+    <a class="kpi" href="<?= e(APP_BASE_URL) ?>/cobrancas.php?status=aberta" style="text-decoration:none;">
+      <div class="v" style="font-size:18px;">
+        <?php if ($val_abertas_brl > 0): ?><?= e(money_fmt($val_abertas_brl, 'BRL')) ?><br><?php endif; ?>
+        <?php if ($val_abertas_usd > 0): ?><?= e(money_fmt($val_abertas_usd, 'USD')) ?><br><?php endif; ?>
+        <?php if ($val_abertas_eur > 0): ?><?= e(money_fmt($val_abertas_eur, 'EUR')) ?><?php endif; ?>
+        <?php if ($tot_abertas == 0): ?>0<?php endif; ?>
+      </div>
+      <div class="l">⏳ A receber (<?= $tot_abertas ?> cobr.)</div>
+    </a>
+    <a class="kpi" href="<?= e(APP_BASE_URL) ?>/pagamentos_funcionarios.php" style="text-decoration:none;" <?= $a_pagar_func>0?'style="border-color:var(--c-orange); text-decoration:none;"':'' ?>>
+      <div class="v" style="font-size:18px; color:<?= $a_pagar_func>0?'var(--c-orange)':'var(--txt-1)' ?>;">$<?= e(number_format($a_pagar_func, 2, '.', ',')) ?></div>
+      <div class="l">💵 A pagar funcionários (USD)</div>
+    </a>
+    <a class="kpi" href="<?= e(APP_BASE_URL) ?>/painel.php" style="text-decoration:none;">
+      <div class="v" style="font-size:18px;">
+        <?php if ($lucro_brl != 0): ?><span style="color:<?= $lucro_brl>=0?'var(--c-success)':'var(--c-danger)' ?>;"><?= e(money_fmt($lucro_brl, 'BRL')) ?></span><br><?php endif; ?>
+        <?php if ($lucro_usd != 0): ?><span style="color:<?= $lucro_usd>=0?'var(--c-success)':'var(--c-danger)' ?>;"><?= e(money_fmt($lucro_usd, 'USD')) ?></span><br><?php endif; ?>
+        <?php if ($lucro_eur != 0): ?><span style="color:<?= $lucro_eur>=0?'var(--c-success)':'var(--c-danger)' ?>;"><?= e(money_fmt($lucro_eur, 'EUR')) ?></span><?php endif; ?>
+        <?php if ($lucro_brl == 0 && $lucro_usd == 0 && $lucro_eur == 0): ?>—<?php endif; ?>
+      </div>
+      <div class="l">💎 Lucro do mês</div>
+    </a>
   </div>
 
   <div class="section-label">Ações rápidas</div>
