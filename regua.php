@@ -22,15 +22,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $te   = (int)($_POST['template_email_id'] ?? 0) ?: null;
         $tw   = (int)($_POST['template_whatsapp_id'] ?? 0) ?: null;
         $at   = isset($_POST['ativa']) ? 1 : 0;
-        if ($id) {
-            $stmt = $db->prepare('UPDATE regua_etapas SET ordem=?, dias_apos_vencimento=?, template_email_id=?, template_whatsapp_id=?, ativa=? WHERE id=?');
-            $stmt->execute([$ord,$dias,$te,$tw,$at,$id]);
-        } else {
-            $stmt = $db->prepare('INSERT INTO regua_etapas (ordem, dias_apos_vencimento, template_email_id, template_whatsapp_id, ativa) VALUES (?,?,?,?,?)');
-            $stmt->execute([$ord,$dias,$te,$tw,$at]);
+        try {
+            $db->beginTransaction();
+            if ($id) {
+                // Trata conflito de ordem (UNIQUE constraint): se já existe outra etapa
+                // com essa ordem, troca a ordem das duas.
+                $stmt = $db->prepare('SELECT id, ordem FROM regua_etapas WHERE ordem = ? AND id != ?');
+                $stmt->execute([$ord, $id]);
+                $conflito = $stmt->fetch();
+                if ($conflito) {
+                    // Pega ordem atual da etapa que está sendo editada
+                    $stmt = $db->prepare('SELECT ordem FROM regua_etapas WHERE id = ?');
+                    $stmt->execute([$id]);
+                    $ordem_atual = (int)$stmt->fetchColumn();
+                    // Swap via valor temporário pra evitar conflito da UNIQUE
+                    $tmp = 99999;
+                    $db->prepare('UPDATE regua_etapas SET ordem = ? WHERE id = ?')->execute([$tmp, (int)$conflito['id']]);
+                    $db->prepare('UPDATE regua_etapas SET ordem = ? WHERE id = ?')->execute([$ord, $id]);
+                    $db->prepare('UPDATE regua_etapas SET ordem = ? WHERE id = ?')->execute([$ordem_atual, (int)$conflito['id']]);
+                }
+                $stmt = $db->prepare('UPDATE regua_etapas SET ordem=?, dias_apos_vencimento=?, template_email_id=?, template_whatsapp_id=?, ativa=? WHERE id=?');
+                $stmt->execute([$ord,$dias,$te,$tw,$at,$id]);
+            } else {
+                // Nova etapa: se ordem já existe, empurra todas a partir dela uma a uma,
+                // do maior pro menor (evita violação da UNIQUE).
+                $stmt = $db->prepare('SELECT id, ordem FROM regua_etapas WHERE ordem >= ? ORDER BY ordem DESC');
+                $stmt->execute([$ord]);
+                $upd = $db->prepare('UPDATE regua_etapas SET ordem = ? WHERE id = ?');
+                foreach ($stmt->fetchAll() as $row) {
+                    $upd->execute([(int)$row['ordem'] + 1, (int)$row['id']]);
+                }
+                $stmt = $db->prepare('INSERT INTO regua_etapas (ordem, dias_apos_vencimento, template_email_id, template_whatsapp_id, ativa) VALUES (?,?,?,?,?)');
+                $stmt->execute([$ord,$dias,$te,$tw,$at]);
+                $id = (int)$db->lastInsertId();
+            }
+            $db->commit();
+            audit_log('regua.etapa_salva', 'regua_etapas', $id);
+            header('Location: ' . APP_BASE_URL . '/regua.php?aba=etapas&ok=1'); exit;
+        } catch (PDOException $e) {
+            if ($db->inTransaction()) $db->rollBack();
+            $flash = ['err', 'Erro ao salvar etapa: ' . $e->getMessage()];
         }
-        audit_log('regua.etapa_salva', 'regua_etapas', $id);
-        header('Location: ' . APP_BASE_URL . '/regua.php?aba=etapas&ok=1'); exit;
     }
     if ($op === 'remover_etapa') {
         $id = (int)($_POST['id'] ?? 0);
