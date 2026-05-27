@@ -174,33 +174,7 @@ if ($acao === 'novo' || $acao === 'editar') {
               </option>
             <?php endforeach; ?>
           </select>
-          <div class="hint">Responsável "principal" — vira o padrão pras novas entregas. Cada entrega pode ter um funcionário diferente.</div>
-
-          <?php
-          // Lista funcionários envolvidos (que já fizeram entregas) — informativo
-          if ((int)$a['id'] > 0):
-              $stmt = $db->prepare("
-                  SELECT u.id, u.nome, COUNT(e.id) AS qtd, MAX(e.competencia_mes) AS ultimo_mes
-                  FROM entregas e
-                  JOIN usuarios u ON u.id = e.funcionario_id
-                  WHERE e.assinatura_id = ?
-                  GROUP BY u.id, u.nome
-                  ORDER BY qtd DESC, u.nome
-              ");
-              $stmt->execute([(int)$a['id']]);
-              $envolvidos = $stmt->fetchAll();
-              if ($envolvidos):
-          ?>
-            <div class="hint" style="margin-top:8px;"><strong>👥 Funcionários envolvidos:</strong></div>
-            <div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:6px;">
-              <?php foreach ($envolvidos as $env): ?>
-                <span class="status status-info" style="font-size:12px;">
-                  <?= e($env['nome']) ?> · <?= (int)$env['qtd'] ?> entrega<?= $env['qtd']>1?'s':'' ?>
-                  <?php if ($env['ultimo_mes']): ?> · último <?= e($env['ultimo_mes']) ?><?php endif; ?>
-                </span>
-              <?php endforeach; ?>
-            </div>
-          <?php endif; endif; ?>
+          <div class="hint">Troca vale para o mês seguinte; histórico fica preservado.</div>
         </div>
 
         <div class="field">
