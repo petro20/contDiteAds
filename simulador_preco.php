@@ -25,6 +25,27 @@ $cot = cotacao_atual($db);
 <h2 class="mt-5">💸 Custos (USD)</h2>
 <div class="card">
   <p class="muted" style="font-size:13px;">Cada linha tem <strong>Valor total ÷ Dividir por = por unidade</strong>. Use o divisor pra rateio: ex. "Opus Clips $174 dividido por 36 vídeos" → $4.83 por vídeo. Pra custo direto, deixe divisor em 1.</p>
+  <p class="hint">💡 Use o botão <strong>🔍</strong> em cada linha pra abrir o Google e pesquisar o preço atual da ferramenta no mercado.</p>
+
+  <details class="mt-2">
+    <summary class="muted" style="cursor:pointer; padding:8px 0; font-size:13px;">💼 Adicionar software popular (preços referência)</summary>
+    <div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;">
+      <button type="button" class="btn btn-ghost small" onclick="adicionarLinha('Canva Pro (mensal)', 13)">Canva Pro $13</button>
+      <button type="button" class="btn btn-ghost small" onclick="adicionarLinha('Adobe Creative Cloud', 55)">Adobe CC $55</button>
+      <button type="button" class="btn btn-ghost small" onclick="adicionarLinha('Figma Pro', 15)">Figma $15</button>
+      <button type="button" class="btn btn-ghost small" onclick="adicionarLinha('ChatGPT Plus', 20)">ChatGPT $20</button>
+      <button type="button" class="btn btn-ghost small" onclick="adicionarLinha('Midjourney', 30)">Midjourney $30</button>
+      <button type="button" class="btn btn-ghost small" onclick="adicionarLinha('Capcut Pro', 10)">Capcut Pro $10</button>
+      <button type="button" class="btn btn-ghost small" onclick="adicionarLinha('Opus Clips Pro', 29)">Opus Clips $29</button>
+      <button type="button" class="btn btn-ghost small" onclick="adicionarLinha('Google Drive 2TB', 10)">Google Drive 2TB $10</button>
+      <button type="button" class="btn btn-ghost small" onclick="adicionarLinha('Dropbox Pro', 12)">Dropbox $12</button>
+      <button type="button" class="btn btn-ghost small" onclick="adicionarLinha('Notion Plus', 10)">Notion $10</button>
+      <button type="button" class="btn btn-ghost small" onclick="adicionarLinha('Buffer (postagem)', 6)">Buffer $6</button>
+      <button type="button" class="btn btn-ghost small" onclick="adicionarLinha('Meta Business Suite', 0)">Meta Suite (grátis)</button>
+    </div>
+    <p class="hint" style="margin-top:8px;">Valores aproximados de referência. Clique no <strong>🔍</strong> em cada linha pra confirmar o preço atual no Google.</p>
+  </details>
+
   <div id="lista_custos"></div>
   <button type="button" class="btn btn-secondary block mt-3" onclick="adicionarLinha()">+ Adicionar custo</button>
 
@@ -100,7 +121,8 @@ function adicionarLinha(desc = '', val = '', divisor = '') {
   const html = `
     <div id="${id}" style="border:1px solid var(--border); border-radius:8px; padding:10px; margin-bottom:8px;">
       <div style="display:flex; gap:6px; align-items:center; margin-bottom:6px;">
-        <input type="text" class="custo-desc" placeholder="ex: Pagto funcionário, Software X" value="${desc}" style="flex:1;">
+        <input type="text" class="custo-desc" placeholder="ex: Pagto funcionário, Canva Pro, Opus Clips" value="${desc}" style="flex:1;">
+        <button type="button" class="btn btn-ghost small" onclick="pesquisarPreco('${id}')" title="Pesquisar preço no Google" style="padding:6px 12px;">🔍</button>
         <button type="button" class="btn btn-ghost small" onclick="removerLinha('${id}')" title="Remover" style="padding:6px 12px;">🗑</button>
       </div>
       <div style="display:grid; grid-template-columns:1fr auto 1fr auto; gap:6px; align-items:center;">
@@ -127,6 +149,17 @@ function adicionarLinha(desc = '', val = '', divisor = '') {
 function removerLinha(id) {
   document.getElementById(id).remove();
   recalcular();
+}
+
+function pesquisarPreco(id) {
+  const desc = document.getElementById(id).querySelector('.custo-desc').value.trim();
+  if (!desc) {
+    alert('Preencha a descrição primeiro (nome do software, ferramenta, etc.) que eu pesquiso o preço pra você.');
+    return;
+  }
+  // Abre Google buscando o preço da ferramenta
+  const q = encodeURIComponent(desc + ' price monthly subscription 2026');
+  window.open('https://www.google.com/search?q=' + q, '_blank', 'noopener');
 }
 
 function recalcular() {
