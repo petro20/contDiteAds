@@ -2,6 +2,7 @@
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/lib/money.php';
 require_once __DIR__ . '/lib/audit.php';
+require_once __DIR__ . '/lib/cotacao.php';
 require_sadmin();
 $db = db();
 
@@ -24,12 +25,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $variante   = isset($_POST['tem_variante_ia']) ? 1 : 0;
 
         $valOrNull = fn($v) => ($v === '' || $v === null) ? null : (float)str_replace(',', '.', (string)$v);
-        $preco_usd = $valOrNull($_POST['preco_usd'] ?? '');
-        $preco_brl = $valOrNull($_POST['preco_brl'] ?? '');
-        $preco_eur = $valOrNull($_POST['preco_eur'] ?? '');
+        // USD é a moeda mestre — admin só preenche USD. BRL/EUR são calculadas
+        // automaticamente usando a cotação do dia, arredondando PRA CIMA (ceil)
+        // pra inteiro (preço sem centavos).
+        $preco_usd    = $valOrNull($_POST['preco_usd']    ?? '');
         $preco_ia_usd = $valOrNull($_POST['preco_ia_usd'] ?? '');
-        $preco_ia_brl = $valOrNull($_POST['preco_ia_brl'] ?? '');
-        $preco_ia_eur = $valOrNull($_POST['preco_ia_eur'] ?? '');
+        $cot = cotacao_atual($db);
+        $convup = function(?float $usd, string $moeda) use ($cot): ?float {
+            if ($usd === null || $usd <= 0) return null;
+            if ($moeda === 'USD') return $usd;
+            $rate = $cot[$moeda] ?? 0;
+            if ($rate <= 0) return null;
+            return (float)ceil($usd * $rate); // arredonda PRA CIMA, sem centavos
+        };
+        $preco_brl    = $convup($preco_usd,    'BRL');
+        $preco_eur    = $convup($preco_usd,    'EUR');
+        $preco_ia_brl = $convup($preco_ia_usd, 'BRL');
+        $preco_ia_eur = $convup($preco_ia_usd, 'EUR');
 
         $resp_a = trim((string)($_POST['resp_agencia'] ?? '')) ?: null;
         $resp_f = trim((string)($_POST['resp_funcionario'] ?? '')) ?: null;
@@ -127,23 +139,46 @@ if ($acao === 'novo' || $acao === 'editar') {
         <label class="check"><input type="checkbox" name="tem_variante_ia" <?= $item['tem_variante_ia']?'checked':'' ?>> Tem variante "com IA" (preços alternativos)</label>
       </div>
 
-      <h2>Preços por moeda</h2>
+      <?php $cot_view = cotacao_atual($db); ?>
+      <h2>Preço</h2>
       <div class="card">
+        <p class="muted" style="font-size:13px;">Preencha em <strong>USD</strong>. BRL e EUR são calculados automaticamente pela cotação do dia (arredondado pra cima, sem centavos). Cotação atual: <strong>R$ <?= e(number_format($cot_view['BRL'], 4)) ?></strong> · <strong>€ <?= e(number_format($cot_view['EUR'], 4)) ?></strong></p>
         <div class="section-label">Padrão</div>
+        <div class="field"><label>USD ($)</label><input type="number" step="0.01" min="0" name="preco_usd" id="preco_usd" value="<?= $item['preco_usd']!==null && $item['preco_usd']!==''?e(number_format((float)$item['preco_usd'],2,'.','')):'' ?>" placeholder="vazio = não vende" oninput="atualizarPreview()"></div>
         <div class="grid-2">
-          <div class="field"><label>USD ($)</label><input type="number" step="0.01" min="0" name="preco_usd" value="<?= $item['preco_usd']!==null && $item['preco_usd']!==''?e(number_format((float)$item['preco_usd'],2,'.','')):'' ?>" placeholder="vazio = não vende"></div>
-          <div class="field"><label>BRL (R$)</label><input type="number" step="0.01" min="0" name="preco_brl" value="<?= $item['preco_brl']!==null && $item['preco_brl']!==''?e(number_format((float)$item['preco_brl'],2,'.','')):'' ?>"></div>
-          <div class="field"><label>EUR (€)</label><input type="number" step="0.01" min="0" name="preco_eur" value="<?= $item['preco_eur']!==null && $item['preco_eur']!==''?e(number_format((float)$item['preco_eur'],2,'.','')):'' ?>"></div>
+          <div class="field"><label>BRL calculado</label><input type="text" id="prev_brl" value="<?= $item['preco_brl']!==null && $item['preco_brl']!==''?'R$ '.e(number_format((float)$item['preco_brl'],0,',','.')):'—' ?>" disabled></div>
+          <div class="field"><label>EUR calculado</label><input type="text" id="prev_eur" value="<?= $item['preco_eur']!==null && $item['preco_eur']!==''?'€ '.e(number_format((float)$item['preco_eur'],0,',','.')):'—' ?>" disabled></div>
         </div>
+
         <?php if ($item['tem_variante_ia']): ?>
         <div class="section-label">Variante "com IA"</div>
+        <div class="field"><label>USD ($)</label><input type="number" step="0.01" min="0" name="preco_ia_usd" id="preco_ia_usd" value="<?= $item['preco_ia_usd']!==null && $item['preco_ia_usd']!==''?e(number_format((float)$item['preco_ia_usd'],2,'.','')):'' ?>" oninput="atualizarPreview()"></div>
         <div class="grid-2">
-          <div class="field"><label>USD ($)</label><input type="number" step="0.01" min="0" name="preco_ia_usd" value="<?= $item['preco_ia_usd']!==null && $item['preco_ia_usd']!==''?e(number_format((float)$item['preco_ia_usd'],2,'.','')):'' ?>"></div>
-          <div class="field"><label>BRL (R$)</label><input type="number" step="0.01" min="0" name="preco_ia_brl" value="<?= $item['preco_ia_brl']!==null && $item['preco_ia_brl']!==''?e(number_format((float)$item['preco_ia_brl'],2,'.','')):'' ?>"></div>
-          <div class="field"><label>EUR (€)</label><input type="number" step="0.01" min="0" name="preco_ia_eur" value="<?= $item['preco_ia_eur']!==null && $item['preco_ia_eur']!==''?e(number_format((float)$item['preco_ia_eur'],2,'.','')):'' ?>"></div>
+          <div class="field"><label>BRL calculado</label><input type="text" id="prev_ia_brl" value="<?= $item['preco_ia_brl']!==null && $item['preco_ia_brl']!==''?'R$ '.e(number_format((float)$item['preco_ia_brl'],0,',','.')):'—' ?>" disabled></div>
+          <div class="field"><label>EUR calculado</label><input type="text" id="prev_ia_eur" value="<?= $item['preco_ia_eur']!==null && $item['preco_ia_eur']!==''?'€ '.e(number_format((float)$item['preco_ia_eur'],0,',','.')):'—' ?>" disabled></div>
         </div>
         <?php endif; ?>
       </div>
+
+      <script>
+      const COTACAO_BRL = <?= json_encode($cot_view['BRL']) ?>;
+      const COTACAO_EUR = <?= json_encode($cot_view['EUR']) ?>;
+      function _conv(usd, rate) {
+        const v = parseFloat(usd);
+        if (!v || !rate) return '—';
+        return Math.ceil(v * rate);
+      }
+      function atualizarPreview() {
+        const u = document.getElementById('preco_usd').value;
+        document.getElementById('prev_brl').value = _conv(u, COTACAO_BRL) === '—' ? '—' : 'R$ ' + _conv(u, COTACAO_BRL);
+        document.getElementById('prev_eur').value = _conv(u, COTACAO_EUR) === '—' ? '—' : '€ ' + _conv(u, COTACAO_EUR);
+        const ia = document.getElementById('preco_ia_usd');
+        if (ia) {
+          document.getElementById('prev_ia_brl').value = _conv(ia.value, COTACAO_BRL) === '—' ? '—' : 'R$ ' + _conv(ia.value, COTACAO_BRL);
+          document.getElementById('prev_ia_eur').value = _conv(ia.value, COTACAO_EUR) === '—' ? '—' : '€ ' + _conv(ia.value, COTACAO_EUR);
+        }
+      }
+      </script>
 
       <h2>Responsabilidades</h2>
       <div class="card">
