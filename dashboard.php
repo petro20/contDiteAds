@@ -159,11 +159,25 @@ require __DIR__ . '/includes/header.php';
       $pag_func_previsto = (float)$stmt->fetchColumn();
   } catch (Throwable $e) {}
 
+  // Contagens pra ajudar o usuário a entender as previsões
+  $qtd_assin_func = 0;
+  try {
+      $stmt = $db->prepare("SELECT COUNT(*) FROM assinaturas a JOIN itens_catalogo i ON i.id = a.item_id
+                            WHERE a.status='ativa' AND i.tipo='mensal' AND a.funcionario_id IS NOT NULL
+                              AND a.iniciada_em <= ? AND (a.encerrada_em IS NULL OR a.encerrada_em >= ?)");
+      $stmt->execute([$fim_mes, $ini_mes]);
+      $qtd_assin_func = (int)$stmt->fetchColumn();
+  } catch (Throwable $e) {}
+  $qtd_despesas = count($desp_mes_data['detalhes'] ?? []);
+
+  // Breakdown das despesas por moeda
+  $despesas_por_moeda = $desp_mes_data['totais'] ?? ['BRL'=>0,'USD'=>0,'EUR'=>0];
+
   // Previsão de pagamento = despesas + pag funcionários previsto (USD)
   $prev_pagamento = [
-      'BRL' => ($desp_mes_data['totais']['BRL'] ?? 0),
-      'USD' => ($desp_mes_data['totais']['USD'] ?? 0) + $pag_func_previsto,
-      'EUR' => ($desp_mes_data['totais']['EUR'] ?? 0),
+      'BRL' => ($despesas_por_moeda['BRL'] ?? 0),
+      'USD' => ($despesas_por_moeda['USD'] ?? 0) + $pag_func_previsto,
+      'EUR' => ($despesas_por_moeda['EUR'] ?? 0),
   ];
   // Previsão de lucro = recebimento − pagamento
   $prev_lucro = [
@@ -190,7 +204,7 @@ require __DIR__ . '/includes/header.php';
     <div class="title" style="color:var(--c-primary-2);">🔮 Previsão do mês <span class="muted" style="font-weight:normal; font-size:12px;">(<?= e(date('M/y')) ?>)</span></div>
 
     <div class="info-pair" style="margin-top:var(--s-3);">
-      <span class="l">📥 Recebimento</span>
+      <span class="l"><strong>📥 Recebimento</strong></span>
       <span class="v" style="text-align:right;">
         <?php
           $partes_prev = [];
@@ -201,9 +215,12 @@ require __DIR__ . '/includes/header.php';
         ?>
       </span>
     </div>
+    <div class="info-pair muted" style="font-size:12px;">
+      <span class="l">↳ cobranças + assinaturas ativas</span>
+    </div>
 
-    <div class="info-pair">
-      <span class="l">📤 Pagamento</span>
+    <div class="info-pair" style="margin-top:var(--s-2);">
+      <span class="l"><strong>📤 Pagamento</strong></span>
       <span class="v" style="text-align:right;">
         <?php
           $partes_pag = [];
@@ -214,8 +231,22 @@ require __DIR__ . '/includes/header.php';
         ?>
       </span>
     </div>
+    <div class="info-pair muted" style="font-size:12px;">
+      <span class="l">↳ 💸 Despesas (<?= (int)$qtd_despesas ?>)</span>
+      <span class="v">
+        <?php
+          $partes_d = [];
+          foreach ($despesas_por_moeda as $m => $v) if ($v > 0) $partes_d[] = e(money_fmt($v, $m));
+          echo $partes_d ? implode(' · ', $partes_d) : '—';
+        ?>
+      </span>
+    </div>
+    <div class="info-pair muted" style="font-size:12px;">
+      <span class="l">↳ 💵 Funcionários (<?= (int)$qtd_assin_func ?> assin.)</span>
+      <span class="v"><?= $pag_func_previsto > 0 ? e(money_fmt($pag_func_previsto, 'USD')) : '—' ?></span>
+    </div>
 
-    <div class="info-pair" style="border-top:1px solid var(--border); padding-top:var(--s-3); margin-top:var(--s-2);">
+    <div class="info-pair" style="border-top:1px solid var(--border); padding-top:var(--s-3); margin-top:var(--s-3);">
       <strong style="font-size:15px;">💎 Lucro previsto</strong>
       <span class="v" style="text-align:right;">
         <?php
@@ -230,8 +261,6 @@ require __DIR__ . '/includes/header.php';
         ?>
       </span>
     </div>
-
-    <div class="desc muted" style="font-size:11px; margin-top:var(--s-3);">recebido/aberto/análise + assinaturas · despesas + funcionários (pago/fila/assin)</div>
   </a>
 
   <?php if ($tot_em_analise > 0): ?>
