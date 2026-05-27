@@ -20,6 +20,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $margem = max(0, min(500, (float)($_POST['margem_pct'] ?? 50)));
         $ia = isset($_POST['tem_variante_ia']) ? 1 : 0;
         $custos_json = (string)($_POST['custos_json'] ?? '[]');
+        $resp_a = trim((string)($_POST['resp_agencia']     ?? '')) ?: null;
+        $resp_f = trim((string)($_POST['resp_funcionario'] ?? '')) ?: null;
+        $resp_c = trim((string)($_POST['resp_cliente']     ?? '')) ?: null;
         // Valida que é JSON válido
         $decoded = json_decode($custos_json, true);
         if (!is_array($decoded)) $custos_json = '[]';
@@ -29,12 +32,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             try {
                 if ($sim_id) {
-                    $stmt = $db->prepare('UPDATE simulacoes_preco SET nome=?, descricao=?, tipo=?, periodo_minimo_meses=?, margem_pct=?, tem_variante_ia=?, custos_json=? WHERE id=?');
-                    $stmt->execute([$nome, $descricao, $tipo, $periodo, $margem, $ia, $custos_json, $sim_id]);
+                    $stmt = $db->prepare('UPDATE simulacoes_preco SET nome=?, descricao=?, tipo=?, periodo_minimo_meses=?, margem_pct=?, resp_agencia=?, resp_funcionario=?, resp_cliente=?, tem_variante_ia=?, custos_json=? WHERE id=?');
+                    $stmt->execute([$nome, $descricao, $tipo, $periodo, $margem, $resp_a, $resp_f, $resp_c, $ia, $custos_json, $sim_id]);
                     audit_log('simulacao.editada', 'simulacoes_preco', $sim_id);
                 } else {
-                    $stmt = $db->prepare('INSERT INTO simulacoes_preco (nome, descricao, tipo, periodo_minimo_meses, margem_pct, tem_variante_ia, custos_json, criado_por) VALUES (?,?,?,?,?,?,?,?)');
-                    $stmt->execute([$nome, $descricao, $tipo, $periodo, $margem, $ia, $custos_json, (int)$me['id']]);
+                    $stmt = $db->prepare('INSERT INTO simulacoes_preco (nome, descricao, tipo, periodo_minimo_meses, margem_pct, resp_agencia, resp_funcionario, resp_cliente, tem_variante_ia, custos_json, criado_por) VALUES (?,?,?,?,?,?,?,?,?,?,?)');
+                    $stmt->execute([$nome, $descricao, $tipo, $periodo, $margem, $resp_a, $resp_f, $resp_c, $ia, $custos_json, (int)$me['id']]);
                     $sim_id = (int)$db->lastInsertId();
                     audit_log('simulacao.criada', 'simulacoes_preco', $sim_id);
                 }
@@ -65,6 +68,7 @@ $sim = [
     'id' => 0, 'nome' => '', 'descricao' => '',
     'tipo' => 'mensal', 'periodo_minimo_meses' => 3,
     'margem_pct' => 50, 'tem_variante_ia' => 0,
+    'resp_agencia' => '', 'resp_funcionario' => '', 'resp_cliente' => '',
     'custos_json' => '[]',
 ];
 if ($sim_id) {
@@ -213,6 +217,29 @@ function toggleSimPeriodo() {
   </div>
 </div>
 
+<h2 class="mt-5">🤝 Responsabilidades</h2>
+<div class="card">
+  <p class="muted" style="font-size:13px;">A IA preenche esses 3 campos quando você usa "✨ Preencher com IA". Você pode editar manualmente.</p>
+  <div class="field">
+    <label>O que a Dite Ads (agência) entrega</label>
+    <textarea name="resp_agencia" id="sim_resp_agencia" rows="4" placeholder="• Setup das campanhas
+• Otimização semanal
+• Relatórios mensais"><?= e($sim['resp_agencia'] ?? '') ?></textarea>
+  </div>
+  <div class="field">
+    <label>O que o funcionário responsável faz</label>
+    <textarea name="resp_funcionario" id="sim_resp_funcionario" rows="4" placeholder="• Criação dos criativos
+• Programação das postagens
+• Acompanhamento de métricas"><?= e($sim['resp_funcionario'] ?? '') ?></textarea>
+  </div>
+  <div class="field">
+    <label>O que o cliente fornece</label>
+    <textarea name="resp_cliente" id="sim_resp_cliente" rows="4" placeholder="• Acesso às contas (Google Ads, Meta)
+• Briefing de público e ofertas
+• Orçamento de mídia"><?= e($sim['resp_cliente'] ?? '') ?></textarea>
+  </div>
+</div>
+
 <div class="btn-pair mt-5">
   <button type="submit" class="btn btn-secondary block" onclick="prepararSalvar()">💾 <?= $sim['id'] ? 'Salvar alterações' : 'Salvar simulação' ?></button>
 </div>
@@ -237,6 +264,9 @@ function toggleSimPeriodo() {
   <input type="hidden" name="tem_variante_ia" id="frm_ia">
   <input type="hidden" name="tipo" id="frm_tipo">
   <input type="hidden" name="periodo_minimo_meses" id="frm_periodo">
+  <input type="hidden" name="resp_agencia" id="frm_resp_a">
+  <input type="hidden" name="resp_funcionario" id="frm_resp_f">
+  <input type="hidden" name="resp_cliente" id="frm_resp_c">
   <button type="submit" class="btn btn-brand block" onclick="preparaCriar()">✓ Criar item no catálogo com este preço →</button>
 </form>
 
@@ -354,6 +384,9 @@ function preparaCriar() {
   document.getElementById('frm_ia').value = ia ? '1' : '';
   document.getElementById('frm_tipo').value = tipo;
   document.getElementById('frm_periodo').value = tipo === 'mensal' ? periodo : 0;
+  document.getElementById('frm_resp_a').value = document.getElementById('sim_resp_agencia').value;
+  document.getElementById('frm_resp_f').value = document.getElementById('sim_resp_funcionario').value;
+  document.getElementById('frm_resp_c').value = document.getElementById('sim_resp_cliente').value;
   if (ia) {
     document.getElementById('frm_preco_ia').value = Math.ceil(parseFloat(preco) * 1.20);
   }
@@ -382,6 +415,9 @@ async function sugerirComIA() {
     if (s.tipo)                 document.getElementById('sim_tipo').value = s.tipo;
     if (s.periodo_minimo_meses != null) document.getElementById('sim_periodo').value = s.periodo_minimo_meses;
     if (s.margem_pct != null)   document.getElementById('margem').value = s.margem_pct;
+    if (s.resp_agencia)         document.getElementById('sim_resp_agencia').value = s.resp_agencia;
+    if (s.resp_funcionario)     document.getElementById('sim_resp_funcionario').value = s.resp_funcionario;
+    if (s.resp_cliente)         document.getElementById('sim_resp_cliente').value = s.resp_cliente;
     toggleSimPeriodo();
     document.getElementById('lista_custos').innerHTML = '';
     counter = 0;

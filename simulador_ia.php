@@ -72,6 +72,10 @@ Sua tarefa: gerar um pacote COMPLETO pra esse serviço.
    - Tools de gestão de anúncios se aplicável
    Cada custo: {"descricao": "string", "valor": número_total_USD, "dividir_por": número}
 
+7. **resp_agencia**: o que a Dite Ads (agência) entrega no escopo. Lista de bullets em texto, sem markdown. Ex: "• Setup das campanhas\\n• Otimização semanal\\n• Relatórios mensais"
+8. **resp_funcionario**: o que o funcionário responsável executa operacionalmente. Bullets em texto.
+9. **resp_cliente**: o que o cliente precisa fornecer (acessos, materiais, briefing). Bullets em texto.
+
 Responda APENAS um JSON válido (sem markdown, sem texto extra antes ou depois):
 {
   "nome": "string",
@@ -79,6 +83,9 @@ Responda APENAS um JSON válido (sem markdown, sem texto extra antes ou depois):
   "tipo": "mensal|unico|por_unidade",
   "periodo_minimo_meses": número,
   "margem_pct": número,
+  "resp_agencia": "string",
+  "resp_funcionario": "string",
+  "resp_cliente": "string",
   "custos": [
     {"descricao": "string", "valor": número, "dividir_por": número}
   ]

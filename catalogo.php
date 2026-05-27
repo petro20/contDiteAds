@@ -175,6 +175,9 @@ if ($acao === 'novo' || $acao === 'editar') {
         if (!empty($_GET['tem_variante_ia'])) $item['tem_variante_ia'] = 1;
         if (!empty($_GET['periodo_minimo_meses'])) $item['periodo_minimo_meses'] = (int)$_GET['periodo_minimo_meses'];
         if (!empty($_GET['tipo'])) $item['tipo'] = (string)$_GET['tipo'];
+        if (!empty($_GET['resp_agencia']))     $item['resp_agencia']     = trim((string)$_GET['resp_agencia']);
+        if (!empty($_GET['resp_funcionario'])) $item['resp_funcionario'] = trim((string)$_GET['resp_funcionario']);
+        if (!empty($_GET['resp_cliente']))     $item['resp_cliente']     = trim((string)$_GET['resp_cliente']);
 
         // Calcula BRL/EUR pra exibir já no preview (mesma lógica do save: ceil(usd × cotacao))
         $cot_pre = cotacao_atual($db);
