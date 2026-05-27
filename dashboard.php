@@ -71,10 +71,92 @@ require __DIR__ . '/includes/header.php';
   $lucro_eur = $rec_eur - ($desp_mes_data['totais']['EUR'] ?? 0);
   ?>
 
+  <?php
+  // ============ ALERTAS ============
+  // 1. Cobranças vencidas
+  $tot_vencidas = 0; $val_vencidas = [];
+  try {
+      $stmt = $db->query("SELECT moeda, COUNT(*) AS qtd, COALESCE(SUM(valor_total),0) AS total
+                          FROM cobrancas WHERE status='aberta' AND vencimento < CURDATE() GROUP BY moeda");
+      foreach ($stmt->fetchAll() as $r) { $tot_vencidas += (int)$r['qtd']; $val_vencidas[$r['moeda']] = (float)$r['total']; }
+  } catch (Throwable $e) {}
+
+  // 2. Funcionários sobrecarregados (entregas do mês > capacidade declarada)
+  $sobrecarga = 0;
+  try {
+      $stmt = $db->query("
+          SELECT COUNT(DISTINCT u.id) FROM usuarios u
+          JOIN capacidade_funcionario c ON c.funcionario_id = u.id
+          LEFT JOIN entregas e ON e.funcionario_id = u.id AND e.competencia_mes = DATE_FORMAT(CURDATE(),'%Y-%m')
+          WHERE u.role IN ('funcionario','admin') AND u.ativo=1
+          GROUP BY u.id, c.categoria, c.capacidade_mensal
+          HAVING COUNT(e.id) > c.capacidade_mensal
+      ");
+      $sobrecarga = (int)$stmt->rowCount();
+  } catch (Throwable $e) {}
+
+  // 3. Funcionários sem WiseTag mas com USD pendente (impede pagar)
+  $sem_wisetag_com_grana = 0;
+  try {
+      $stmt = $db->query("
+          SELECT COUNT(DISTINCT ci.funcionario_id) FROM cobranca_itens ci
+          JOIN cobrancas c ON c.id = ci.cobranca_id
+          JOIN usuarios u ON u.id = ci.funcionario_id
+          LEFT JOIN pagamento_funcionario_itens pfi ON pfi.cobranca_item_id = ci.id
+          WHERE c.status='paga' AND pfi.id IS NULL AND (u.wisetag IS NULL OR u.wisetag='')
+      ");
+      $sem_wisetag_com_grana = (int)$stmt->fetchColumn();
+  } catch (Throwable $e) {}
+
+  // 4. Lucro do mês pendente de distribuir (se já passou dia 5 e tem sócio pendente)
+  $dist_pendente = false;
+  if ((int)date('j') >= 5 && ($lucro_brl > 0 || $lucro_usd > 0 || $lucro_eur > 0)) {
+      try {
+          $stmt = $db->prepare("SELECT COALESCE(SUM(valor),0) FROM pagamentos_socio WHERE competencia_mes = ?");
+          $stmt->execute([$competencia_now]);
+          $ja_distribuido = (float)$stmt->fetchColumn();
+          if ($ja_distribuido < ($lucro_brl + $lucro_usd + $lucro_eur) * 0.5) {
+              $dist_pendente = true;
+          }
+      } catch (Throwable $e) {}
+  }
+  ?>
+
   <?php if ($tot_em_analise > 0): ?>
     <a class="card attention" href="<?= e(APP_BASE_URL) ?>/cobrancas.php?status=em_analise">
       <div class="title" style="color:var(--c-orange);">🔔 <?= $tot_em_analise ?> comprovante<?= $tot_em_analise>1?'s':'' ?> aguardando verificação</div>
       <div class="desc">Cliente enviou comprovante de pagamento. Aceite ou rejeite para concluir o ciclo.</div>
+    </a>
+  <?php endif; ?>
+
+  <?php if ($tot_vencidas > 0): ?>
+    <a class="card danger" href="<?= e(APP_BASE_URL) ?>/cobrancas.php?status=aberta">
+      <div class="title" style="color:var(--c-danger);">💢 <?= $tot_vencidas ?> cobrança<?= $tot_vencidas>1?'s':'' ?> vencida<?= $tot_vencidas>1?'s':'' ?></div>
+      <div class="desc">
+        <?php $partes = []; foreach ($val_vencidas as $m => $v) $partes[] = money_fmt($v, $m); echo e(implode(' · ', $partes)); ?>
+         · cobrar urgência via WhatsApp ou régua
+      </div>
+    </a>
+  <?php endif; ?>
+
+  <?php if ($sem_wisetag_com_grana > 0): ?>
+    <a class="card attention" href="<?= e(APP_BASE_URL) ?>/funcionarios.php">
+      <div class="title" style="color:var(--c-orange);">💳 <?= $sem_wisetag_com_grana ?> funcionário<?= $sem_wisetag_com_grana>1?'s':'' ?> sem WiseTag com USD a receber</div>
+      <div class="desc">Cadastre o @wisetag no perfil deles pra liberar o pagamento.</div>
+    </a>
+  <?php endif; ?>
+
+  <?php if ($sobrecarga > 0): ?>
+    <a class="card attention" href="<?= e(APP_BASE_URL) ?>/capacidade.php">
+      <div class="title" style="color:var(--c-orange);">📊 <?= $sobrecarga ?> funcionário<?= $sobrecarga>1?'s':'' ?> acima da capacidade</div>
+      <div class="desc">A agenda do mês passou do que ele declarou conseguir entregar.</div>
+    </a>
+  <?php endif; ?>
+
+  <?php if ($dist_pendente): ?>
+    <a class="card attention" href="<?= e(APP_BASE_URL) ?>/distribuicao.php">
+      <div class="title" style="color:var(--c-orange);">💎 Lucro do mês pendente de distribuir</div>
+      <div class="desc">Já passou do dia 5 e o lucro ainda não foi distribuído aos sócios.</div>
     </a>
   <?php endif; ?>
   <div class="grid-2">
