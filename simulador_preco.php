@@ -119,8 +119,8 @@ $cot = cotacao_atual($db);
   </div>
   <div class="field">
     <label>📝 Descrição do serviço</label>
-    <textarea id="sim_descricao" name="descricao" rows="4" placeholder="Conta o que vai ser entregue. Ex: 'Edição de 2 vídeos por semana pra Instagram + Reels, com legenda e thumb. Inclui Opus Clips pra cortar e Capcut pra editar.'"><?= e($sim['descricao']) ?></textarea>
-    <div class="hint">Quanto mais detalhe, melhor a sugestão da IA.</div>
+    <textarea id="sim_descricao" name="descricao" rows="8" placeholder="Conta em poucas palavras o que será feito. A IA vai expandir em descrição detalhada com escopo, entregas, ferramentas, responsabilidades. Ex: 'Anúncios Google Ads + Meta Ads, até 5 campanhas/plataforma'"><?= e($sim['descricao']) ?></textarea>
+    <div class="hint">A IA vai DETALHAR completamente — você só dá o ponto de partida.</div>
   </div>
   <button type="button" class="btn btn-brand block" id="btn_ia" onclick="sugerirComIA()">✨ Preencher com IA</button>
   <div id="ia_msg" class="hint mt-2" style="text-align:center;"></div>
@@ -375,6 +375,7 @@ async function sugerirComIA() {
     if (!resp.ok || !data.ok) { msg.innerHTML = '<span style="color:var(--c-danger);">' + (data.error || 'Erro') + '</span>'; return; }
     const s = data.sugestao;
     if (s.nome)                 document.getElementById('sim_nome').value = s.nome;
+    if (s.descricao)            document.getElementById('sim_descricao').value = s.descricao;
     if (s.tipo)                 document.getElementById('sim_tipo').value = s.tipo;
     if (s.periodo_minimo_meses != null) document.getElementById('sim_periodo').value = s.periodo_minimo_meses;
     if (s.margem_pct != null)   document.getElementById('margem').value = s.margem_pct;
@@ -383,7 +384,7 @@ async function sugerirComIA() {
     counter = 0;
     if (Array.isArray(s.custos)) s.custos.forEach(c => adicionarLinha(c.descricao || '', c.valor || '', c.dividir_por || 1));
     recalcular();
-    msg.innerHTML = '<span style="color:var(--c-success);">✓ Sugestão aplicada!</span>';
+    msg.innerHTML = '<span style="color:var(--c-success);">✓ Sugestão aplicada! Revise a descrição e os custos antes de salvar.</span>';
   } catch (e) {
     msg.innerHTML = '<span style="color:var(--c-danger);">Erro: ' + e.message + '</span>';
   } finally {

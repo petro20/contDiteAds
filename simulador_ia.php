@@ -40,31 +40,42 @@ if (!$api_key) {
 }
 
 $prompt = <<<TXT
-Você é um especialista em precificação de serviços de marketing digital pra uma agência (Dite Ads).
+Você é um especialista em precificação E em escopo de serviços de marketing digital pra uma agência (Dite Ads).
 
-DESCRIÇÃO DO SERVIÇO:
-Nome: {$nome}
-{$descricao}
+ENTRADA DO ADMIN:
+Nome rascunho: {$nome}
+Descrição rascunho: {$descricao}
 
-Sua tarefa: analisar a descrição e sugerir:
-1. Nome ajustado/limpo do serviço (curto, claro, max 50 chars)
-2. Tipo de cobrança: "unico" (one-shot), "mensal" (recorrente) ou "por_unidade"
-3. Período mínimo de contrato em meses (0 a 12)
-4. Margem desejada em % (geralmente 40-80% pra marketing digital)
-5. Lista de custos REAIS típicos pra esse serviço, em USD. Cada custo:
-   - descricao: nome do componente
-   - valor: valor total em USD (preço de mercado realista da ferramenta)
-   - dividir_por: pra rateio quando aplicável (ex: software \$50/mês ÷ 10 clientes = 10)
+Sua tarefa: gerar um pacote COMPLETO pra esse serviço.
 
-Exemplos de custos comuns pra marketing digital:
-- Pagamento ao funcionário (USD por execução)
-- Software/licenças (Canva Pro \$13, Adobe CC \$55, Figma \$15, ChatGPT \$20, Midjourney \$30, Capcut \$10, Opus Clips \$29, Google Drive 2TB \$10)
-- Anúncios/orçamento de mídia (se aplicável)
-- Horas próprias de gestão
+1. **nome**: ajustado/limpo, claro e curto (max 60 chars)
+2. **descricao**: descrição DETALHADA do que será entregue. ENGLOBE:
+   - O que o serviço inclui (cada entrega tangível)
+   - Frequência/volume (ex: "até 5 campanhas", "2 vídeos/semana")
+   - O que a Dite Ads (agência) entrega
+   - O que o funcionário responsável executa
+   - O que o cliente precisa fornecer (acesso, materiais, briefing)
+   - Ferramentas/canais usados
+   - Limites/escopo (o que NÃO está incluso)
+   Use texto corrido, parágrafos curtos, com bullets quando fizer sentido.
+   Mínimo 4–6 linhas. Tom profissional mas direto.
+3. **tipo**: "unico" (one-shot), "mensal" (recorrente) ou "por_unidade"
+4. **periodo_minimo_meses**: 0 a 12 (recomende fidelidade pra serviços contínuos)
+5. **margem_pct**: 40–80% pra marketing digital
+6. **custos**: lista REAL de custos em USD com rateio quando aplicável.
+   Exemplos típicos:
+   - Pagamento ao funcionário (USD por execução)
+   - Software/licenças (Canva Pro \$13, Adobe CC \$55, Figma \$15, ChatGPT \$20,
+     Midjourney \$30, Capcut Pro \$10, Opus Clips \$29, Google Drive 2TB \$10,
+     Buffer \$6, Notion \$10)
+   - Horas próprias de gestão (ex: 2h × \$30/h)
+   - Tools de gestão de anúncios se aplicável
+   Cada custo: {"descricao": "string", "valor": número_total_USD, "dividir_por": número}
 
-Responda APENAS um objeto JSON válido (sem markdown, sem explicação extra), no formato:
+Responda APENAS um JSON válido (sem markdown, sem texto extra antes ou depois):
 {
   "nome": "string",
+  "descricao": "string com quebras de linha \\n permitidas",
   "tipo": "mensal|unico|por_unidade",
   "periodo_minimo_meses": número,
   "margem_pct": número,
@@ -76,7 +87,7 @@ TXT;
 
 $payload = json_encode([
     'model'      => 'claude-sonnet-4-5',
-    'max_tokens' => 1024,
+    'max_tokens' => 2048,
     'messages'   => [['role' => 'user', 'content' => $prompt]],
 ]);
 
