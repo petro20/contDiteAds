@@ -77,7 +77,22 @@ if ($acao === 'novo' || $acao === 'editar') {
       <input type="hidden" name="op" value="salvar">
       <input type="hidden" name="id" value="<?= (int)$d['id'] ?>">
       <div class="card">
-        <div class="field"><label>Nome *</label><input name="nome" required value="<?= e($d['nome']) ?>" placeholder="Ex: Adobe Creative Cloud"></div>
+        <div class="field">
+          <label>Nome *</label>
+          <div style="display:flex; gap:6px;">
+            <input name="nome" id="despesa_nome" required value="<?= e($d['nome']) ?>" placeholder="Ex: Adobe Creative Cloud" style="flex:1;">
+            <button type="button" class="btn btn-ghost small" onclick="pesquisarPrecoSoftware()" title="Pesquisar preço no Google" style="padding:6px 12px;">🔍</button>
+          </div>
+          <div class="hint">Digite o nome e clique 🔍 pra abrir o Google buscando o preço atual.</div>
+        </div>
+        <script>
+        function pesquisarPrecoSoftware() {
+          const nome = document.getElementById('despesa_nome').value.trim();
+          if (!nome) { alert('Preencha o nome primeiro pra pesquisar o preço.'); return; }
+          const q = encodeURIComponent(nome + ' price monthly subscription 2026');
+          window.open('https://www.google.com/search?q=' + q, '_blank', 'noopener');
+        }
+        </script>
         <div class="field"><label>Categoria</label>
           <select name="categoria">
             <option value="">— sem categoria —</option>
