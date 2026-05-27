@@ -79,7 +79,10 @@ require __DIR__ . '/includes/header.php';
   <div class="card attention">
     <div class="title">
       <?= e($t['nome_empresa']) ?>
-      <span class="status status-aberta">+<?= (int)$t['dias_apos_vencimento'] ?> dias</span>
+      <?php $d = (int)$t['dias_apos_vencimento']; ?>
+      <span class="status <?= $d < 0 ? 'status-info' : 'status-aberta' ?>">
+        <?= $d < 0 ? '−' . abs($d) . ' antes' : ($d === 0 ? 'no dia' : '+' . $d . ' dias') ?>
+      </span>
     </div>
     <div class="sub muted">Venc <?= e(date('d/m/Y', strtotime($t['vencimento']))) ?> · <?= e($t['template_codigo']) ?></div>
     <div class="btn-pair mt-3">
@@ -101,11 +104,19 @@ require __DIR__ . '/includes/header.php';
 <?php endforeach; endif; ?>
 
 <h2 class="mt-5">Etapas configuradas</h2>
+<p class="muted" style="font-size:13px;">Use dias <strong>negativos</strong> para lembretes <em>antes</em> do vencimento (ex: −3 = 3 dias antes) e <strong>positivos</strong> para cobranças <em>após</em> vencer.</p>
+<?php
+function formato_dias_etapa(int $d): string {
+    if ($d === 0)  return 'no dia do vencimento';
+    if ($d < 0)    return abs($d) . ' dia' . (abs($d)>1?'s':'') . ' antes do vencimento';
+    return $d . ' dia' . ($d>1?'s':'') . ' após vencimento';
+}
+?>
 <?php foreach ($etapas as $e): ?>
   <div class="card">
     <div class="spaced">
       <div>
-        <div class="title">Etapa <?= (int)$e['ordem'] ?> · <?= (int)$e['dias_apos_vencimento'] ?> dias após vencimento</div>
+        <div class="title">Etapa <?= (int)$e['ordem'] ?> · <?= e(formato_dias_etapa((int)$e['dias_apos_vencimento'])) ?></div>
         <div class="sub muted">
           Email: <?= $e['te_cod'] ? e($e['te_cod']) : '<em>nenhum</em>' ?> ·
           WhatsApp: <?= $e['tw_cod'] ? e($e['tw_cod']) : '<em>nenhum</em>' ?> ·
@@ -121,7 +132,7 @@ require __DIR__ . '/includes/header.php';
         <input type="hidden" name="id" value="<?= (int)$e['id'] ?>">
         <div class="grid-2">
           <div class="field"><label>Ordem</label><input type="number" name="ordem" value="<?= (int)$e['ordem'] ?>" required></div>
-          <div class="field"><label>Dias após venc</label><input type="number" name="dias_apos_vencimento" value="<?= (int)$e['dias_apos_vencimento'] ?>" required></div>
+          <div class="field"><label>Dias relativos ao venc.</label><input type="number" name="dias_apos_vencimento" value="<?= (int)$e['dias_apos_vencimento'] ?>" required><div class="hint">negativo = antes · 0 = no dia · positivo = depois</div></div>
         </div>
         <div class="field"><label>Template email</label>
           <select name="template_email_id">
@@ -153,7 +164,7 @@ require __DIR__ . '/includes/header.php';
     <input type="hidden" name="id" value="0">
     <div class="grid-2">
       <div class="field"><label>Ordem</label><input type="number" name="ordem" value="<?= count($etapas)+1 ?>" required></div>
-      <div class="field"><label>Dias após venc</label><input type="number" name="dias_apos_vencimento" value="0" required></div>
+      <div class="field"><label>Dias relativos ao venc.</label><input type="number" name="dias_apos_vencimento" value="-3" required><div class="hint">ex: −3 (3 dias antes) · 0 (no dia) · 7 (7 dias após)</div></div>
     </div>
     <div class="field"><label>Template email</label>
       <select name="template_email_id">

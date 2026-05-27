@@ -54,13 +54,14 @@ function regua_executar(PDO $db, DateTimeImmutable $hoje): array {
 
     foreach ($cobrancas as $cob) {
         $venc = new DateTimeImmutable($cob['vencimento']);
+        // diferença em dias (positivo = atraso, negativo = ainda vai vencer)
         $dias_atraso = (int)$venc->diff($hoje)->format('%r%a');
-        // Só processa se hoje >= vencimento
-        if ($dias_atraso < 0) continue;
 
         $vars = wa_vars_cobranca($db, (int)$cob['id']);
 
         foreach ($etapas as $etapa) {
+            // etapa.dias_apos_vencimento pode ser negativo (envio ANTES do vencimento)
+            // ou positivo (depois). Só dispara quando bate exato.
             if ((int)$etapa['dias_apos_vencimento'] !== $dias_atraso) continue;
 
             // EMAIL
