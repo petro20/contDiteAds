@@ -139,6 +139,35 @@ require __DIR__ . '/includes/header.php';
   } catch (Throwable $e) {}
   $tem_prev = ($prev_faturamento['BRL'] + $prev_faturamento['USD'] + $prev_faturamento['EUR']) > 0;
 
+  // Previsão de pagamentos a funcionários (USD) = já pago + fila + previsão das assinaturas sem cobrança
+  $prev_pag_func_assin = 0.0;
+  try {
+      $stmt = $db->prepare("
+          SELECT COALESCE(SUM(COALESCE(fsp.valor_usd, 0)), 0)
+          FROM assinaturas a
+          JOIN itens_catalogo i ON i.id = a.item_id
+          LEFT JOIN func_servico_pagamento fsp
+                 ON fsp.funcionario_id = a.funcionario_id AND fsp.item_id = a.item_id
+          WHERE a.status='ativa' AND i.tipo='mensal'
+            AND a.funcionario_id IS NOT NULL
+            AND a.iniciada_em <= ?
+            AND (a.encerrada_em IS NULL OR a.encerrada_em >= ?)
+            AND NOT EXISTS (
+              SELECT 1 FROM cobranca_itens ci JOIN cobrancas cb ON cb.id = ci.cobranca_id
+              WHERE ci.assinatura_id = a.id AND cb.competencia_mes = ?
+            )");
+      $stmt->execute([$fim_mes, $ini_mes, $competencia_now]);
+      $prev_pag_func_assin = (float)$stmt->fetchColumn();
+  } catch (Throwable $e) {}
+  $pag_func_previsto = $pag_func_mes_usd + $a_pagar_func + $prev_pag_func_assin;
+
+  // Previsão de lucro = previsão de faturamento − despesas − pag func previsto (USD apenas)
+  $prev_lucro = [
+      'BRL' => $prev_faturamento['BRL'] - ($desp_mes_data['totais']['BRL'] ?? 0),
+      'USD' => $prev_faturamento['USD'] - ($desp_mes_data['totais']['USD'] ?? 0) - $pag_func_previsto,
+      'EUR' => $prev_faturamento['EUR'] - ($desp_mes_data['totais']['EUR'] ?? 0),
+  ];
+
   // 4. Lucro do mês pendente de distribuir (se já passou dia 5 e tem sócio pendente)
   $dist_pendente = false;
   if ((int)date('j') >= 5 && ($lucro_brl > 0 || $lucro_usd > 0 || $lucro_eur > 0)) {
@@ -168,7 +197,28 @@ require __DIR__ . '/includes/header.php';
         }
       ?>
     </div>
-    <div class="desc muted" style="font-size:12px; margin-top:4px;">recebido + a receber + em análise · este mês</div>
+    <div class="desc muted" style="font-size:12px; margin-top:4px;">recebido + a receber + em análise + assinaturas ativas</div>
+  </a>
+
+  <a class="card brand" href="<?= e(APP_BASE_URL) ?>/painel.php" style="text-decoration:none;">
+    <div class="title" style="color:var(--c-primary-2);">💎 Previsão de lucro <span class="muted" style="font-weight:normal; font-size:12px;">(<?= e(date('M/y')) ?>)</span></div>
+    <div class="desc" style="margin-top:6px;">
+      <?php
+        $partes_lucro = [];
+        foreach ($prev_lucro as $m => $v) {
+            if ($v != 0) {
+                $cor = $v >= 0 ? 'var(--c-success)' : 'var(--c-danger)';
+                $partes_lucro[] = '<strong style="color:' . $cor . ';">' . e(money_fmt($v, $m)) . '</strong>';
+            }
+        }
+        if ($partes_lucro) {
+            echo implode(' · ', $partes_lucro);
+        } else {
+            echo '<strong class="muted">—</strong>';
+        }
+      ?>
+    </div>
+    <div class="desc muted" style="font-size:12px; margin-top:4px;">faturamento previsto − despesas − pag. funcionários (USD)</div>
   </a>
 
   <?php if ($tot_em_analise > 0): ?>
