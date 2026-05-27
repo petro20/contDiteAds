@@ -37,6 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $zelle = trim((string)($_POST['zelle_email'] ?? ''));
     $wise  = trim((string)($_POST['wise_link']   ?? ''));
     $instr = trim((string)($_POST['instrucoes']  ?? ''));
+    $api_ia = trim((string)($_POST['anthropic_api_key'] ?? ''));
 
     if ($wise && !preg_match('~^https?://~i', $wise)) {
         $flash = ['err', 'O link do Wise precisa começar com http:// ou https://'];
@@ -44,6 +45,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         config_set($db, 'pagamento_zelle_email', $zelle);
         config_set($db, 'pagamento_wise_link',   $wise);
         config_set($db, 'pagamento_instrucoes',  $instr);
+        // Só atualiza se foi alterado (preserva valor se admin não preencher pra evitar limpar)
+        if ($api_ia !== '' && $api_ia !== '••••••••') {
+            config_set($db, 'anthropic_api_key', $api_ia);
+        }
 
         // Upload do QR code do Zelle
         if (!empty($_FILES['zelle_qr']['tmp_name']) && $_FILES['zelle_qr']['error'] === UPLOAD_ERR_OK) {
@@ -172,6 +177,17 @@ require __DIR__ . '/includes/header.php';
     <div class="field">
       <label>Texto extra (opcional)</label>
       <textarea name="instrucoes" rows="3" placeholder="ex: Após o pagamento, envie o comprovante pelo botão abaixo."><?= e($cfg['instrucoes']) ?></textarea>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="title">🤖 IA (Anthropic Claude)</div>
+    <p class="muted" style="font-size:13px;">Usado pelo Simulador de preço pra sugerir custos automaticamente. Pegue uma chave em <a href="https://console.anthropic.com/" target="_blank" rel="noopener" style="color:var(--c-primary-2);">console.anthropic.com</a> (começa com <code>sk-ant-</code>).</p>
+    <div class="field">
+      <label>API key</label>
+      <?php $tem_key = (bool)config_get($db, 'anthropic_api_key'); ?>
+      <input type="password" name="anthropic_api_key" value="<?= $tem_key ? '••••••••' : '' ?>" placeholder="sk-ant-..." autocomplete="off">
+      <div class="hint"><?= $tem_key ? '✓ Chave já configurada. Deixe em branco pra manter, ou cole uma nova pra trocar.' : 'Nenhuma chave configurada — o botão "✨ Preencher com IA" do simulador não funciona sem isso.' ?></div>
     </div>
   </div>
 

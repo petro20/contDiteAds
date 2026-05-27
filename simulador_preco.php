@@ -19,7 +19,15 @@ $cot = cotacao_atual($db);
     <label>Nome do serviço (rascunho)</label>
     <input type="text" id="sim_nome" placeholder="ex: META ADS Pro, LANDING PAGE Premium">
   </div>
-  <div class="grid-2">
+  <div class="field">
+    <label>📝 Descrição do serviço</label>
+    <textarea id="sim_descricao" rows="4" placeholder="Conta o que vai ser entregue. Ex: 'Edição de 2 vídeos por semana pra Instagram + Reels, com legenda e thumb. Inclui Opus Clips pra cortar e Capcut pra editar.'"></textarea>
+    <div class="hint">Quanto mais detalhe, melhor a sugestão da IA.</div>
+  </div>
+  <button type="button" class="btn btn-brand block" id="btn_ia" onclick="sugerirComIA()">✨ Preencher com IA</button>
+  <div id="ia_msg" class="hint mt-2" style="text-align:center;"></div>
+
+  <div class="grid-2 mt-3">
     <div class="field">
       <label>Tipo de cobrança</label>
       <select id="sim_tipo" onchange="toggleSimPeriodo()">
@@ -36,6 +44,56 @@ $cot = cotacao_atual($db);
   </div>
   <label class="check"><input type="checkbox" id="sim_ia"> Tem variante "com IA" (preços alternativos)</label>
 </div>
+
+<script>
+async function sugerirComIA() {
+  const btn = document.getElementById('btn_ia');
+  const msg = document.getElementById('ia_msg');
+  const nome = document.getElementById('sim_nome').value.trim();
+  const descricao = document.getElementById('sim_descricao').value.trim();
+  if (!nome && !descricao) {
+    msg.innerHTML = '<span style="color:var(--c-danger);">Preencha o nome ou a descrição primeiro.</span>';
+    return;
+  }
+  btn.disabled = true;
+  btn.innerHTML = '⏳ Analisando...';
+  msg.innerHTML = 'Consultando IA (~10s)...';
+
+  const fd = new FormData();
+  fd.append('csrf', '<?= e(csrf_token()) ?>');
+  fd.append('nome', nome);
+  fd.append('descricao', descricao);
+
+  try {
+    const resp = await fetch('<?= e(APP_BASE_URL) ?>/simulador_ia.php', { method: 'POST', body: fd });
+    const data = await resp.json();
+    if (!resp.ok || !data.ok) {
+      msg.innerHTML = '<span style="color:var(--c-danger);">' + (data.error || 'Erro desconhecido') + '</span>';
+      return;
+    }
+    const s = data.sugestao;
+    // Aplica sugestões
+    if (s.nome)                 document.getElementById('sim_nome').value = s.nome;
+    if (s.tipo)                 document.getElementById('sim_tipo').value = s.tipo;
+    if (s.periodo_minimo_meses != null) document.getElementById('sim_periodo').value = s.periodo_minimo_meses;
+    if (s.margem_pct != null)   document.getElementById('margem').value = s.margem_pct;
+    toggleSimPeriodo();
+    // Limpa custos existentes e adiciona os sugeridos
+    document.getElementById('lista_custos').innerHTML = '';
+    counter = 0;
+    if (Array.isArray(s.custos)) {
+      s.custos.forEach(c => adicionarLinha(c.descricao || '', c.valor || '', c.dividir_por || 1));
+    }
+    recalcular();
+    msg.innerHTML = '<span style="color:var(--c-success);">✓ Sugestão aplicada! Revise e ajuste antes de criar o item.</span>';
+  } catch (e) {
+    msg.innerHTML = '<span style="color:var(--c-danger);">Erro de rede: ' + e.message + '</span>';
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '✨ Preencher com IA';
+  }
+}
+</script>
 
 <script>
 function toggleSimPeriodo() {
