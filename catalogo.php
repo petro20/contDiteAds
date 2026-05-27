@@ -56,13 +56,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $db->prepare('UPDATE itens_catalogo SET nome=?, descricao=?, tipo=?, periodo_minimo_meses=?, preco_usd=?, preco_brl=?, preco_eur=?, a_negociar=?, e_pacote=?, tem_variante_ia=?, preco_ia_usd=?, preco_ia_brl=?, preco_ia_eur=?, resp_agencia=?, resp_funcionario=?, resp_cliente=?, ativo=? WHERE id=?');
             $stmt->execute([$nome,$descricao,$tipo,$periodo_min,$preco_usd,$preco_brl,$preco_eur,$a_negociar,$e_pacote,$variante,$preco_ia_usd,$preco_ia_brl,$preco_ia_eur,$resp_a,$resp_f,$resp_c,$ativo,$pid]);
             audit_log('catalogo.editado', 'itens_catalogo', $pid);
-            header('Location: ' . APP_BASE_URL . '/catalogo.php?acao=editar&id=' . $pid . '&ok=upd'); exit;
+            // Se for pacote, vai pro form (precisa configurar composição); senão volta pra lista
+            $dest = $e_pacote ? '/catalogo.php?acao=editar&id=' . $pid . '&ok=upd#composicao' : '/catalogo.php?ok=upd';
+            header('Location: ' . APP_BASE_URL . $dest); exit;
         } else {
             $stmt = $db->prepare('INSERT INTO itens_catalogo (nome,descricao,tipo,periodo_minimo_meses,preco_usd,preco_brl,preco_eur,a_negociar,e_pacote,tem_variante_ia,preco_ia_usd,preco_ia_brl,preco_ia_eur,resp_agencia,resp_funcionario,resp_cliente,ativo) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
             $stmt->execute([$nome,$descricao,$tipo,$periodo_min,$preco_usd,$preco_brl,$preco_eur,$a_negociar,$e_pacote,$variante,$preco_ia_usd,$preco_ia_brl,$preco_ia_eur,$resp_a,$resp_f,$resp_c,$ativo]);
             $newId = (int)$db->lastInsertId();
             audit_log('catalogo.criado', 'itens_catalogo', $newId);
-            header('Location: ' . APP_BASE_URL . '/catalogo.php?acao=editar&id=' . $newId . '&ok=add'); exit;
+            // Pacote precisa abrir o form pra configurar composição; item normal volta pra lista
+            $dest = $e_pacote ? '/catalogo.php?acao=editar&id=' . $newId . '&ok=add#composicao' : '/catalogo.php?ok=add';
+            header('Location: ' . APP_BASE_URL . $dest); exit;
         }
     }
 
