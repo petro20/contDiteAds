@@ -1,0 +1,12 @@
+# QR Code do Zelle é exibido publicamente nas cobranças (incluindo clientes
+# que abrem via link sem estar logados). Permite acesso só a imagens.
+Require all granted
+
+<FilesMatch "\.(png|jpg|jpeg|webp|gif)$">
+    Require all granted
+</FilesMatch>
+
+# Bloqueia qualquer outro tipo de arquivo
+<FilesMatch "\.(php|phtml|phar|html|htm|js|json|xml|sql|ini|env|sh)$">
+    Require all denied
+</FilesMatch>

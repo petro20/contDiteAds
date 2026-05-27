@@ -43,6 +43,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } else {
                 $dir = UPLOAD_DIR . '/zelle';
                 if (!is_dir($dir)) @mkdir($dir, 0775, true);
+                // Garante que o .htaccess de exceção exista (libera só imagens)
+                $htaccess = $dir . '/.htaccess';
+                if (!is_file($htaccess)) {
+                    @file_put_contents($htaccess,
+                        "Require all granted\n" .
+                        "<FilesMatch \"\\.(png|jpg|jpeg|webp|gif)\$\">\n    Require all granted\n</FilesMatch>\n" .
+                        "<FilesMatch \"\\.(php|phtml|phar|html|htm|js|json|xml|sql|ini|env|sh)\$\">\n    Require all denied\n</FilesMatch>\n"
+                    );
+                }
                 $nome = 'qr_zelle_' . bin2hex(random_bytes(6)) . '.' . $ext;
                 $destino = $dir . '/' . $nome;
                 if (move_uploaded_file($tmp, $destino)) {
