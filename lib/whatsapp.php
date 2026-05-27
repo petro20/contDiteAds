@@ -74,7 +74,16 @@ function wa_vars_cobranca(PDO $db, int $cobranca_id): array {
         'link_recibo'     => APP_BASE_URL . '/recibo.php?cobranca=' . (int)$cobranca_id,
         'link_comprovante'=> APP_BASE_URL . '/cobrancas.php?id=' . (int)$cobranca_id,
         'link_sistema'    => APP_BASE_URL . '/',
-        'zelle_email'         => (function() use ($db) { require_once __DIR__ . '/configuracoes.php'; return config_get($db, 'pagamento_zelle_email'); })(),
+        'zelle_email'         => (function() use ($db) {
+            require_once __DIR__ . '/configuracoes.php';
+            $email = config_get($db, 'pagamento_zelle_email');
+            // Insere ZERO-WIDTH SPACE antes do @ pra evitar que WhatsApp/email
+            // converta em link mailto: clicável (que abriria o app de email
+            // em vez de mostrar o email pro cliente copiar pro app do banco).
+            // O cliente seleciona/copia normalmente — o ZWSP some na maioria
+            // dos campos de input.
+            return $email ? str_replace('@', "\u{200B}@", $email) : '';
+        })(),
         'zelle_qr_url'        => (function() use ($db) { require_once __DIR__ . '/configuracoes.php'; $q = config_get($db, 'pagamento_zelle_qr'); return $q ? (APP_BASE_URL . '/uploads/' . $q) : ''; })(),
         'link_wise'           => (function() use ($db) { require_once __DIR__ . '/configuracoes.php'; return config_get($db, 'pagamento_wise_link'); })(),
         'instrucoes_pagamento'=> (function() use ($db) { require_once __DIR__ . '/configuracoes.php'; return config_get($db, 'pagamento_instrucoes'); })(),
