@@ -396,8 +396,8 @@ $stmt->execute($params);
 $itens = $stmt->fetchAll();
 ?>
 <?php
-$f_moeda = $_GET['moeda'] ?? 'BRL';
-if (!in_array($f_moeda, ['BRL','USD','EUR'], true)) $f_moeda = 'BRL';
+$f_moeda = $_GET['moeda'] ?? 'USD';
+if (!in_array($f_moeda, ['USD','EUR','BRL'], true)) $f_moeda = 'USD';
 ?>
 <h1 class="page-title">Catálogo</h1>
 <?php if ($flash): ?><div class="flash <?= e($flash[0]) ?>"><?= e($flash[1]) ?></div><?php endif; ?>
@@ -413,7 +413,7 @@ if (!in_array($f_moeda, ['BRL','USD','EUR'], true)) $f_moeda = 'BRL';
 </form>
 
 <nav class="tabs-bar mt-3">
-  <?php foreach (['BRL'=>'R$ BRL','USD'=>'$ USD','EUR'=>'€ EUR'] as $m => $lbl): ?>
+  <?php foreach (['USD'=>'$ USD','EUR'=>'€ EUR','BRL'=>'R$ BRL'] as $m => $lbl): ?>
     <a class="<?= $f_moeda===$m?'active':'' ?>" href="?moeda=<?= $m ?><?= $f_tipo?'&tipo='.e($f_tipo):'' ?>"><?= e($lbl) ?></a>
   <?php endforeach; ?>
 </nav>
