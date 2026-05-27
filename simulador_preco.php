@@ -19,8 +19,29 @@ $cot = cotacao_atual($db);
     <label>Nome do serviço (rascunho)</label>
     <input type="text" id="sim_nome" placeholder="ex: META ADS Pro, LANDING PAGE Premium">
   </div>
+  <div class="grid-2">
+    <div class="field">
+      <label>Tipo de cobrança</label>
+      <select id="sim_tipo" onchange="toggleSimPeriodo()">
+        <option value="unico">Único (one-shot)</option>
+        <option value="mensal" selected>Mensal (recorrente)</option>
+        <option value="por_unidade">Por unidade</option>
+      </select>
+    </div>
+    <div class="field" id="sim_periodo_box">
+      <label>Período mínimo (meses)</label>
+      <input type="number" id="sim_periodo" min="0" max="60" value="3" placeholder="0 = sem mínimo">
+      <div class="hint">Tempo mínimo que o cliente deve manter o contrato.</div>
+    </div>
+  </div>
   <label class="check"><input type="checkbox" id="sim_ia"> Tem variante "com IA" (preços alternativos)</label>
 </div>
+
+<script>
+function toggleSimPeriodo() {
+  document.getElementById('sim_periodo_box').style.display = document.getElementById('sim_tipo').value === 'mensal' ? 'block' : 'none';
+}
+</script>
 
 <h2 class="mt-5">💸 Custos (USD)</h2>
 <div class="card">
@@ -93,6 +114,8 @@ $cot = cotacao_atual($db);
   <input type="hidden" name="preco_usd" id="frm_preco">
   <input type="hidden" name="preco_ia_usd" id="frm_preco_ia">
   <input type="hidden" name="tem_variante_ia" id="frm_ia">
+  <input type="hidden" name="tipo" id="frm_tipo">
+  <input type="hidden" name="periodo_minimo_meses" id="frm_periodo">
   <button type="submit" class="btn btn-brand block" onclick="preparaCriar()">✓ Criar item no catálogo com este preço →</button>
 </form>
 
@@ -191,9 +214,13 @@ function preparaCriar() {
   const nome = document.getElementById('sim_nome').value.trim();
   const preco = document.getElementById('preco_final').textContent;
   const ia = document.getElementById('sim_ia').checked;
+  const tipo = document.getElementById('sim_tipo').value;
+  const periodo = document.getElementById('sim_periodo').value;
   document.getElementById('frm_nome').value = nome;
   document.getElementById('frm_preco').value = preco;
   document.getElementById('frm_ia').value = ia ? '1' : '';
+  document.getElementById('frm_tipo').value = tipo;
+  document.getElementById('frm_periodo').value = tipo === 'mensal' ? periodo : 0;
   // Pré-popula preço da IA com 20% a mais
   if (ia) {
     document.getElementById('frm_preco_ia').value = Math.ceil(parseFloat(preco) * 1.20);

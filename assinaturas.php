@@ -189,7 +189,28 @@ if ($acao === 'novo' || $acao === 'editar') {
           <?php if ($a['id']): ?><div class="hint">Mudar a data afeta de quais meses essa assinatura entra em cobrança.</div><?php endif; ?>
         </div>
 
-        <?php if ($a['id']): ?>
+        <?php if ($a['id']):
+            // Calcula se ainda está dentro do período mínimo
+            $stmt = $db->prepare('SELECT periodo_minimo_meses FROM itens_catalogo WHERE id = ?');
+            $stmt->execute([(int)$a['item_id']]);
+            $per_min = (int)($stmt->fetchColumn() ?: 0);
+            $aviso_min = null;
+            if ($per_min > 0 && !empty($a['iniciada_em'])) {
+                $inicio = new DateTimeImmutable($a['iniciada_em']);
+                $fim_min = $inicio->modify('+' . $per_min . ' months');
+                $hoje = new DateTimeImmutable();
+                if ($hoje < $fim_min) {
+                    $dias_faltam = (int)$hoje->diff($fim_min)->format('%a');
+                    $aviso_min = 'Período mínimo de ' . $per_min . ' meses. Faltam ' . $dias_faltam . ' dias (até ' . $fim_min->format('d/m/Y') . ').';
+                }
+            }
+        ?>
+        <?php if ($aviso_min): ?>
+          <div class="card attention" style="margin:var(--s-2) 0;">
+            <div class="title" style="color:var(--c-orange);">⚠ Dentro do período mínimo</div>
+            <div class="desc"><?= e($aviso_min) ?> Cancelar/pausar agora pode gerar atrito com o cliente.</div>
+          </div>
+        <?php endif; ?>
         <div class="field">
           <label>Status</label>
           <select name="status">

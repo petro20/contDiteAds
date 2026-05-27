@@ -20,6 +20,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $descricao = trim((string)($_POST['descricao'] ?? '')) ?: null;
         $tipo      = $_POST['tipo'] ?? 'unico';
         if (!in_array($tipo, ['unico','mensal','por_unidade'], true)) $tipo = 'unico';
+        $periodo_min = max(0, min(60, (int)($_POST['periodo_minimo_meses'] ?? 0)));
         $a_negociar = isset($_POST['a_negociar']) ? 1 : 0;
         $e_pacote   = isset($_POST['e_pacote']) ? 1 : 0;
         $variante   = isset($_POST['tem_variante_ia']) ? 1 : 0;
@@ -52,13 +53,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $flash = ['err', 'Nome é obrigatório.'];
             $acao = $pid ? 'editar' : 'novo'; $id = $pid;
         } elseif ($pid) {
-            $stmt = $db->prepare('UPDATE itens_catalogo SET nome=?, descricao=?, tipo=?, preco_usd=?, preco_brl=?, preco_eur=?, a_negociar=?, e_pacote=?, tem_variante_ia=?, preco_ia_usd=?, preco_ia_brl=?, preco_ia_eur=?, resp_agencia=?, resp_funcionario=?, resp_cliente=?, ativo=? WHERE id=?');
-            $stmt->execute([$nome,$descricao,$tipo,$preco_usd,$preco_brl,$preco_eur,$a_negociar,$e_pacote,$variante,$preco_ia_usd,$preco_ia_brl,$preco_ia_eur,$resp_a,$resp_f,$resp_c,$ativo,$pid]);
+            $stmt = $db->prepare('UPDATE itens_catalogo SET nome=?, descricao=?, tipo=?, periodo_minimo_meses=?, preco_usd=?, preco_brl=?, preco_eur=?, a_negociar=?, e_pacote=?, tem_variante_ia=?, preco_ia_usd=?, preco_ia_brl=?, preco_ia_eur=?, resp_agencia=?, resp_funcionario=?, resp_cliente=?, ativo=? WHERE id=?');
+            $stmt->execute([$nome,$descricao,$tipo,$periodo_min,$preco_usd,$preco_brl,$preco_eur,$a_negociar,$e_pacote,$variante,$preco_ia_usd,$preco_ia_brl,$preco_ia_eur,$resp_a,$resp_f,$resp_c,$ativo,$pid]);
             audit_log('catalogo.editado', 'itens_catalogo', $pid);
             header('Location: ' . APP_BASE_URL . '/catalogo.php?acao=editar&id=' . $pid . '&ok=upd'); exit;
         } else {
-            $stmt = $db->prepare('INSERT INTO itens_catalogo (nome,descricao,tipo,preco_usd,preco_brl,preco_eur,a_negociar,e_pacote,tem_variante_ia,preco_ia_usd,preco_ia_brl,preco_ia_eur,resp_agencia,resp_funcionario,resp_cliente,ativo) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
-            $stmt->execute([$nome,$descricao,$tipo,$preco_usd,$preco_brl,$preco_eur,$a_negociar,$e_pacote,$variante,$preco_ia_usd,$preco_ia_brl,$preco_ia_eur,$resp_a,$resp_f,$resp_c,$ativo]);
+            $stmt = $db->prepare('INSERT INTO itens_catalogo (nome,descricao,tipo,periodo_minimo_meses,preco_usd,preco_brl,preco_eur,a_negociar,e_pacote,tem_variante_ia,preco_ia_usd,preco_ia_brl,preco_ia_eur,resp_agencia,resp_funcionario,resp_cliente,ativo) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
+            $stmt->execute([$nome,$descricao,$tipo,$periodo_min,$preco_usd,$preco_brl,$preco_eur,$a_negociar,$e_pacote,$variante,$preco_ia_usd,$preco_ia_brl,$preco_ia_eur,$resp_a,$resp_f,$resp_c,$ativo]);
             $newId = (int)$db->lastInsertId();
             audit_log('catalogo.criado', 'itens_catalogo', $newId);
             header('Location: ' . APP_BASE_URL . '/catalogo.php?acao=editar&id=' . $newId . '&ok=add'); exit;
@@ -137,13 +138,15 @@ $nav_active = 'catalogo';
 if ($acao === 'novo' || $acao === 'editar') {
     $show_back = true;
     $back_to = APP_BASE_URL . '/catalogo.php';
-    $item = ['id'=>0,'nome'=>'','descricao'=>'','tipo'=>'unico','preco_usd'=>'','preco_brl'=>'','preco_eur'=>'','a_negociar'=>0,'e_pacote'=>0,'tem_variante_ia'=>0,'preco_ia_usd'=>'','preco_ia_brl'=>'','preco_ia_eur'=>'','resp_agencia'=>'','resp_funcionario'=>'','resp_cliente'=>'','ativo'=>1];
+    $item = ['id'=>0,'nome'=>'','descricao'=>'','tipo'=>'unico','periodo_minimo_meses'=>0,'preco_usd'=>'','preco_brl'=>'','preco_eur'=>'','a_negociar'=>0,'e_pacote'=>0,'tem_variante_ia'=>0,'preco_ia_usd'=>'','preco_ia_brl'=>'','preco_ia_eur'=>'','resp_agencia'=>'','resp_funcionario'=>'','resp_cliente'=>'','ativo'=>1];
     // Pré-preenchimento via query string (vindo do simulador de preço)
     if ($acao === 'novo') {
         if (!empty($_GET['nome']))         $item['nome']            = trim((string)$_GET['nome']);
         if (!empty($_GET['preco_usd']))    $item['preco_usd']       = (float)$_GET['preco_usd'];
         if (!empty($_GET['preco_ia_usd'])) $item['preco_ia_usd']    = (float)$_GET['preco_ia_usd'];
         if (!empty($_GET['tem_variante_ia'])) $item['tem_variante_ia'] = 1;
+        if (!empty($_GET['periodo_minimo_meses'])) $item['periodo_minimo_meses'] = (int)$_GET['periodo_minimo_meses'];
+        if (!empty($_GET['tipo'])) $item['tipo'] = (string)$_GET['tipo'];
     }
     if ($acao === 'editar' && $id) {
         $stmt = $db->prepare('SELECT * FROM itens_catalogo WHERE id=?');
@@ -171,12 +174,23 @@ if ($acao === 'novo' || $acao === 'editar') {
         </div>
         <div class="field">
           <label>Tipo de cobrança *</label>
-          <select name="tipo" required>
+          <select name="tipo" id="tipo_sel" required onchange="togglePeriodoMin()">
             <option value="unico"       <?= $item['tipo']==='unico'?'selected':'' ?>>Único (one-shot)</option>
             <option value="mensal"      <?= $item['tipo']==='mensal'?'selected':'' ?>>Mensal (recorrente)</option>
             <option value="por_unidade" <?= $item['tipo']==='por_unidade'?'selected':'' ?>>Por unidade</option>
           </select>
         </div>
+        <div class="field" id="periodo_min_field" style="display:<?= $item['tipo']==='mensal'?'block':'none' ?>;">
+          <label>Período mínimo de contrato (meses)</label>
+          <input type="number" name="periodo_minimo_meses" min="0" max="60" value="<?= (int)$item['periodo_minimo_meses'] ?>" placeholder="0 = sem mínimo">
+          <div class="hint">Cliente precisa manter a assinatura ativa por este tempo. 0 = pode cancelar quando quiser.</div>
+        </div>
+        <script>
+        function togglePeriodoMin() {
+          const tipo = document.getElementById('tipo_sel').value;
+          document.getElementById('periodo_min_field').style.display = tipo === 'mensal' ? 'block' : 'none';
+        }
+        </script>
         <label class="check"><input type="checkbox" name="ativo" <?= $item['ativo']?'checked':'' ?>> Item ativo (aparece para contratar)</label>
         <label class="check"><input type="checkbox" name="a_negociar" <?= $item['a_negociar']?'checked':'' ?>> Preço a negociar (cliente a cliente)</label>
         <label class="check"><input type="checkbox" name="e_pacote" <?= $item['e_pacote']?'checked':'' ?>> Este item é um pacote (combo de outros)</label>
