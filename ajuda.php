@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/includes/auth.php';
+require_once __DIR__ . '/includes/grupos.php';
 $u = require_login();
 
 $page = 'Ajuda';
@@ -16,7 +17,9 @@ $role_label = [
     'cliente'     => 'Cliente',
 ][$role] ?? $role;
 ?>
-<h1 class="page-title">Como usar o sistema</h1>
+<h1 class="page-title">Minha conta</h1>
+<?php render_group_tabs('conta', 'ajuda'); ?>
+<h2>Como usar o sistema</h2>
 <p class="muted">Guia para o perfil <strong><?= e($role_label) ?></strong>. Olá, <?= e($u['nome']) ?>!</p>
 
 <?php if ($role === 'sadmin'): ?>
@@ -253,7 +256,5 @@ $role_label = [
   </div>
 
 <?php endif; ?>
-
-<a class="btn btn-secondary block mt-5" href="<?= e(APP_BASE_URL) ?>/perfil.php">← Voltar ao perfil</a>
 
 <?php require __DIR__ . '/includes/footer.php'; ?>

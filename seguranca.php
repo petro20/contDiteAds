@@ -56,8 +56,11 @@ $page = 'Segurança';
 $show_back = true;
 $back_to = APP_BASE_URL . '/perfil.php';
 require __DIR__ . '/includes/header.php';
+require_once __DIR__ . '/includes/grupos.php';
 ?>
-<h1 class="page-title">Segurança · 2FA</h1>
+<h1 class="page-title">Minha conta</h1>
+<?php render_group_tabs('conta', 'seguranca'); ?>
+<h2>Segurança · 2FA</h2>
 <?php if ($flash): ?><div class="flash <?= e($flash[0]) ?>"><?= e($flash[1]) ?></div><?php endif; ?>
 
 <?php if ($enabled): ?>

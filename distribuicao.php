@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/includes/auth.php';
+require_once __DIR__ . '/includes/grupos.php';
 require_once __DIR__ . '/lib/money.php';
 require_once __DIR__ . '/lib/distribuicao.php';
 require_once __DIR__ . '/lib/despesas.php';
@@ -89,7 +90,9 @@ $show_back = true;
 $back_to = APP_BASE_URL . '/dashboard.php';
 require __DIR__ . '/includes/header.php';
 ?>
-<h1 class="page-title">Distribuição de lucro</h1>
+<h1 class="page-title">Finanças</h1>
+<?php render_group_tabs('financas', 'distribuicao'); ?>
+<h2>Distribuição de lucro</h2>
 <p class="muted">Receita das cobranças pagas é dividida em <strong><?= $total_quotas ?> quotas iguais</strong>: <?= $n_socios ?> sócio<?= $n_socios===1?'':'s' ?> + empresa.</p>
 
 <div class="spaced mb-3">

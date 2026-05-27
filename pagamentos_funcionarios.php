@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/includes/auth.php';
+require_once __DIR__ . '/includes/grupos.php';
 require_once __DIR__ . '/lib/audit.php';
 require_once __DIR__ . '/lib/email.php';
 require_once __DIR__ . '/lib/pagamentos.php';
@@ -181,7 +182,9 @@ $fila = fila_pagamentos_funcionarios($db);
 
 require __DIR__ . '/includes/header.php';
 ?>
-<h1 class="page-title">Pagamentos a funcionários</h1>
+<h1 class="page-title">Equipe</h1>
+<?php render_group_tabs('equipe', 'pagamentos'); ?>
+<h2>Pagamentos a funcionários</h2>
 <?php if (isset($_GET['ok']) && $_GET['ok'] === 'del'): ?><div class="flash ok">Pagamento apagado.</div><?php endif; ?>
 <?php if ($flash): ?><div class="flash <?= e($flash[0]) ?>"><?= e($flash[1]) ?></div><?php endif; ?>
 

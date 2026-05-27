@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/includes/auth.php';
+require_once __DIR__ . '/includes/grupos.php';
 require_once __DIR__ . '/lib/audit.php';
 require_once __DIR__ . '/lib/money.php';
 require_once __DIR__ . '/lib/despesas.php';
@@ -134,7 +135,9 @@ $todas = $db->query('SELECT * FROM despesas ORDER BY ativo DESC, categoria, nome
 $dt = DateTime::createFromFormat('Y-m', $competencia);
 $nome_mes = ['','janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'][(int)$dt->format('n')] . ' de ' . $dt->format('Y');
 ?>
-<h1 class="page-title">Despesas da empresa</h1>
+<h1 class="page-title">Finanças</h1>
+<?php render_group_tabs('financas', 'despesas'); ?>
+<h2>Despesas da empresa</h2>
 <?php if ($flash): ?><div class="flash <?= e($flash[0]) ?>"><?= e($flash[1]) ?></div><?php endif; ?>
 
 <a class="btn btn-brand block" href="?acao=novo">+ Nova despesa</a>

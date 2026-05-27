@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/includes/auth.php';
+require_once __DIR__ . '/includes/grupos.php';
 require_once __DIR__ . '/lib/audit.php';
 $u = require_login();
 $db = db();
@@ -30,7 +31,8 @@ $page = 'Perfil';
 $nav_active = 'perfil';
 require __DIR__ . '/includes/header.php';
 ?>
-<h1 class="page-title">Meu perfil</h1>
+<h1 class="page-title">Minha conta</h1>
+<?php render_group_tabs('conta', 'perfil'); ?>
 <?php if ($flash): ?><div class="flash <?= e($flash[0]) ?>"><?= e($flash[1]) ?></div><?php endif; ?>
 
 <form method="post" class="card">
@@ -42,7 +44,5 @@ require __DIR__ . '/includes/header.php';
   <button class="btn block" type="submit">Salvar alterações</button>
 </form>
 
-<a class="btn btn-secondary block mt-5" href="<?= e(APP_BASE_URL) ?>/ajuda.php">❓ Como usar o sistema</a>
-<a class="btn btn-secondary block mt-3" href="<?= e(APP_BASE_URL) ?>/seguranca.php">🔐 Configurar 2FA</a>
-<a class="btn btn-ghost block mt-3" href="<?= e(APP_BASE_URL) ?>/logout.php">Sair</a>
+<a class="btn btn-ghost block mt-5" href="<?= e(APP_BASE_URL) ?>/logout.php">Sair</a>
 <?php require __DIR__ . '/includes/footer.php'; ?>

@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/includes/auth.php';
+require_once __DIR__ . '/includes/grupos.php';
 require_admin();
 $db = db();
 $competencia = $_GET['mes'] ?? date('Y-m');
@@ -39,7 +40,9 @@ $show_back = true;
 $back_to = APP_BASE_URL . '/dashboard.php';
 require __DIR__ . '/includes/header.php';
 ?>
-<h1 class="page-title">Capacidade da equipe</h1>
+<h1 class="page-title">Equipe</h1>
+<?php render_group_tabs('equipe', 'capacidade'); ?>
+<h2>Capacidade da equipe</h2>
 <p class="muted">Mês de referência: <strong><?= e($competencia) ?></strong></p>
 
 <?php if (!$funcs): ?>

@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/includes/auth.php';
+require_once __DIR__ . '/includes/grupos.php';
 require_once __DIR__ . '/lib/audit.php';
 require_once __DIR__ . '/lib/configuracoes.php';
 require_sadmin();
@@ -83,7 +84,9 @@ $show_back = true;
 $back_to = APP_BASE_URL . '/dashboard.php';
 require __DIR__ . '/includes/header.php';
 ?>
-<h1 class="page-title">Formas de pagamento</h1>
+<h1 class="page-title">Finanças</h1>
+<?php render_group_tabs('financas', 'pagamento_cfg'); ?>
+<h2>Formas de pagamento</h2>
 <p class="muted">Configure os métodos de pagamento que serão exibidos nas cobranças e disponibilizados nas mensagens (templates).</p>
 
 <?php if ($flash): ?><div class="flash <?= e($flash[0]) ?>"><?= e($flash[1]) ?></div><?php endif; ?>

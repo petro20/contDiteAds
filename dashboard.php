@@ -371,21 +371,15 @@ require __DIR__ . '/includes/header.php';
   <div class="section-label">Ações rápidas</div>
   <a class="card" href="<?= e(APP_BASE_URL) ?>/painel.php">
     <div class="title">📊 Painel financeiro</div>
-    <div class="desc">Agenda · Por cliente · Por serviço (vencidos, recebido, em aberto)</div>
+    <div class="desc">Agenda · Por cliente · Por serviço</div>
   </a>
-  <?php if (is_sadmin()): ?>
-  <a class="card" href="<?= e(APP_BASE_URL) ?>/catalogo.php">
-    <div class="title">📦 Catálogo</div>
-    <div class="desc">Cadastrar e editar itens <span class="status status-destaque">sadmin</span></div>
-  </a>
-  <?php endif; ?>
   <a class="card" href="<?= e(APP_BASE_URL) ?>/clientes.php">
     <div class="title">👥 Clientes</div>
     <div class="desc">Gerenciar clientes e gerar convites</div>
   </a>
   <a class="card" href="<?= e(APP_BASE_URL) ?>/funcionarios.php">
-    <div class="title">🧑‍💼 Funcionários</div>
-    <div class="desc">Gerenciar equipe e capacidades</div>
+    <div class="title">🧑‍💼 Equipe</div>
+    <div class="desc">Lista · Capacidade · Pagamentos a funcionários</div>
   </a>
   <a class="card" href="<?= e(APP_BASE_URL) ?>/assinaturas.php">
     <div class="title">📝 Assinaturas</div>
@@ -393,43 +387,29 @@ require __DIR__ . '/includes/header.php';
   </a>
   <a class="card" href="<?= e(APP_BASE_URL) ?>/cobrancas.php">
     <div class="title">💳 Cobranças</div>
-    <div class="desc">Ver cobranças geradas e gerar manualmente para teste</div>
-  </a>
-  <a class="card" href="<?= e(APP_BASE_URL) ?>/pagamentos_funcionarios.php">
-    <div class="title">💵 Pagamentos a funcionários</div>
-    <div class="desc">Fila de valores liberados em USD para pagar via Wise</div>
+    <div class="desc">Ver e gerar cobranças</div>
   </a>
   <?php if (is_sadmin()): ?>
+  <a class="card" href="<?= e(APP_BASE_URL) ?>/catalogo.php">
+    <div class="title">📦 Catálogo</div>
+    <div class="desc">Cadastrar e editar itens <span class="status status-destaque">sadmin</span></div>
+  </a>
+  <a class="card" href="<?= e(APP_BASE_URL) ?>/despesas.php">
+    <div class="title">💰 Finanças</div>
+    <div class="desc">Despesas · Distribuição de lucro · Formas de pagamento <span class="status status-destaque">sadmin</span></div>
+  </a>
   <a class="card" href="<?= e(APP_BASE_URL) ?>/regua.php">
     <div class="title">💬 Comunicação</div>
-    <div class="desc">Régua automática · Tarefas WhatsApp · Templates de mensagem <span class="status status-destaque">sadmin</span></div>
+    <div class="desc">Régua automática · Tarefas WhatsApp · Templates <span class="status status-destaque">sadmin</span></div>
   </a>
-  <a class="card" href="<?= e(APP_BASE_URL) ?>/config_pagamento.php">
-    <div class="title">💳 Formas de pagamento</div>
-    <div class="desc">Zelle + Wise — aparecem nas cobranças e templates <span class="status status-destaque">sadmin</span></div>
-  </a>
-  <?php endif; ?>
-  <a class="card" href="<?= e(APP_BASE_URL) ?>/capacidade.php">
-    <div class="title">📊 Capacidade da equipe</div>
-    <div class="desc">Quanto cada funcionário absorve por mês</div>
-  </a>
-  <?php if (is_sadmin()): ?>
-  <div class="section-label">Super Admin</div>
   <a class="card" href="<?= e(APP_BASE_URL) ?>/auditoria.php">
     <div class="title">🔍 Auditoria</div>
-    <div class="desc">Histórico de tudo no sistema (só sadmin)</div>
+    <div class="desc">Histórico de tudo no sistema <span class="status status-destaque">sadmin</span></div>
   </a>
-  <?php endif; ?>
-
-  <div class="section-label">Sociedade</div>
+  <?php else: // admin não-sadmin tem acesso a distribuição como sócio mas não às configs ?>
   <a class="card" href="<?= e(APP_BASE_URL) ?>/distribuicao.php">
-    <div class="title">💰 Distribuição de lucro</div>
-    <div class="desc">Receita − despesas dividida em quotas (sócios + empresa)</div>
-  </a>
-  <?php if (is_sadmin()): ?>
-  <a class="card" href="<?= e(APP_BASE_URL) ?>/despesas.php">
-    <div class="title">💸 Despesas da empresa</div>
-    <div class="desc">Cadastrar gastos (ferramentas, software, etc.) <span class="status status-destaque">sadmin</span></div>
+    <div class="title">💎 Distribuição de lucro</div>
+    <div class="desc">Sua quota como sócio</div>
   </a>
   <?php endif; ?>
 

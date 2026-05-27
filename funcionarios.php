@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/includes/auth.php';
+require_once __DIR__ . '/includes/grupos.php';
 require_once __DIR__ . '/lib/audit.php';
 require_once __DIR__ . '/lib/pagamentos.php';
 require_once __DIR__ . '/lib/hard_delete.php';
@@ -308,7 +309,8 @@ if ($acao === 'novo' || $acao === 'editar') {
 require __DIR__ . '/includes/header.php';
 $users = $db->query("SELECT id, nome, email, role, ativo, wisetag, aceitando_clientes FROM usuarios WHERE role IN ('sadmin','admin','funcionario') ORDER BY FIELD(role,'sadmin','admin','funcionario'), nome")->fetchAll();
 ?>
-<h1 class="page-title">Funcionários</h1>
+<h1 class="page-title">Equipe</h1>
+<?php render_group_tabs('equipe', 'funcionarios'); ?>
 <?php if ($flash): ?><div class="flash <?= e($flash[0]) ?>"><?= e($flash[1]) ?></div><?php endif; ?>
 <div class="btn-pair">
   <a href="?acao=novo" class="btn btn-brand">+ Novo</a>
