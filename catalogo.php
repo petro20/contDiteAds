@@ -138,6 +138,13 @@ if ($acao === 'novo' || $acao === 'editar') {
     $show_back = true;
     $back_to = APP_BASE_URL . '/catalogo.php';
     $item = ['id'=>0,'nome'=>'','descricao'=>'','tipo'=>'unico','preco_usd'=>'','preco_brl'=>'','preco_eur'=>'','a_negociar'=>0,'e_pacote'=>0,'tem_variante_ia'=>0,'preco_ia_usd'=>'','preco_ia_brl'=>'','preco_ia_eur'=>'','resp_agencia'=>'','resp_funcionario'=>'','resp_cliente'=>'','ativo'=>1];
+    // Pré-preenchimento via query string (vindo do simulador de preço)
+    if ($acao === 'novo') {
+        if (!empty($_GET['nome']))         $item['nome']            = trim((string)$_GET['nome']);
+        if (!empty($_GET['preco_usd']))    $item['preco_usd']       = (float)$_GET['preco_usd'];
+        if (!empty($_GET['preco_ia_usd'])) $item['preco_ia_usd']    = (float)$_GET['preco_ia_usd'];
+        if (!empty($_GET['tem_variante_ia'])) $item['tem_variante_ia'] = 1;
+    }
     if ($acao === 'editar' && $id) {
         $stmt = $db->prepare('SELECT * FROM itens_catalogo WHERE id=?');
         $stmt->execute([$id]);
@@ -311,12 +318,13 @@ if (!in_array($f_moeda, ['BRL','USD','EUR'], true)) $f_moeda = 'BRL';
 
 <div class="btn-pair">
   <a href="?acao=novo" class="btn btn-brand">+ Novo item</a>
-  <form method="post" style="margin:0; flex:1;" onsubmit="return confirm('Recalcular BRL e EUR de TODOS os itens usando a cotação do dia?\n\nUsa o preco_usd como base e aplica ceil() pra arredondar pra cima.');">
-    <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
-    <input type="hidden" name="op" value="recalcular_todos">
-    <button type="submit" class="btn btn-secondary block">🔄 Recalcular preços (cotação)</button>
-  </form>
+  <a href="<?= e(APP_BASE_URL) ?>/simulador_preco.php" class="btn btn-secondary">📊 Simulador de preço</a>
 </div>
+<form method="post" class="mt-2" onsubmit="return confirm('Recalcular BRL e EUR de TODOS os itens usando a cotação do dia?\n\nUsa o preco_usd como base e aplica ceil() pra arredondar pra cima.');">
+  <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
+  <input type="hidden" name="op" value="recalcular_todos">
+  <button type="submit" class="btn btn-ghost small block">🔄 Recalcular preços (cotação)</button>
+</form>
 
 <nav class="tabs-bar mt-3">
   <?php foreach (['BRL'=>'R$ BRL','USD'=>'$ USD','EUR'=>'€ EUR'] as $m => $lbl): ?>
