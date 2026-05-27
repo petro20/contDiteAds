@@ -129,7 +129,7 @@ $tpls = $db->query('SELECT * FROM templates_mensagem ORDER BY canal, codigo')->f
   <form method="post" style="margin:0; flex:1;" onsubmit="return confirm('Vai instalar/sobrescrever os templates padrão de cobrança (WhatsApp + Email) com instruções completas de Zelle/QR/Wise.\n\nConfirmar?');">
     <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
     <input type="hidden" name="op" value="seed_pagamento">
-    <button type="submit" class="btn btn-secondary block">🪄 Instalar templates de pagamento</button>
+    <button type="submit" class="btn btn-secondary block">✨ Instalar templates de pagamento</button>
   </form>
 </div>
 
