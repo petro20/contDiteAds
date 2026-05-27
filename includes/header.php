@@ -23,7 +23,7 @@ $nav_active   = $nav_active   ?? '';
 <?php if ($u && !$hide_nav): ?>
 <header class="topbar">
   <?php if ($show_back): ?>
-    <a class="back-btn" href="<?= e($back_to ?? (APP_BASE_URL . '/dashboard.php')) ?>" aria-label="Voltar">←</a>
+    <a class="back-btn" href="<?= e($back_to ?? (APP_BASE_URL . '/dashboard.php')) ?>" onclick="if(history.length>1){history.back();return false;}" aria-label="Voltar">←</a>
   <?php else: ?>
     <a class="brand-link" href="<?= e(APP_BASE_URL) ?>/dashboard.php" aria-label="Início">
       <img src="<?= e(APP_BASE_URL) ?>/assets/img/logo.png" alt="Dite Ads" class="brand-logo">
