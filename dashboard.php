@@ -438,58 +438,41 @@ require __DIR__ . '/includes/header.php';
     $tot_entregas = (int)$stmt->fetchColumn();
 
     // Previsão MENSAL do funcionário:
-    //   já recebido no mês + a receber pelos itens pendentes DO MÊS CORRENTE
-    //   + assinaturas ativas dele sem cobrança ainda neste mês (estimativa)
-    $a_receber_mes = 0.0;
-    try {
-        $stmt = $db->prepare("
-            SELECT COALESCE(SUM(ci.quantidade * COALESCE(fsp.valor_usd, 0)), 0)
-            FROM cobranca_itens ci
-            JOIN cobrancas c   ON c.id = ci.cobranca_id
-            JOIN assinaturas a ON a.id = ci.assinatura_id
-            LEFT JOIN func_servico_pagamento fsp
-                   ON fsp.funcionario_id = a.funcionario_id AND fsp.item_id = a.item_id
-            LEFT JOIN pagamento_funcionario_itens pfi ON pfi.cobranca_item_id = ci.id
-            WHERE c.status = 'paga' AND a.funcionario_id = ?
-              AND pfi.id IS NULL
-              AND c.competencia_mes = ?");
-        $stmt->execute([(int)$u['id'], $competencia_now]);
-        $a_receber_mes = (float)$stmt->fetchColumn();
-    } catch (Throwable $e) {}
-    // Assinaturas ativas dele que ainda não geraram cobrança neste mês
-    $prev_assin_func = 0.0;
+    //   Lógica simplificada — se a assinatura está ativa, esse é o valor que ele vai
+    //   receber este mês. Total = SUM(valor_usd) de todas as assinaturas ativas dele.
+    $prev_func = 0.0;
+    $qtd_assin_minhas = 0;
     try {
         $ini_mes_f = $competencia_now . '-01';
         $fim_mes_f = date('Y-m-t', strtotime($ini_mes_f));
         $stmt = $db->prepare("
-            SELECT COALESCE(SUM(COALESCE(fsp.valor_usd, 0)), 0)
+            SELECT
+              COALESCE(SUM(COALESCE(fsp.valor_usd, 0)), 0) AS total,
+              COUNT(*) AS qtd
             FROM assinaturas a
             JOIN itens_catalogo i ON i.id = a.item_id
             LEFT JOIN func_servico_pagamento fsp
                    ON fsp.funcionario_id = a.funcionario_id AND fsp.item_id = a.item_id
             WHERE a.funcionario_id = ? AND a.status = 'ativa' AND i.tipo = 'mensal'
               AND a.iniciada_em <= ?
-              AND (a.encerrada_em IS NULL OR a.encerrada_em >= ?)
-              AND NOT EXISTS (
-                SELECT 1 FROM cobranca_itens ci JOIN cobrancas cb ON cb.id = ci.cobranca_id
-                WHERE ci.assinatura_id = a.id AND cb.competencia_mes = ?
-              )");
-        $stmt->execute([(int)$u['id'], $fim_mes_f, $ini_mes_f, $competencia_now]);
-        $prev_assin_func = (float)$stmt->fetchColumn();
+              AND (a.encerrada_em IS NULL OR a.encerrada_em >= ?)");
+        $stmt->execute([(int)$u['id'], $fim_mes_f, $ini_mes_f]);
+        $row = $stmt->fetch();
+        $prev_func = (float)($row['total'] ?? 0);
+        $qtd_assin_minhas = (int)($row['qtd'] ?? 0);
     } catch (Throwable $e) {}
-    $prev_func = $recebido_mes + $a_receber_mes + $prev_assin_func;
   ?>
 
   <a class="card brand" href="<?= e(APP_BASE_URL) ?>/meus_pagamentos.php" style="text-decoration:none;">
     <div class="title" style="color:var(--c-primary-2);">🔮 Previsão de recebimento <span class="muted" style="font-weight:normal; font-size:12px;">(<?= e(date('M/y')) ?>)</span></div>
     <div class="desc" style="margin-top:6px;">
       <?php if ($prev_func > 0): ?>
-        <strong style="color:var(--txt-1);">$<?= e(number_format($prev_func, 2, '.', ',')) ?> USD</strong>
+        <strong style="color:var(--c-success);">$<?= e(number_format($prev_func, 2, '.', ',')) ?> USD</strong>
       <?php else: ?>
-        <strong class="muted">Sem entregas confirmadas pra este mês ainda</strong>
+        <strong class="muted">Sem assinaturas ativas pra este mês</strong>
       <?php endif; ?>
     </div>
-    <div class="desc muted" style="font-size:12px; margin-top:4px;">recebido + a receber pelas entregas pendentes</div>
+    <div class="desc muted" style="font-size:12px; margin-top:4px;"><?= $qtd_assin_minhas ?> assinatura<?= $qtd_assin_minhas==1?'':'s' ?> ativa<?= $qtd_assin_minhas==1?'':'s' ?> mensal · valor fixo por assinatura</div>
   </a>
 
   <div class="grid-2">
