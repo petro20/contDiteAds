@@ -7,6 +7,36 @@ $flash = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_check();
+    if (($_POST['op'] ?? '') === 'seed_pagamento') {
+        $tpls = [
+            [
+                'codigo'  => 'cobranca_pagamento',
+                'canal'   => 'whatsapp',
+                'assunto' => null,
+                'corpo'   => "Olá *{nome_cliente}*! 👋\n\nSua cobrança da Dite Ads:\n💵 Valor: *{valor} {moeda}*\n📅 Vencimento: *{vencimento}*\n📋 Mês: {mes_referencia}\n\n📦 *Itens:*\n{itens}\n\n══════════════\n💳 *COMO PAGAR*\n══════════════\n\n💜 *Opção 1 — Zelle*\n1. Abra o app do *seu banco* (Bank of America, Chase, Wells Fargo, etc.)\n2. Procure a opção *Zelle*\n3. Envie pro email: {zelle_email}\n   ou escaneie o QR: {zelle_qr_url}\n4. Valor: *{valor} {moeda}*\n\n🌍 *Opção 2 — Wise*\nClique no link e siga as instruções:\n{link_wise}\n\n══════════════\n\n📤 Após pagar, envie o comprovante pelo link:\n{link_comprovante}\n\n{instrucoes_pagamento}\n\nQualquer dúvida, estamos por aqui! 🚀\n*Dite Ads*",
+            ],
+            [
+                'codigo'  => 'cobranca_pagamento',
+                'canal'   => 'email',
+                'assunto' => 'Cobrança Dite Ads — {valor} {moeda} (vence {vencimento})',
+                'corpo'   => "<p>Olá <strong>{nome_cliente}</strong>,</p>\n<p>Segue sua cobrança da Dite Ads:</p>\n<ul>\n  <li><strong>Valor:</strong> {valor} {moeda}</li>\n  <li><strong>Vencimento:</strong> {vencimento}</li>\n  <li><strong>Mês de referência:</strong> {mes_referencia}</li>\n</ul>\n<p><strong>Itens:</strong></p>\n<pre style=\"background:#f4f4f4;padding:10px;border-radius:4px;\">{itens}</pre>\n<h3 style=\"color:#9333EA;\">💳 Como pagar</h3>\n<h4>💜 Opção 1 — Zelle</h4>\n<ol>\n  <li>Abra o app do <strong>seu banco</strong> (Bank of America, Chase, Wells Fargo, etc.)</li>\n  <li>Procure a opção <strong>Zelle</strong></li>\n  <li>Envie para o email: <strong>{zelle_email}</strong></li>\n  <li>Ou escaneie o QR Code:<br><img src=\"{zelle_qr_url}\" alt=\"QR Zelle\" style=\"max-width:200px;margin-top:8px;\"></li>\n  <li>Valor: <strong>{valor} {moeda}</strong></li>\n</ol>\n<h4>🌍 Opção 2 — Wise</h4>\n<p>Clique no link abaixo e siga as instruções:<br>\n<a href=\"{link_wise}\">{link_wise}</a></p>\n<hr>\n<p>📤 <strong>Após pagar</strong>, envie o comprovante pelo sistema:<br>\n<a href=\"{link_comprovante}\">{link_comprovante}</a></p>\n<p>{instrucoes_pagamento}</p>\n<p>Qualquer dúvida, estamos à disposição.</p>\n<p>— <strong>Dite Ads</strong></p>",
+            ],
+        ];
+        try {
+            $stmt = $db->prepare("
+                INSERT INTO templates_mensagem (codigo, canal, assunto, corpo, ativo)
+                VALUES (?,?,?,?,1)
+                ON DUPLICATE KEY UPDATE assunto = VALUES(assunto), corpo = VALUES(corpo), ativo = 1
+            ");
+            foreach ($tpls as $t) {
+                $stmt->execute([$t['codigo'], $t['canal'], $t['assunto'], $t['corpo']]);
+            }
+            audit_log('template.seed_pagamento', 'templates_mensagem', 0);
+            header('Location: ' . APP_BASE_URL . '/templates.php?ok=seed'); exit;
+        } catch (PDOException $e) {
+            $flash = ['err', 'Erro: ' . $e->getMessage()];
+        }
+    }
     if (($_POST['op'] ?? '') === 'salvar') {
         $id      = (int)($_POST['id'] ?? 0);
         $codigo  = trim((string)($_POST['codigo'] ?? ''));
@@ -37,7 +67,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-if (isset($_GET['ok'])) $flash = ['ok', 'Template salvo.'];
+if (isset($_GET['ok'])) {
+    $flash = ['ok', $_GET['ok'] === 'seed'
+        ? 'Templates padrão de pagamento instalados (WhatsApp + Email).'
+        : 'Template salvo.'];
+}
 
 $page = 'Templates de mensagem';
 $show_back = true;
@@ -90,7 +124,14 @@ $tpls = $db->query('SELECT * FROM templates_mensagem ORDER BY canal, codigo')->f
 ?>
 <h1 class="page-title">Templates</h1>
 <?php if ($flash): ?><div class="flash <?= e($flash[0]) ?>"><?= e($flash[1]) ?></div><?php endif; ?>
-<a class="btn btn-brand block" href="?novo=1">+ Novo template</a>
+<div class="btn-pair">
+  <a class="btn btn-brand" href="?novo=1">+ Novo template</a>
+  <form method="post" style="margin:0; flex:1;" onsubmit="return confirm('Vai instalar/sobrescrever os templates padrão de cobrança (WhatsApp + Email) com instruções completas de Zelle/QR/Wise.\n\nConfirmar?');">
+    <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
+    <input type="hidden" name="op" value="seed_pagamento">
+    <button type="submit" class="btn btn-secondary block">🪄 Instalar templates de pagamento</button>
+  </form>
+</div>
 
 <div class="section-label mt-5">Cadastrados (<?= count($tpls) ?>)</div>
 <?php foreach ($tpls as $t): ?>
