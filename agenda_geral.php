@@ -113,12 +113,123 @@ require __DIR__ . '/includes/header.php';
   <?php
     require_once __DIR__ . '/lib/entregas.php';
     $modo_view = $_GET['view'] ?? 'compact';
-    if (!in_array($modo_view, ['compact','expand'], true)) $modo_view = 'compact';
+    if (!in_array($modo_view, ['compact','expand','calendar'], true)) $modo_view = 'compact';
   ?>
-  <div class="btn-pair mb-3">
-    <a class="btn small <?= $modo_view==='compact'?'btn-brand':'btn-secondary' ?>" href="?mes=<?= e($competencia) ?><?= $mostrar_inativos?'&inativos=1':'' ?>&view=compact">📋 Lista compacta</a>
-    <a class="btn small <?= $modo_view==='expand'?'btn-brand':'btn-secondary' ?>" href="?mes=<?= e($competencia) ?><?= $mostrar_inativos?'&inativos=1':'' ?>&view=expand">📅 Expandida (assinaturas)</a>
+  <div class="btn-pair mb-3" style="flex-wrap:wrap;">
+    <a class="btn small <?= $modo_view==='compact'?'btn-brand':'btn-secondary' ?>" href="?mes=<?= e($competencia) ?><?= $mostrar_inativos?'&inativos=1':'' ?>&view=compact">📋 Lista</a>
+    <a class="btn small <?= $modo_view==='expand'?'btn-brand':'btn-secondary' ?>" href="?mes=<?= e($competencia) ?><?= $mostrar_inativos?'&inativos=1':'' ?>&view=expand">📅 Por pessoa</a>
+    <a class="btn small <?= $modo_view==='calendar'?'btn-brand':'btn-secondary' ?>" href="?mes=<?= e($competencia) ?><?= $mostrar_inativos?'&inativos=1':'' ?>&view=calendar">🗓 Calendário</a>
   </div>
+
+  <?php if ($modo_view === 'calendar'):
+    // Busca TODAS as entregas do mês com info dos funcionários, clientes, itens
+    $stmt = $db->prepare("
+        SELECT e.id, e.funcionario_id, e.data_marcada, e.criado_em, e.indice,
+               u.nome AS func_nome, u.role,
+               cl.nome_empresa, i.nome AS item_nome, i.tipo, i.e_pacote,
+               a.id AS assin_id
+        FROM entregas e
+        JOIN usuarios u    ON u.id = e.funcionario_id
+        JOIN assinaturas a ON a.id = e.assinatura_id
+        JOIN clientes cl   ON cl.id = a.cliente_id
+        JOIN itens_catalogo i ON i.id = a.item_id
+        WHERE e.competencia_mes = ?
+        ORDER BY u.nome
+    ");
+    $stmt->execute([$competencia]);
+    $todas_entregas = $stmt->fetchAll();
+
+    // Atribui cor consistente pra cada funcionário (hash do ID)
+    $cores = ['#3B82F6','#10B981','#A855F7','#F59E0B','#EC4899','#06B6D4','#84CC16','#F97316','#8B5CF6','#14B8A6'];
+    $func_cor = [];
+    $func_nome = [];
+    foreach ($todas_entregas as $en) {
+        $fid = (int)$en['funcionario_id'];
+        if (!isset($func_cor[$fid])) {
+            $func_cor[$fid] = $cores[count($func_cor) % count($cores)];
+            $func_nome[$fid] = $en['func_nome'];
+        }
+    }
+
+    // Agrupa por data (usa data_marcada se houver, senão criado_em)
+    $por_dia = [];
+    foreach ($todas_entregas as $en) {
+        $data = $en['data_marcada'] ?: substr($en['criado_em'], 0, 10);
+        if (!isset($por_dia[$data])) $por_dia[$data] = [];
+        $por_dia[$data][] = $en;
+    }
+
+    // Gera calendário do mês
+    $primeiro_dt = new DateTimeImmutable($ini_m);
+    $dias_no_mes = (int)$primeiro_dt->format('t');
+    $dia_semana_ini = (int)$primeiro_dt->format('w'); // 0=Dom, 6=Sáb
+  ?>
+
+  <h2 class="mt-5">🗓 Calendário do mês — todos os funcionários</h2>
+
+  <?php if ($func_cor): ?>
+    <div class="card">
+      <div style="display:flex; flex-wrap:wrap; gap:8px;">
+        <?php foreach ($func_cor as $fid => $cor): ?>
+          <span style="display:inline-flex; align-items:center; gap:6px; font-size:13px;">
+            <span style="width:14px; height:14px; border-radius:3px; background:<?= e($cor) ?>;"></span>
+            <?= e($func_nome[$fid]) ?>
+          </span>
+        <?php endforeach; ?>
+      </div>
+    </div>
+  <?php endif; ?>
+
+  <div class="card" style="overflow-x:auto;">
+    <table style="width:100%; border-collapse:collapse; min-width:560px;">
+      <thead>
+        <tr>
+          <?php foreach (['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'] as $w): ?>
+            <th style="padding:6px; color:var(--txt-3); font-size:12px; text-align:center; border-bottom:1px solid var(--border);"><?= $w ?></th>
+          <?php endforeach; ?>
+        </tr>
+      </thead>
+      <tbody>
+        <?php
+        $celulas = [];
+        for ($i = 0; $i < $dia_semana_ini; $i++) $celulas[] = null;
+        for ($d = 1; $d <= $dias_no_mes; $d++) $celulas[] = $d;
+        while (count($celulas) % 7 !== 0) $celulas[] = null;
+
+        for ($r = 0; $r < count($celulas); $r += 7): ?>
+          <tr>
+          <?php for ($c = 0; $c < 7; $c++):
+              $dia = $celulas[$r + $c];
+              if ($dia === null): ?>
+                <td style="padding:6px; border:1px solid var(--border); background:transparent; height:90px;"></td>
+              <?php else:
+                $iso = $competencia . '-' . str_pad((string)$dia, 2, '0', STR_PAD_LEFT);
+                $entregas_dia = $por_dia[$iso] ?? [];
+                $hoje = date('Y-m-d') === $iso;
+              ?>
+                <td style="padding:4px; border:1px solid var(--border); vertical-align:top; height:90px; background:<?= $hoje?'rgba(59,130,246,0.08)':'transparent' ?>;">
+                  <div style="font-size:13px; font-weight:<?= $hoje?'700':'600' ?>; color:<?= $hoje?'var(--c-primary-2)':'var(--txt-2)' ?>; margin-bottom:3px;"><?= $dia ?></div>
+                  <?php foreach ($entregas_dia as $en):
+                    $fid = (int)$en['funcionario_id'];
+                    $cor = $func_cor[$fid] ?? '#666';
+                  ?>
+                    <div title="<?= e($en['func_nome']) . ' — ' . e($en['nome_empresa']) . ' / ' . e($en['item_nome']) ?>"
+                         style="background:<?= e($cor) ?>; color:#fff; font-size:10px; padding:2px 4px; border-radius:3px; margin-bottom:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                      <?= e($en['nome_empresa']) ?>
+                    </div>
+                  <?php endforeach; ?>
+                </td>
+              <?php endif;
+          endfor; ?>
+          </tr>
+        <?php endfor; ?>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="muted center mt-3" style="font-size:13px;">Passe o mouse sobre cada chip pra ver detalhes (funcionário, cliente, item).</p>
+
+  <?php else: ?>
 
   <div class="section-label mt-5">Por pessoa</div>
   <?php foreach ($dados as $d):
@@ -203,6 +314,7 @@ require __DIR__ . '/includes/header.php';
     </div>
     <?php endif; ?>
   <?php endforeach; ?>
+  <?php endif; // fim do else do view=calendar ?>
 <?php endif; ?>
 
 <p class="muted center mt-5" style="font-size:13px;">Clique num funcionário pra ver a agenda detalhada dele.</p>
