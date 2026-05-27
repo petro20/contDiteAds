@@ -326,7 +326,23 @@ require __DIR__ . '/includes/header.php';
     $stmt = $db->prepare("SELECT COUNT(*) FROM entregas WHERE funcionario_id=? AND competencia_mes=?");
     $stmt->execute([(int)$u['id'], $competencia_now]);
     $tot_entregas = (int)$stmt->fetchColumn();
+
+    // Previsão do funcionário: já recebido + a receber pelas entregas pendentes
+    $prev_func = $recebido_mes + $a_receber;
   ?>
+
+  <a class="card brand" href="<?= e(APP_BASE_URL) ?>/meus_pagamentos.php" style="text-decoration:none;">
+    <div class="title" style="color:var(--c-primary-2);">🔮 Previsão de recebimento <span class="muted" style="font-weight:normal; font-size:12px;">(<?= e(date('M/y')) ?>)</span></div>
+    <div class="desc" style="margin-top:6px;">
+      <?php if ($prev_func > 0): ?>
+        <strong style="color:var(--txt-1);">$<?= e(number_format($prev_func, 2, '.', ',')) ?> USD</strong>
+      <?php else: ?>
+        <strong class="muted">Sem entregas confirmadas pra este mês ainda</strong>
+      <?php endif; ?>
+    </div>
+    <div class="desc muted" style="font-size:12px; margin-top:4px;">recebido + a receber pelas entregas pendentes</div>
+  </a>
+
   <div class="grid-2">
     <div class="kpi"><div class="v"><?= $tot_clientes ?></div><div class="l">Clientes que atendo</div></div>
     <div class="kpi"><div class="v"><?= $tot_assin ?></div><div class="l">Serviços ativos</div></div>
@@ -375,7 +391,37 @@ require __DIR__ . '/includes/header.php';
 
   <?php if (!$cli): ?>
     <div class="card attention"><div class="title">⚠ Conta sem empresa vinculada</div><div class="desc">Avise o admin pra ligar sua conta a um cliente cadastrado.</div></div>
-  <?php else: ?>
+  <?php else:
+    // Previsão do cliente: já pago + em aberto + em análise no mês atual
+    $competencia_cli = date('Y-m');
+    $ja_pago_cli = 0.0;
+    try {
+        $stmt = $db->prepare("SELECT COALESCE(SUM(p.valor_pago),0) FROM pagamentos_cliente p
+                              JOIN cobrancas c ON c.id = p.cobranca_id
+                              WHERE c.cliente_id = ? AND c.competencia_mes = ? AND COALESCE(p.pendente,0)=0");
+        $stmt->execute([$cid, $competencia_cli]);
+        $ja_pago_cli = (float)$stmt->fetchColumn();
+    } catch (Throwable $e) {}
+    $em_analise_cli = 0.0;
+    try {
+        $stmt = $db->prepare("SELECT COALESCE(SUM(valor_total),0) FROM cobrancas WHERE cliente_id = ? AND status='em_analise'");
+        $stmt->execute([$cid]);
+        $em_analise_cli = (float)$stmt->fetchColumn();
+    } catch (Throwable $e) {}
+    $prev_cli = $ja_pago_cli + $em_aberto + $em_analise_cli;
+  ?>
+    <a class="card brand" href="<?= e(APP_BASE_URL) ?>/cobrancas.php" style="text-decoration:none;">
+      <div class="title" style="color:var(--c-primary-2);">🔮 Previsão de gastos <span class="muted" style="font-weight:normal; font-size:12px;">(<?= e(date('M/y')) ?>)</span></div>
+      <div class="desc" style="margin-top:6px;">
+        <?php if ($prev_cli > 0): ?>
+          <strong style="color:var(--txt-1);"><?= e(money_fmt($prev_cli, $cli['moeda'])) ?></strong>
+        <?php else: ?>
+          <strong class="muted">Sem cobranças neste mês ainda</strong>
+        <?php endif; ?>
+      </div>
+      <div class="desc muted" style="font-size:12px; margin-top:4px;">já pago + em aberto + em análise · este mês</div>
+    </a>
+
     <div class="grid-2">
       <div class="kpi"><div class="v"><?= e(money_fmt($em_aberto, $cli['moeda'])) ?></div><div class="l">Em aberto</div></div>
       <div class="kpi <?= $vencidas?'':'' ?>" <?= $vencidas?'style="border-color:var(--c-danger);"':'' ?>><div class="v"><?= $vencidas ?></div><div class="l"><?= $vencidas?'<span style="color:var(--c-danger);">Vencidas</span>':'Vencidas' ?></div></div>
