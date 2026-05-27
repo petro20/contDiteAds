@@ -108,7 +108,7 @@ require __DIR__ . '/includes/header.php';
       $sem_wisetag_com_grana = (int)$stmt->fetchColumn();
   } catch (Throwable $e) {}
 
-  // Previsão de faturamento do mês = recebido + a receber (aberta) + em análise — por moeda
+  // Previsão de faturamento do mês = recebido + a receber + em análise + assinaturas ainda sem cobrança
   $prev_faturamento = ['BRL'=>0.0,'USD'=>0.0,'EUR'=>0.0];
   $prev_faturamento['BRL'] = $rec_brl + $val_abertas_brl;
   $prev_faturamento['USD'] = $rec_usd + $val_abertas_usd;
@@ -117,6 +117,24 @@ require __DIR__ . '/includes/header.php';
       $stmt = $db->prepare("SELECT moeda, COALESCE(SUM(valor_total),0) AS total
                             FROM cobrancas WHERE status='em_analise' AND competencia_mes = ? GROUP BY moeda");
       $stmt->execute([$competencia_now]);
+      foreach ($stmt->fetchAll() as $r) { $prev_faturamento[$r['moeda']] += (float)$r['total']; }
+  } catch (Throwable $e) {}
+  // Assinaturas ativas mensais que ainda não geraram cobrança neste mês
+  try {
+      $stmt = $db->prepare("
+          SELECT cl.moeda, COALESCE(SUM(a.valor_cobrado), 0) AS total
+          FROM assinaturas a
+          JOIN clientes cl       ON cl.id = a.cliente_id
+          JOIN itens_catalogo i  ON i.id  = a.item_id
+          WHERE a.status='ativa' AND i.tipo='mensal'
+            AND a.iniciada_em <= ?
+            AND (a.encerrada_em IS NULL OR a.encerrada_em >= ?)
+            AND NOT EXISTS (
+              SELECT 1 FROM cobranca_itens ci JOIN cobrancas cb ON cb.id = ci.cobranca_id
+              WHERE ci.assinatura_id = a.id AND cb.competencia_mes = ?
+            )
+          GROUP BY cl.moeda");
+      $stmt->execute([$fim_mes, $ini_mes, $competencia_now]);
       foreach ($stmt->fetchAll() as $r) { $prev_faturamento[$r['moeda']] += (float)$r['total']; }
   } catch (Throwable $e) {}
   $tem_prev = ($prev_faturamento['BRL'] + $prev_faturamento['USD'] + $prev_faturamento['EUR']) > 0;
@@ -329,6 +347,7 @@ require __DIR__ . '/includes/header.php';
 
     // Previsão MENSAL do funcionário:
     //   já recebido no mês + a receber pelos itens pendentes DO MÊS CORRENTE
+    //   + assinaturas ativas dele sem cobrança ainda neste mês (estimativa)
     $a_receber_mes = 0.0;
     try {
         $stmt = $db->prepare("
@@ -345,7 +364,28 @@ require __DIR__ . '/includes/header.php';
         $stmt->execute([(int)$u['id'], $competencia_now]);
         $a_receber_mes = (float)$stmt->fetchColumn();
     } catch (Throwable $e) {}
-    $prev_func = $recebido_mes + $a_receber_mes;
+    // Assinaturas ativas dele que ainda não geraram cobrança neste mês
+    $prev_assin_func = 0.0;
+    try {
+        $ini_mes_f = $competencia_now . '-01';
+        $fim_mes_f = date('Y-m-t', strtotime($ini_mes_f));
+        $stmt = $db->prepare("
+            SELECT COALESCE(SUM(COALESCE(fsp.valor_usd, 0)), 0)
+            FROM assinaturas a
+            JOIN itens_catalogo i ON i.id = a.item_id
+            LEFT JOIN func_servico_pagamento fsp
+                   ON fsp.funcionario_id = a.funcionario_id AND fsp.item_id = a.item_id
+            WHERE a.funcionario_id = ? AND a.status = 'ativa' AND i.tipo = 'mensal'
+              AND a.iniciada_em <= ?
+              AND (a.encerrada_em IS NULL OR a.encerrada_em >= ?)
+              AND NOT EXISTS (
+                SELECT 1 FROM cobranca_itens ci JOIN cobrancas cb ON cb.id = ci.cobranca_id
+                WHERE ci.assinatura_id = a.id AND cb.competencia_mes = ?
+              )");
+        $stmt->execute([(int)$u['id'], $fim_mes_f, $ini_mes_f, $competencia_now]);
+        $prev_assin_func = (float)$stmt->fetchColumn();
+    } catch (Throwable $e) {}
+    $prev_func = $recebido_mes + $a_receber_mes + $prev_assin_func;
   ?>
 
   <a class="card brand" href="<?= e(APP_BASE_URL) ?>/meus_pagamentos.php" style="text-decoration:none;">
@@ -433,7 +473,26 @@ require __DIR__ . '/includes/header.php';
         $stmt->execute([$cid, $competencia_cli]);
         $em_analise_cli = (float)$stmt->fetchColumn();
     } catch (Throwable $e) {}
-    $prev_cli = $ja_pago_cli + $em_aberto_mes + $em_analise_cli;
+    // Assinaturas ativas mensais dele sem cobrança gerada ainda neste mês
+    $prev_assin_cli = 0.0;
+    try {
+        $ini_mes_c = $competencia_cli . '-01';
+        $fim_mes_c = date('Y-m-t', strtotime($ini_mes_c));
+        $stmt = $db->prepare("
+            SELECT COALESCE(SUM(a.valor_cobrado), 0)
+            FROM assinaturas a
+            JOIN itens_catalogo i ON i.id = a.item_id
+            WHERE a.cliente_id = ? AND a.status='ativa' AND i.tipo='mensal'
+              AND a.iniciada_em <= ?
+              AND (a.encerrada_em IS NULL OR a.encerrada_em >= ?)
+              AND NOT EXISTS (
+                SELECT 1 FROM cobranca_itens ci JOIN cobrancas cb ON cb.id = ci.cobranca_id
+                WHERE ci.assinatura_id = a.id AND cb.competencia_mes = ?
+              )");
+        $stmt->execute([$cid, $fim_mes_c, $ini_mes_c, $competencia_cli]);
+        $prev_assin_cli = (float)$stmt->fetchColumn();
+    } catch (Throwable $e) {}
+    $prev_cli = $ja_pago_cli + $em_aberto_mes + $em_analise_cli + $prev_assin_cli;
   ?>
     <a class="card brand" href="<?= e(APP_BASE_URL) ?>/cobrancas.php" style="text-decoration:none;">
       <div class="title" style="color:var(--c-primary-2);">🔮 Previsão de gastos <span class="muted" style="font-weight:normal; font-size:12px;">(<?= e(date('M/y')) ?>)</span></div>
