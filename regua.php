@@ -71,6 +71,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header('Location: ' . APP_BASE_URL . '/regua.php?aba=etapas&ok=1'); exit;
     }
 
+    if ($op === 'mover_etapa') {
+        $id = (int)($_POST['id'] ?? 0);
+        $dir = $_POST['dir'] ?? '';
+        if ($id && in_array($dir, ['up','down'], true)) {
+            try {
+                $db->beginTransaction();
+                $stmt = $db->prepare('SELECT id, ordem FROM regua_etapas WHERE id = ?');
+                $stmt->execute([$id]);
+                $atual = $stmt->fetch();
+                if ($atual) {
+                    $op_cmp = $dir === 'up' ? '<' : '>';
+                    $op_ord = $dir === 'up' ? 'DESC' : 'ASC';
+                    $stmt = $db->prepare("SELECT id, ordem FROM regua_etapas WHERE ordem $op_cmp ? ORDER BY ordem $op_ord LIMIT 1");
+                    $stmt->execute([(int)$atual['ordem']]);
+                    $vizinho = $stmt->fetch();
+                    if ($vizinho) {
+                        // Swap usando temp pra contornar UNIQUE
+                        $db->prepare('UPDATE regua_etapas SET ordem = 99999 WHERE id = ?')->execute([(int)$vizinho['id']]);
+                        $db->prepare('UPDATE regua_etapas SET ordem = ? WHERE id = ?')->execute([(int)$vizinho['ordem'], $id]);
+                        $db->prepare('UPDATE regua_etapas SET ordem = ? WHERE id = ?')->execute([(int)$atual['ordem'], (int)$vizinho['id']]);
+                        audit_log('regua.etapa_movida', 'regua_etapas', $id);
+                    }
+                }
+                $db->commit();
+            } catch (PDOException $e) {
+                if ($db->inTransaction()) $db->rollBack();
+            }
+        }
+        header('Location: ' . APP_BASE_URL . '/regua.php?aba=etapas'); exit;
+    }
+
     // ===== TAREFAS =====
     if ($op === 'marcar_wa_enviado') {
         $eid = (int)($_POST['evento_id'] ?? 0);
@@ -312,18 +343,39 @@ require __DIR__ . '/includes/header.php';
 <?php else: // ===== ABA ETAPAS (default) ===== ?>
   <p class="muted" style="font-size:13px;">Use dias <strong>negativos</strong> para lembretes <em>antes</em> do vencimento (ex: −3 = 3 dias antes) e <strong>positivos</strong> para cobranças <em>após</em> vencer.</p>
 
-  <?php foreach ($etapas as $e): ?>
-    <div class="card">
-      <div class="spaced">
-        <div>
-          <div class="title">Etapa <?= (int)$e['ordem'] ?> · <?= e(formato_dias_etapa((int)$e['dias_apos_vencimento'])) ?></div>
-          <div class="sub muted">
-            Email: <?= $e['te_cod'] ? e($e['te_cod']) : '<em>nenhum</em>' ?> ·
-            WhatsApp: <?= $e['tw_cod'] ? e($e['tw_cod']) : '<em>nenhum</em>' ?> ·
-            <?= $e['ativa'] ? '<span class="status status-paga">ativa</span>' : '<span class="status status-info">inativa</span>' ?>
-          </div>
+  <?php
+    $etapas_count = count($etapas);
+    foreach ($etapas as $idx_e => $e):
+      $primeira = ($idx_e === 0);
+      $ultima   = ($idx_e === $etapas_count - 1);
+  ?>
+  <div class="card">
+    <div class="spaced">
+      <div style="flex:1;">
+        <div class="title">Etapa <?= (int)$e['ordem'] ?> · <?= e(formato_dias_etapa((int)$e['dias_apos_vencimento'])) ?></div>
+        <div class="sub muted">
+          Email: <?= $e['te_cod'] ? e($e['te_cod']) : '<em>nenhum</em>' ?> ·
+          WhatsApp: <?= $e['tw_cod'] ? e($e['tw_cod']) : '<em>nenhum</em>' ?> ·
+          <?= $e['ativa'] ? '<span class="status status-paga">ativa</span>' : '<span class="status status-info">inativa</span>' ?>
         </div>
       </div>
+      <div style="display:flex; flex-direction:column; gap:4px;">
+        <form method="post" style="margin:0;">
+          <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
+          <input type="hidden" name="op" value="mover_etapa">
+          <input type="hidden" name="id" value="<?= (int)$e['id'] ?>">
+          <input type="hidden" name="dir" value="up">
+          <button type="submit" class="btn btn-ghost small" <?= $primeira?'disabled':'' ?> title="Subir" style="padding:4px 10px;">↑</button>
+        </form>
+        <form method="post" style="margin:0;">
+          <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
+          <input type="hidden" name="op" value="mover_etapa">
+          <input type="hidden" name="id" value="<?= (int)$e['id'] ?>">
+          <input type="hidden" name="dir" value="down">
+          <button type="submit" class="btn btn-ghost small" <?= $ultima?'disabled':'' ?> title="Descer" style="padding:4px 10px;">↓</button>
+        </form>
+      </div>
+    </div>
       <details class="mt-3">
         <summary>Editar</summary>
         <form method="post" class="mt-3">
