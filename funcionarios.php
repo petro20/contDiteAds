@@ -272,8 +272,12 @@ if ($acao === 'novo' || $acao === 'editar') {
       </form>
 
     <?php
-        // Valores USD por item
-        $itens_cat = $db->query('SELECT id, nome, tipo FROM itens_catalogo WHERE ativo=1 ORDER BY nome')->fetchAll();
+        // Valores USD por item — ordem: setup (UNICO) → ongoing (MENSAL) → variável (POR_UNIDADE)
+        // (segue a jornada natural do cliente: primeiro setup, depois manutenção mensal)
+        $itens_cat = $db->query("
+            SELECT id, nome, tipo FROM itens_catalogo WHERE ativo=1
+            ORDER BY FIELD(tipo, 'unico','mensal','por_unidade'), nome
+        ")->fetchAll();
         $stmt = $db->prepare('SELECT item_id, valor_usd FROM func_servico_pagamento WHERE funcionario_id = ?');
         $stmt->execute([$func['id']]);
         $valores_map = [];
