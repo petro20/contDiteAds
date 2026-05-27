@@ -142,11 +142,23 @@ if ($acao === 'novo' || $acao === 'editar') {
     // Pré-preenchimento via query string (vindo do simulador de preço)
     if ($acao === 'novo') {
         if (!empty($_GET['nome']))         $item['nome']            = trim((string)$_GET['nome']);
+        if (!empty($_GET['descricao']))    $item['descricao']       = trim((string)$_GET['descricao']);
         if (!empty($_GET['preco_usd']))    $item['preco_usd']       = (float)$_GET['preco_usd'];
         if (!empty($_GET['preco_ia_usd'])) $item['preco_ia_usd']    = (float)$_GET['preco_ia_usd'];
         if (!empty($_GET['tem_variante_ia'])) $item['tem_variante_ia'] = 1;
         if (!empty($_GET['periodo_minimo_meses'])) $item['periodo_minimo_meses'] = (int)$_GET['periodo_minimo_meses'];
         if (!empty($_GET['tipo'])) $item['tipo'] = (string)$_GET['tipo'];
+
+        // Calcula BRL/EUR pra exibir já no preview (mesma lógica do save: ceil(usd × cotacao))
+        $cot_pre = cotacao_atual($db);
+        if ($item['preco_usd']) {
+            $item['preco_brl'] = ceil((float)$item['preco_usd'] * $cot_pre['BRL']);
+            $item['preco_eur'] = ceil((float)$item['preco_usd'] * $cot_pre['EUR']);
+        }
+        if ($item['preco_ia_usd']) {
+            $item['preco_ia_brl'] = ceil((float)$item['preco_ia_usd'] * $cot_pre['BRL']);
+            $item['preco_ia_eur'] = ceil((float)$item['preco_ia_usd'] * $cot_pre['EUR']);
+        }
     }
     if ($acao === 'editar' && $id) {
         $stmt = $db->prepare('SELECT * FROM itens_catalogo WHERE id=?');

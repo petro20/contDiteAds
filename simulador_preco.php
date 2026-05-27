@@ -231,6 +231,7 @@ function toggleSimPeriodo() {
 <form method="get" action="<?= e(APP_BASE_URL) ?>/catalogo.php" class="mt-5">
   <input type="hidden" name="acao" value="novo">
   <input type="hidden" name="nome" id="frm_nome">
+  <input type="hidden" name="descricao" id="frm_descricao">
   <input type="hidden" name="preco_usd" id="frm_preco">
   <input type="hidden" name="preco_ia_usd" id="frm_preco_ia">
   <input type="hidden" name="tem_variante_ia" id="frm_ia">
@@ -342,11 +343,13 @@ function prepararSalvar() {
 
 function preparaCriar() {
   const nome = document.getElementById('sim_nome').value.trim();
+  const descricao = document.getElementById('sim_descricao').value.trim();
   const preco = document.getElementById('preco_final').textContent;
   const ia = document.getElementById('sim_ia').checked;
   const tipo = document.getElementById('sim_tipo').value;
   const periodo = document.getElementById('sim_periodo').value;
   document.getElementById('frm_nome').value = nome;
+  document.getElementById('frm_descricao').value = descricao;
   document.getElementById('frm_preco').value = preco;
   document.getElementById('frm_ia').value = ia ? '1' : '';
   document.getElementById('frm_tipo').value = tipo;
