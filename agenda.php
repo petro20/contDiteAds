@@ -5,8 +5,22 @@ $u = require_login();
 if ($u['role'] === 'cliente') { header('Location: ' . APP_BASE_URL . '/entregas.php'); exit; }
 $db = db();
 
+// Verifica se o usuário trabalha em dupla — pega ID do parceiro (assinaturas estão sob esse ID)
+$trabalha_com_id = null;
+$trabalha_com_nome = null;
+try {
+    $stmt = $db->prepare("SELECT u.trabalha_com_id, p.nome FROM usuarios u LEFT JOIN usuarios p ON p.id = u.trabalha_com_id WHERE u.id = ?");
+    $stmt->execute([(int)$u['id']]);
+    $r = $stmt->fetch();
+    if ($r && $r['trabalha_com_id']) {
+        $trabalha_com_id = (int)$r['trabalha_com_id'];
+        $trabalha_com_nome = $r['nome'];
+    }
+} catch (Throwable $e) {}
+
 // Funcionário vê só dele; admin pode ver de qualquer um via ?funcionario_id=
-$funcionario_id = (int)$u['id'];
+// Se trabalha em dupla, vê a agenda do parceiro (pagamento vai pra ele)
+$funcionario_id = $trabalha_com_id ?: (int)$u['id'];
 if (is_admin() && isset($_GET['funcionario_id'])) {
     $funcionario_id = (int)$_GET['funcionario_id'];
 }
@@ -20,12 +34,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $assin = (int)($_POST['assinatura_id'] ?? 0);
     $comp  = $_POST['competencia'] ?? $competencia;
 
-    // Confirma posse: assinatura tem que ter o funcionário como responsável (ou admin pode tudo)
+    // Confirma posse: assinatura tem que ter o funcionário como responsável
+    // (ou admin pode tudo, ou usuário trabalha em dupla com o responsável)
     if ($assin) {
         $stmt = $db->prepare('SELECT funcionario_id FROM assinaturas WHERE id = ?');
         $stmt->execute([$assin]);
         $fres = (int)$stmt->fetchColumn();
-        if (!is_admin() && $fres !== (int)$u['id']) {
+        $autorizado = is_admin() || $fres === (int)$u['id'] || ($trabalha_com_id && $fres === $trabalha_com_id);
+        if (!$autorizado) {
             http_response_code(403); exit('Acesso negado.');
         }
     }
@@ -55,6 +71,12 @@ $nav_active = 'agenda';
 require __DIR__ . '/includes/header.php';
 ?>
 <h1 class="page-title">Agenda</h1>
+<?php if ($trabalha_com_id && !is_admin()): ?>
+  <div class="card brand">
+    <div class="title">👥 Você trabalha em dupla com <?= e($trabalha_com_nome) ?></div>
+    <div class="desc">Esta é a agenda de <strong><?= e($trabalha_com_nome) ?></strong> — você pode ver e marcar entregas, mas o <strong>pagamento vai todo pra ele</strong>.</div>
+  </div>
+<?php endif; ?>
 <div class="spaced mb-3">
   <a class="btn btn-ghost small" href="?mes=<?= e($mes_anterior_str) ?><?= is_admin() ? '&funcionario_id='.$funcionario_id : '' ?>">← <?= e($mes_anterior_str) ?></a>
   <strong><?= e($nome_mes) ?></strong>

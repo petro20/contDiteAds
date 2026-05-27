@@ -127,6 +127,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $wisetag = trim((string)($_POST['wisetag'] ?? '')) ?: null;
         $pais    = trim((string)($_POST['pais'] ?? '')) ?: null;
         $tel     = trim((string)($_POST['telefone'] ?? '')) ?: null;
+        $trabalha_com = (int)($_POST['trabalha_com_id'] ?? 0) ?: null;
+        if ($trabalha_com === $pid) $trabalha_com = null; // não pode trabalhar consigo mesmo
 
         if ($nome === '' || $email === '') {
             $flash = ['err','Nome e email são obrigatórios.'];
@@ -137,17 +139,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             try {
                 if ($pid) {
                     if ($senha !== '') {
-                        $stmt = $db->prepare('UPDATE usuarios SET nome=?, email=?, role=?, ativo=?, senha_hash=?, cpf=?, wisetag=?, pais=?, aceitando_clientes=? WHERE id=?');
-                        $stmt->execute([$nome,$email,$role,$ativo,password_hash($senha, PASSWORD_DEFAULT),$cpf,$wisetag,$pais,$aceit,$pid]);
+                        $stmt = $db->prepare('UPDATE usuarios SET nome=?, email=?, role=?, ativo=?, senha_hash=?, cpf=?, wisetag=?, pais=?, aceitando_clientes=?, trabalha_com_id=? WHERE id=?');
+                        $stmt->execute([$nome,$email,$role,$ativo,password_hash($senha, PASSWORD_DEFAULT),$cpf,$wisetag,$pais,$aceit,$trabalha_com,$pid]);
                     } else {
-                        $stmt = $db->prepare('UPDATE usuarios SET nome=?, email=?, role=?, ativo=?, cpf=?, wisetag=?, pais=?, aceitando_clientes=? WHERE id=?');
-                        $stmt->execute([$nome,$email,$role,$ativo,$cpf,$wisetag,$pais,$aceit,$pid]);
+                        $stmt = $db->prepare('UPDATE usuarios SET nome=?, email=?, role=?, ativo=?, cpf=?, wisetag=?, pais=?, aceitando_clientes=?, trabalha_com_id=? WHERE id=?');
+                        $stmt->execute([$nome,$email,$role,$ativo,$cpf,$wisetag,$pais,$aceit,$trabalha_com,$pid]);
                     }
                     audit_log('funcionario.editado', 'usuarios', $pid);
                     header('Location: ' . APP_BASE_URL . '/funcionarios.php?ok=upd'); exit;
                 } else {
-                    $stmt = $db->prepare("INSERT INTO usuarios (nome,email,senha_hash,role,ativo,cpf,wisetag,pais,aceitando_clientes) VALUES (?,?,?,?,?,?,?,?,?)");
-                    $stmt->execute([$nome,$email,password_hash($senha, PASSWORD_DEFAULT),$role,$ativo,$cpf,$wisetag,$pais,$aceit]);
+                    $stmt = $db->prepare("INSERT INTO usuarios (nome,email,senha_hash,role,ativo,cpf,wisetag,pais,aceitando_clientes,trabalha_com_id) VALUES (?,?,?,?,?,?,?,?,?,?)");
+                    $stmt->execute([$nome,$email,password_hash($senha, PASSWORD_DEFAULT),$role,$ativo,$cpf,$wisetag,$pais,$aceit,$trabalha_com]);
                     audit_log('funcionario.criado', 'usuarios', (int)$db->lastInsertId());
                     header('Location: ' . APP_BASE_URL . '/funcionarios.php?ok=add'); exit;
                 }
@@ -169,9 +171,9 @@ $nav_active = '';
 if ($acao === 'novo' || $acao === 'editar') {
     $show_back = true;
     $back_to = APP_BASE_URL . '/funcionarios.php';
-    $func = ['id'=>0,'nome'=>'','email'=>'','role'=>'funcionario','ativo'=>1,'cpf'=>'','wisetag'=>'','pais'=>'','aceitando_clientes'=>1,'telefone'=>''];
+    $func = ['id'=>0,'nome'=>'','email'=>'','role'=>'funcionario','ativo'=>1,'cpf'=>'','wisetag'=>'','pais'=>'','aceitando_clientes'=>1,'telefone'=>'','trabalha_com_id'=>null];
     if ($acao === 'editar' && $id) {
-        $stmt = $db->prepare("SELECT id, nome, email, role, ativo, cpf, wisetag, pais, aceitando_clientes FROM usuarios WHERE id=? AND role IN ('sadmin','admin','funcionario')");
+        $stmt = $db->prepare("SELECT id, nome, email, role, ativo, cpf, wisetag, pais, aceitando_clientes, trabalha_com_id FROM usuarios WHERE id=? AND role IN ('sadmin','admin','funcionario')");
         $stmt->execute([$id]);
         $row = $stmt->fetch();
         if ($row) {
@@ -209,6 +211,19 @@ if ($acao === 'novo' || $acao === 'editar') {
         <div class="field"><label>Senha <?= $func['id'] ? '(deixe em branco para manter)' : '*' ?></label><input type="password" name="senha" <?= $func['id']?'':'required' ?> autocomplete="new-password"></div>
         <label class="check"><input type="checkbox" name="ativo" <?= $func['ativo']?'checked':'' ?>> Ativo</label>
         <label class="check"><input type="checkbox" name="aceitando_clientes" <?= $func['aceitando_clientes']?'checked':'' ?>> Aceitando novos clientes</label>
+
+        <div class="field mt-3">
+          <label>👥 Trabalha em dupla com (opcional)</label>
+          <select name="trabalha_com_id">
+            <option value="">— sozinho (sem dupla) —</option>
+            <?php
+              $duplas = $db->query("SELECT id, nome FROM usuarios WHERE ativo=1 AND role IN ('funcionario','admin','sadmin') AND id != " . (int)$func['id'] . " ORDER BY nome")->fetchAll();
+              foreach ($duplas as $d): ?>
+              <option value="<?= (int)$d['id'] ?>" <?= $func['trabalha_com_id']==$d['id']?'selected':'' ?>><?= e($d['nome']) ?></option>
+            <?php endforeach; ?>
+          </select>
+          <div class="hint">Se essa pessoa trabalha em dupla com outra, ela <strong>vê a mesma agenda</strong> e pode marcar entregas — mas o <strong>pagamento vai todo</strong> para a pessoa selecionada.</div>
+        </div>
       </div>
       <button class="btn block" type="submit">Salvar</button>
     </form>
