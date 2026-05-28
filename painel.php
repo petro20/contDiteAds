@@ -19,6 +19,20 @@ $nav_active = 'painel';
 require __DIR__ . '/includes/header.php';
 ?>
 <h1 class="page-title">Painel</h1>
+<details class="card" style="margin-bottom:var(--s-3);">
+  <summary class="muted" style="cursor:pointer; padding:8px 0; font-size:13px;">📊 Exportar planilhas (CSV)</summary>
+  <div class="btn-pair" style="margin-top:8px; flex-wrap:wrap;">
+    <a class="btn btn-ghost small" href="<?= e(APP_BASE_URL) ?>/export.php?tipo=cobrancas&mes=<?= e($competencia) ?>">💳 Cobranças</a>
+    <a class="btn btn-ghost small" href="<?= e(APP_BASE_URL) ?>/export.php?tipo=distribuicao&mes=<?= e($competencia) ?>">💎 Distribuição</a>
+    <a class="btn btn-ghost small" href="<?= e(APP_BASE_URL) ?>/export.php?tipo=entregas&mes=<?= e($competencia) ?>">📅 Entregas</a>
+    <a class="btn btn-ghost small" href="<?= e(APP_BASE_URL) ?>/export.php?tipo=clientes">👥 Clientes</a>
+    <a class="btn btn-ghost small" href="<?= e(APP_BASE_URL) ?>/export.php?tipo=funcionarios">🧑‍💼 Funcionários</a>
+    <?php if (is_sadmin()): ?>
+      <a class="btn btn-ghost small" href="<?= e(APP_BASE_URL) ?>/export.php?tipo=despesas">💸 Despesas</a>
+    <?php endif; ?>
+  </div>
+  <div class="hint" style="margin-top:6px;">Abre no Excel/Google Sheets com encoding UTF-8.</div>
+</details>
 
 <nav class="tabs-bar">
   <a class="<?= $aba==='agenda'?'active':'' ?>" href="?aba=agenda&mes=<?= e($competencia) ?>">Agenda</a>
