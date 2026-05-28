@@ -41,7 +41,7 @@ $role_label = [
   <div class="card">
     <p><strong>+ Novo</strong> direto ou <strong>✉️ Convidar</strong> (link por email).</p>
     <p><strong>Mudou moeda do cliente?</strong> Sistema recalcula automaticamente o valor de todas as assinaturas ativas dele usando a cotação USD do dia.</p>
-    <p><strong>⚠ Apagar em cascata:</strong> deleta cliente + cobranças + assinaturas + entregas + login. Sem volta — prefira desativar pra preservar histórico.</p>
+    <p><strong>⚠ Apagar em cascata:</strong> deleta cliente + cobranças + assinaturas + entregas + login. <strong>BLOQUEADO se houver pagamentos confirmados</strong> em cima (protege histórico financeiro e distribuição a sócios). Use "Desativar" nesses casos.</p>
   </div>
 
   <h2>📦 Catálogo (form em 5 passos)</h2>
@@ -55,6 +55,7 @@ $role_label = [
       <li><strong>4️⃣ Responsabilidades</strong> — o que a agência entrega, o funcionário faz, o cliente fornece (a IA preenche)</li>
       <li><strong>5️⃣ Opções</strong> — item ativo, é pacote</li>
     </ol>
+    <p><strong>⚠ Variante IA:</strong> se marcar "tem variante com IA", o preço IA em USD vira obrigatório. Sistema bloqueia o save sem ele pra evitar assinaturas com valor zero.</p>
     <p><strong>📊 Simulador de preço:</strong> botão no topo do catálogo — descreva o serviço, IA sugere custos + margem + responsabilidades. Salve simulações pra editar depois.</p>
     <p><strong>🔄 Recalcular preços:</strong> atualiza BRL/EUR de TODOS os itens com cotação atual.</p>
     <p><strong>⚠ Apagar item:</strong> só funciona se NÃO houver assinaturas vinculadas. Caso contrário, desative o item.</p>
@@ -104,7 +105,7 @@ $role_label = [
   <h2>💰 Finanças (3 abas)</h2>
   <div class="card">
     <p><strong>💸 Despesas:</strong> ferramentas, software, marketing — recorrência única/mensal/anual.</p>
-    <p><strong>💎 Distribuição:</strong> cada sócio = 1 quota; empresa = 1 quota. Botão Pagar registra cada lançamento. Sadmin pode apagar lançamentos errados.</p>
+    <p><strong>💎 Distribuição:</strong> cada sócio = 1 quota; empresa = 1 quota. Botão Pagar registra cada lançamento. Sadmin pode apagar lançamentos errados. <strong>Trava:</strong> valor pago não pode exceder a quota disponível na competência (sistema mostra quota total / já pago / disponível).</p>
     <p><strong>💳 Pagamentos:</strong> esta aba concentra:</p>
     <ul style="padding-left:20px; color:var(--txt-2);">
       <li><strong>💱 Cotação USD:</strong> USD→BRL e USD→EUR atual + botão "Atualizar agora" (AwesomeAPI, cache diário)</li>
@@ -125,9 +126,30 @@ $role_label = [
   <h2>💳 Cobranças</h2>
   <div class="card">
     <p><strong>Geração automática:</strong> cron diário às 5h, 7 dias antes do vencimento.</p>
-    <p><strong>Manual:</strong> "Marcar como paga" ou "Nova cobrança avulsa".</p>
-    <p><strong>Detalhe (cliente vê):</strong> QR Zelle + email + link Wise com passo a passo, botão copiar.</p>
+    <p><strong>Manual:</strong> "Marcar como paga" ou "Nova cobrança avulsa" (não aceita vencimento no passado).</p>
+    <p><strong>Detalhe (cliente vê):</strong> QR Zelle + email + link Wise Quick Pay com passo a passo, botão copiar.</p>
     <p><strong>Comprovante do cliente:</strong> vai pra "Em análise" → alerta no dashboard → aceita/rejeita.</p>
+    <p><strong>🪝 Pagamento via Wise:</strong> webhook detecta automaticamente. Vai como "pendente" pra você confirmar em <em>wise_eventos.php</em> ou pelo card laranja no dashboard.</p>
+    <p><strong>Travas:</strong>
+      <ul style="padding-left:20px; color:var(--txt-2); margin-top:4px;">
+        <li>Cobrança paga não pode ser cancelada (estorne primeiro)</li>
+        <li>Cobrança zerada (sem itens) vira "cancelada" automático</li>
+        <li>Régua respeita saldo: se pagou parcial, não recobra o total</li>
+      </ul>
+    </p>
+  </div>
+
+  <h2>🪝 Wise — Webhook + Reconciliação</h2>
+  <div class="card">
+    <p>Em <em>Finanças → Pagamentos → 🪝 Webhook</em> (ou direto em <code>/wise_eventos.php</code>):</p>
+    <ul style="padding-left:20px; color:var(--txt-2);">
+      <li><strong>URL do webhook</strong> pra colar no painel Wise</li>
+      <li><strong>Validação RSA SHA256</strong> ligada em produção (sempre obrigatória)</li>
+      <li><strong>Chave pública da Wise</strong> salva no sistema</li>
+      <li><strong>Lista de pagamentos pendentes</strong> com botão Confirmar/Rejeitar</li>
+      <li><strong>Histórico dos últimos 100 eventos</strong></li>
+    </ul>
+    <p>Pagamentos chegam como <strong>pendentes</strong> propositalmente — você revisa antes de marcar como paga e liberar comissão.</p>
   </div>
 
   <h2>💬 Comunicação (3 abas)</h2>
@@ -146,7 +168,22 @@ $role_label = [
   <h2>🔐 Segurança e auditoria</h2>
   <div class="card">
     <p><strong>2FA:</strong> ativa em <em>Minha conta → 🔐 Segurança</em>.</p>
+    <p><strong>🔑 Backup codes:</strong> ao ativar 2FA, sistema gera 8 códigos one-time-use. <strong>Salve em local seguro</strong> (impressão + gerenciador de senhas). Se perder o celular, cada código te deixa entrar 1 vez. Você pode regerar a qualquer momento.</p>
+    <p><strong>Reset de senha:</strong> ao trocar senha, todas as sessões em outros dispositivos são invalidadas automaticamente.</p>
     <p><strong>🔍 Auditoria:</strong> histórico de tudo no sistema. Só sadmin acessa.</p>
+  </div>
+
+  <h2>💾 Backup do banco</h2>
+  <div class="card">
+    <p>Em <code>/backups.php</code>: dump comprimido (gzip) do MySQL inteiro.</p>
+    <ul style="padding-left:20px; color:var(--txt-2);">
+      <li><strong>Cron diário às 04:00</strong> (antes de gerar cobranças e régua)</li>
+      <li><strong>Retenção:</strong> últimos 14 backups; mais antigos são apagados</li>
+      <li><strong>Pasta protegida:</strong> <code>uploads/.backups/</code> com <code>.htaccess Require all denied</code> — só baixa via tela do admin</li>
+      <li><strong>Botão "Gerar backup agora"</strong> pra forçar fora do cron</li>
+      <li><strong>Restauração:</strong> baixa, descompacta (<code>gunzip</code>), importa no phpMyAdmin</li>
+    </ul>
+    <p class="hint" style="color:var(--c-attention);">💡 Recomendado: baixe manualmente 1x por mês pra um lugar fora da Hostinger (Drive, Dropbox, HD).</p>
   </div>
 
 <?php elseif ($role === 'admin'): ?>
@@ -182,6 +219,8 @@ $role_label = [
   <h2>💳 Cobranças</h2>
   <div class="card">
     <p>Geração automática 7 dias antes. Comprovante do cliente vai pra "Em análise" → aceita/rejeita. WhatsApp com template editável.</p>
+    <p><strong>🪝 Pagamentos via Wise:</strong> webhook detecta automaticamente e marca como pendente. Reconcilia no card laranja do dashboard ou em <code>/wise_eventos.php</code> (Confirmar/Rejeitar).</p>
+    <p><strong>Cobrança paga</strong> não pode ser cancelada (estorne primeiro). <strong>Cobrança avulsa</strong> não aceita vencimento no passado.</p>
   </div>
 
   <h2>🧑‍💼 Equipe</h2>
@@ -202,6 +241,7 @@ $role_label = [
   <h2>🔐 Segurança</h2>
   <div class="card">
     <p>Ative 2FA em <em>Minha conta → 🔐 Segurança</em>.</p>
+    <p><strong>🔑 Backup codes:</strong> ao ativar 2FA o sistema gera 8 códigos one-time-use. Salve em local seguro — se perder o celular você ainda consegue entrar.</p>
   </div>
 
 <?php elseif ($role === 'funcionario'): ?>
@@ -221,7 +261,12 @@ $role_label = [
   <div class="card">
     <p>Itens pra entregar no mês, agrupados por cliente. Checkbox em cada um — marque ao concluir.</p>
     <p>Indicador 🟢/🔴 mostra se está dentro da capacidade.</p>
-    <p><strong>👥 Trabalha em dupla?</strong> Se você foi vinculado a alguém pelo admin, vai ver a agenda do principal aqui — pode marcar entregas, mas o pagamento vai todo pra ele (combinem como dividir off-platform). Card laranja no topo deixa isso claro: "Você trabalha em dupla com [nome]".</p>
+    <p><strong>👥 Trabalha em dupla?</strong> Se você foi vinculado a alguém pelo admin, vê dois botões no topo:
+      <ul style="padding-left:20px; color:var(--txt-2);">
+        <li><strong>Minha agenda</strong> — clientes atribuídos diretamente a você</li>
+        <li><strong>Agenda do [parceiro]</strong> — agenda da dupla (pagamento vai todo pro principal; combinem off-platform)</li>
+      </ul>
+    </p>
   </div>
 
   <h2>🧭 Navegação</h2>
@@ -237,9 +282,9 @@ $role_label = [
 
   <h2>👤 Minha conta</h2>
   <div class="card">
-    <p><strong>WiseTag:</strong> obrigatório pra receber.</p>
-    <p><strong>Aceitando clientes:</strong> ative/desative quando estiver cheio.</p>
-    <p><strong>🔐 2FA</strong> e <strong>❓ Ajuda</strong> nas abas Minha conta.</p>
+    <p><strong>WiseTag:</strong> obrigatório pra receber pagamento. <strong>Você edita em <em>Perfil</em></strong> (campos WiseTag/CPF/País). Se estiver vazio, aparece alerta vermelho avisando.</p>
+    <p><strong>Aceitando clientes:</strong> peça pro admin desmarcar quando você estiver cheio — sistema vai avisar antes de te atribuir novos clientes.</p>
+    <p><strong>🔐 2FA + backup codes:</strong> ative em <em>Minha conta → Segurança</em>. Os 8 backup codes te salvam se perder o celular — salva eles em local seguro.</p>
   </div>
 
 <?php else: // cliente ?>
@@ -259,10 +304,10 @@ $role_label = [
   <div class="card">
     <p><strong>Como pagar:</strong> abra a cobrança e veja:</p>
     <ul style="padding-left:20px; color:var(--txt-2);">
-      <li><strong>💜 Zelle:</strong> QR Code (escaneia no app do banco) + email pra copiar</li>
-      <li><strong>🌍 Wise:</strong> botão "Abrir Wise" com valor</li>
+      <li><strong>💜 Zelle:</strong> QR Code (escaneia no app do banco) + email pra copiar. <em>Envie comprovante depois pelo botão.</em></li>
+      <li><strong>🌍 Wise:</strong> botão "Abrir Wise" — preenche o valor exato da cobrança e paga. <strong>Não precisa enviar comprovante</strong> — o sistema detecta automaticamente.</li>
     </ul>
-    <p>Depois envie o <strong>comprovante</strong> pelo botão. Status vai pra "Em análise" e admin confirma.</p>
+    <p>Comprovante (Zelle) vai pra "Em análise" e a Dite Ads confirma em até 1 dia útil.</p>
   </div>
 
   <h2>✅ Entregas</h2>
