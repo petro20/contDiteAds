@@ -19,45 +19,67 @@ require_once __DIR__ . '/../includes/db.php';
  * Chama-se sempre que adiciona/remove pagamento.
  */
 function atualiza_status_cobranca(PDO $db, int $cobranca_id): void {
-    $stmt = $db->prepare('SELECT valor_total, status FROM cobrancas WHERE id = ?');
-    $stmt->execute([$cobranca_id]);
-    $c = $stmt->fetch();
-    if (!$c || $c['status'] === 'cancelada') return;
-
-    // Só conta pagamentos CONFIRMADOS (pendente=0). Tolera schema antigo sem coluna pendente.
+    // Envolve em transação com SELECT ... FOR UPDATE pra evitar TOCTOU
+    // (webhook + admin agindo na mesma cobrança ao mesmo tempo).
+    $in_tx = $db->inTransaction();
+    if (!$in_tx) $db->beginTransaction();
     try {
-        $stmt = $db->prepare('SELECT COALESCE(SUM(valor_pago), 0) FROM pagamentos_cliente WHERE cobranca_id = ? AND pendente = 0');
+        $stmt = $db->prepare('SELECT valor_total, status FROM cobrancas WHERE id = ? FOR UPDATE');
         $stmt->execute([$cobranca_id]);
-    } catch (PDOException $e) {
-        $stmt = $db->prepare('SELECT COALESCE(SUM(valor_pago), 0) FROM pagamentos_cliente WHERE cobranca_id = ?');
-        $stmt->execute([$cobranca_id]);
-    }
-    $pago_confirmado = (float)$stmt->fetchColumn();
+        $c = $stmt->fetch();
+        if (!$c || $c['status'] === 'cancelada') {
+            if (!$in_tx) $db->commit();
+            return;
+        }
 
-    // Tem comprovante pendente? Se sim e não está paga ainda, status = em_analise
-    try {
-        $stmt = $db->prepare('SELECT COUNT(*) FROM pagamentos_cliente WHERE cobranca_id = ? AND pendente = 1');
-        $stmt->execute([$cobranca_id]);
-        $tem_pendente = (int)$stmt->fetchColumn() > 0;
-    } catch (PDOException $e) {
-        $tem_pendente = false;
-    }
+        // Só conta pagamentos CONFIRMADOS (pendente=0). Tolera schema antigo sem coluna pendente.
+        try {
+            $stmt = $db->prepare('SELECT COALESCE(SUM(valor_pago), 0) FROM pagamentos_cliente WHERE cobranca_id = ? AND pendente = 0');
+            $stmt->execute([$cobranca_id]);
+        } catch (PDOException $e) {
+            $stmt = $db->prepare('SELECT COALESCE(SUM(valor_pago), 0) FROM pagamentos_cliente WHERE cobranca_id = ?');
+            $stmt->execute([$cobranca_id]);
+        }
+        $pago_confirmado = (float)$stmt->fetchColumn();
 
-    if ((float)$c['valor_total'] <= 0) {
-        // Cobrança zerada (sem itens) — cancela automaticamente.
-        // Evita ficar como "aberta" indefinidamente e poluir painel/lista de vencidas.
-        $novo = 'cancelada';
-    } elseif ($pago_confirmado >= (float)$c['valor_total']) {
-        $novo = 'paga';
-    } elseif ($tem_pendente) {
-        $novo = 'em_analise';
-    } else {
-        $novo = 'aberta';
-    }
+        // Tem comprovante pendente? Se sim e não está paga ainda, status = em_analise
+        try {
+            $stmt = $db->prepare('SELECT COUNT(*) FROM pagamentos_cliente WHERE cobranca_id = ? AND pendente = 1');
+            $stmt->execute([$cobranca_id]);
+            $tem_pendente = (int)$stmt->fetchColumn() > 0;
+        } catch (PDOException $e) {
+            $tem_pendente = false;
+        }
 
-    if ($novo !== $c['status']) {
-        $stmt = $db->prepare('UPDATE cobrancas SET status = ? WHERE id = ?');
-        $stmt->execute([$novo, $cobranca_id]);
+        // Proteção: se a cobrança JÁ ESTÁ paga e tem dinheiro confirmado em cima,
+        // não permite degradar pra 'cancelada' nem 'aberta' por causa de remoção
+        // de item ou outro evento — preserva o histórico de pagamento.
+        if ($c['status'] === 'paga' && $pago_confirmado > 0) {
+            if (!$in_tx) $db->commit();
+            return;
+        }
+
+        if ((float)$c['valor_total'] <= 0) {
+            // Cobrança zerada (sem itens) — cancela automaticamente.
+            // Evita ficar como "aberta" indefinidamente e poluir painel/lista de vencidas.
+            $novo = 'cancelada';
+        } elseif ($pago_confirmado >= (float)$c['valor_total']) {
+            $novo = 'paga';
+        } elseif ($tem_pendente) {
+            $novo = 'em_analise';
+        } else {
+            $novo = 'aberta';
+        }
+
+        if ($novo !== $c['status']) {
+            $stmt = $db->prepare('UPDATE cobrancas SET status = ? WHERE id = ?');
+            $stmt->execute([$novo, $cobranca_id]);
+        }
+
+        if (!$in_tx) $db->commit();
+    } catch (Throwable $e) {
+        if (!$in_tx && $db->inTransaction()) $db->rollBack();
+        throw $e;
     }
 }
 

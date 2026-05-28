@@ -58,9 +58,12 @@ if (file_exists($pub_key_path) && $assinatura && $payload_raw) {
         $assinatura_ok = ($r === 1);
     }
 }
-// Se a config 'wise_skip_signature' = '1', aceita sem validar (útil pra teste inicial)
+// Bypass de assinatura: apenas em ambiente NÃO-produção (dev/staging).
+// Em produção, a flag no banco é IGNORADA — sempre exigimos assinatura válida.
+// Isso impede que um admin (ou um atacante com acesso à UI) desligue a validação
+// e abra o endpoint pra POSTs falsificados.
 require_once __DIR__ . '/lib/configuracoes.php';
-$skip_sig = config_get($db, 'wise_skip_signature') === '1';
+$skip_sig = (APP_ENV !== 'production') && config_get($db, 'wise_skip_signature') === '1';
 
 if (!$is_test && !$assinatura_ok && !$skip_sig) {
     // Loga mesmo se assinatura falhar (pra debug)
@@ -119,8 +122,19 @@ if (strpos($event_type, 'credit') !== false || strpos($event_type, 'balances') !
             }
             if ($cob_id) {
                 $obs = 'Wise webhook · ' . ($delivery ?? '') . ' · pagador: ' . $payer;
-                $pag_id = registrar_pagamento_cliente($db, $cob_id, $valor, date('Y-m-d'), 'Wise', $obs, null, 0, false);
-                $status = 'casado';
+                // pendente=true: admin precisa reconciliar/confirmar.
+                // Evita marcar cobrança como 'paga' automaticamente sem revisão humana
+                // (proteção contra payload falsificado ou casamento errado por valor).
+                try {
+                    $pag_id = registrar_pagamento_cliente($db, $cob_id, $valor, date('Y-m-d'), 'Wise', $obs, null, 0, true);
+                    $status = 'casado';
+                } catch (Throwable $e) {
+                    // Notificação ou outro side-effect pode falhar; ainda assim o pagamento
+                    // já foi inserido no DB. Loga o erro mas mantém o evento como 'casado'
+                    // pra Wise não reenviar.
+                    error_log('Wise webhook side-effect: ' . $e->getMessage());
+                    $status = 'casado';
+                }
             }
         } catch (Throwable $e) {
             $status = 'erro';

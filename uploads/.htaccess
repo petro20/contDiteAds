@@ -1,2 +1,21 @@
-# Bloqueia acesso direto. Arquivos são servidos via cobrancas.php?baixar_comprovante=N com checagem de auth.
+# Bloqueia acesso direto. Arquivos são servidos via cobrancas.php?baixar_comprovante=N
+# com checagem de auth.
 Require all denied
+
+# Defense in depth: mesmo se o Require all denied falhar por má config do server,
+# qualquer arquivo PHP ou similar uplodado por engano NÃO deve executar.
+<FilesMatch "\.(php|phtml|phar|php\d|pht|html?|sh|cgi|pl|py|js|json|xml|sql|ini|env|conf|htaccess)$">
+    Require all denied
+</FilesMatch>
+
+# Desliga engine PHP nessa pasta (defesa extra contra polyglot uploads).
+# Se módulo php_mod estiver carregado, isso impede execução.
+<IfModule mod_php.c>
+    php_flag engine off
+</IfModule>
+<IfModule mod_php7.c>
+    php_flag engine off
+</IfModule>
+<IfModule mod_php8.c>
+    php_flag engine off
+</IfModule>

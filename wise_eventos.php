@@ -80,7 +80,11 @@ require __DIR__ . '/includes/header.php';
     </span>
     <button type="submit" class="btn btn-ghost small"><?= $skip_sig ? 'Ligar' : 'Desligar (teste)' ?></button>
   </form>
-  <div class="hint">Wise envia assinatura SHA256 do payload. Pra TESTES iniciais (sem chave pública), DESLIGUE. Pra PRODUÇÃO, ligue com chave pública cadastrada abaixo.</div>
+  <div class="hint">Wise envia assinatura SHA256 do payload. Pra TESTES iniciais (sem chave pública), DESLIGUE. Pra PRODUÇÃO, ligue com chave pública cadastrada abaixo.
+  <?php if (defined('APP_ENV') && APP_ENV === 'production'): ?>
+    <br><strong style="color:var(--c-success);">🔒 Em ambiente de produção este toggle é apenas informativo — a assinatura é SEMPRE validada.</strong>
+  <?php endif; ?>
+  </div>
 </div>
 
 <details class="card">
