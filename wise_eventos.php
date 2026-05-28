@@ -86,8 +86,8 @@ require __DIR__ . '/includes/header.php';
 <details class="card">
   <summary style="cursor:pointer; padding:8px 0;"><strong>🔑 Chave pública RSA da Wise</strong> <?= file_exists(__DIR__ . '/wise_public_key.pem') ? '<span class="status status-paga">✓ Salva</span>' : '<span class="status status-info">não configurada</span>' ?></summary>
   <div style="margin-top:12px;">
-    <p class="muted" style="font-size:13px;">Pegue a chave pública na documentação da Wise: <a href="https://api-docs.wise.com/api-docs/guides/webhooks/subscription-event-public-keys" target="_blank" rel="noopener" style="color:var(--c-primary-2);">api-docs.wise.com → Webhooks → Public Keys</a>.</p>
-    <p class="muted" style="font-size:13px;">Procure por <strong>"Live signing key (production)"</strong>. Copia tudo desde <code>-----BEGIN PUBLIC KEY-----</code> até <code>-----END PUBLIC KEY-----</code> e cola aqui.</p>
+    <p class="muted" style="font-size:13px;">Pegue a chave pública na documentação da Wise: <a href="https://docs.wise.com/guides/developer/webhooks/event-handling" target="_blank" rel="noopener" style="color:var(--c-primary-2);">docs.wise.com → Event Handling → Public Keys</a>.</p>
+    <p class="muted" style="font-size:13px;">Procure por <strong>"Production Live Signing Public Key"</strong>. Copia tudo desde <code>-----BEGIN PUBLIC KEY-----</code> até <code>-----END PUBLIC KEY-----</code> e cola aqui.</p>
     <form method="post">
       <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
       <input type="hidden" name="op" value="salvar_pub_key">
