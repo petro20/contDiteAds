@@ -98,10 +98,12 @@ require __DIR__ . '/includes/header.php';
   // 3. Funcionários sem WiseTag mas com USD pendente (impede pagar)
   $sem_wisetag_com_grana = 0;
   try {
+      // funcionario_id está em ASSINATURAS, não em cobranca_itens. Bug antigo.
       $stmt = $db->query("
-          SELECT COUNT(DISTINCT ci.funcionario_id) FROM cobranca_itens ci
+          SELECT COUNT(DISTINCT a.funcionario_id) FROM cobranca_itens ci
           JOIN cobrancas c ON c.id = ci.cobranca_id
-          JOIN usuarios u ON u.id = ci.funcionario_id
+          JOIN assinaturas a ON a.id = ci.assinatura_id
+          JOIN usuarios u ON u.id = a.funcionario_id
           LEFT JOIN pagamento_funcionario_itens pfi ON pfi.cobranca_item_id = ci.id
           WHERE c.status='paga' AND pfi.id IS NULL AND (u.wisetag IS NULL OR u.wisetag='')
       ");

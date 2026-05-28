@@ -10,7 +10,8 @@ function totp_base32_encode(string $bytes): string {
     $alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
     $bits = '';
     foreach (str_split($bytes) as $c) $bits .= str_pad(decbin(ord($c)), 8, '0', STR_PAD_LEFT);
-    $bits = str_pad($bits, ceil(strlen($bits) / 5) * 5, '0');
+    // (int) cast: ceil() retorna float, str_pad() em PHP 8.1+ exige int.
+    $bits = str_pad($bits, (int)(ceil(strlen($bits) / 5) * 5), '0');
     $out = '';
     foreach (str_split($bits, 5) as $chunk) $out .= $alphabet[bindec($chunk)];
     return $out;
