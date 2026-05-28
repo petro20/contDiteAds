@@ -23,27 +23,23 @@ if (isset($_GET['baixar'])) {
     exit;
 }
 
-// Roda backup sob demanda
+// Roda backup sob demanda — inclui o script diretamente (não depende de exec)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_check();
     if (($_POST['op'] ?? '') === 'rodar_agora') {
-        // Em ambiente shared hosting, exec() pode estar desabilitada.
-        // Tentamos chamar o script via include — pior caso, instrui o admin
-        // a rodar manualmente.
         $script = __DIR__ . '/cron/backup_db.php';
         if (is_file($script)) {
+            // O script detecta PHP_SAPI e ajusta o output. Aqui captura tudo.
             ob_start();
-            // Simula CLI rodando o script
-            $_SERVER['argv'] = ['backup_db.php'];
             try {
-                @passthru('php ' . escapeshellarg($script) . ' 2>&1', $rc);
+                include $script;
             } catch (Throwable $e) {
-                echo "Erro: " . $e->getMessage();
-                $rc = 1;
+                echo "Erro fatal: " . $e->getMessage();
             }
             $out = ob_get_clean();
             audit_log('backup.rodado_manual', 'sistema', 0);
-            $flash = [$rc === 0 ? 'ok' : 'err', "Saída do script:\n" . $out];
+            $sucesso = strpos($out, 'OK:') !== false;
+            $flash = [$sucesso ? 'ok' : 'err', "Saída do script:\n" . $out];
         } else {
             $flash = ['err', 'Script cron/backup_db.php não encontrado.'];
         }
