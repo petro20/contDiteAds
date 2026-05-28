@@ -11,6 +11,30 @@ $pode_editar_wisetag = in_array($u['role'], ['funcionario','admin','sadmin'], tr
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_check();
+
+    // Salvar capacidade — handler separado (campo distinto, fluxo separado)
+    if (($_POST['op'] ?? '') === 'salvar_capacidade_perfil') {
+        if (in_array($u['role'], ['funcionario','admin','sadmin'], true)) {
+            $cap = $_POST['cap'] ?? [];
+            if (is_array($cap)) {
+                foreach ($cap as $categoria => $valor) {
+                    $categoria = preg_replace('/[^a-z_]/', '', (string)$categoria);
+                    $v = (int)$valor;
+                    if ($v <= 0) {
+                        $stmt = $db->prepare('DELETE FROM capacidade_funcionario WHERE funcionario_id=? AND categoria=?');
+                        $stmt->execute([(int)$u['id'], $categoria]);
+                    } else {
+                        $stmt = $db->prepare('INSERT INTO capacidade_funcionario (funcionario_id, categoria, capacidade_mensal) VALUES (?,?,?) ON DUPLICATE KEY UPDATE capacidade_mensal = VALUES(capacidade_mensal)');
+                        $stmt->execute([(int)$u['id'], $categoria, $v]);
+                    }
+                }
+                audit_log('perfil.capacidade_atualizada', 'usuarios', (int)$u['id']);
+                $flash = ['ok', 'Capacidade atualizada.'];
+            }
+        }
+        goto fim_perfil_post;
+    }
+
     $nome = trim((string)($_POST['nome'] ?? ''));
     $senha = (string)($_POST['senha'] ?? '');
     $wisetag = $pode_editar_wisetag ? trim((string)($_POST['wisetag'] ?? '')) : null;
@@ -46,6 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->execute([$u['id']]);
         $u = array_merge($u, $stmt->fetch() ?: []);
     }
+    fim_perfil_post:;
 }
 
 $page = 'Perfil';
@@ -81,6 +106,32 @@ require __DIR__ . '/includes/header.php';
   <div class="field"><label>Nova senha (opcional)</label><input type="password" name="senha" autocomplete="new-password" placeholder="deixe em branco para manter"></div>
   <button class="btn block" type="submit">Salvar alterações</button>
 </form>
+
+<?php if (in_array($u['role'], ['funcionario','admin','sadmin'], true)):
+    // Capacidade declarada — funcionário pode atualizar a própria
+    $cap_categorias = ['criativos','postagens','sites_projetos'];
+    $cap_labels = ['criativos'=>'Criativos (CTF/CTV/CTI)','postagens'=>'Pacotes POSTAGEM','sites_projetos'=>'Sites/projetos únicos'];
+    $cap_map = [];
+    try {
+        $stmt = $db->prepare('SELECT categoria, capacidade_mensal FROM capacidade_funcionario WHERE funcionario_id = ?');
+        $stmt->execute([(int)$u['id']]);
+        foreach ($stmt->fetchAll() as $r) $cap_map[$r['categoria']] = (int)$r['capacidade_mensal'];
+    } catch (PDOException $e) {}
+?>
+  <h2 class="mt-5">📊 Capacidade mensal declarada</h2>
+  <form method="post" class="card">
+    <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
+    <input type="hidden" name="op" value="salvar_capacidade_perfil">
+    <p class="muted" style="font-size:13px;">Quantos itens você consegue absorver por mês. Sistema usa pra mostrar 🟢/🔴 quando admin tenta te atribuir um cliente. <strong>Mantenha atualizado.</strong></p>
+    <?php foreach ($cap_categorias as $cat): ?>
+      <div class="field">
+        <label><?= e($cap_labels[$cat]) ?></label>
+        <input type="number" min="0" name="cap[<?= e($cat) ?>]" value="<?= isset($cap_map[$cat]) ? (int)$cap_map[$cat] : '' ?>" placeholder="0">
+      </div>
+    <?php endforeach; ?>
+    <button class="btn block" type="submit">Salvar capacidade</button>
+  </form>
+<?php endif; ?>
 
 <a class="btn btn-ghost block mt-5" href="<?= e(APP_BASE_URL) ?>/logout.php">Sair</a>
 <?php require __DIR__ . '/includes/footer.php'; ?>
