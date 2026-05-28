@@ -38,6 +38,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $wise  = trim((string)($_POST['wise_link']   ?? ''));
     $instr = trim((string)($_POST['instrucoes']  ?? ''));
     $api_ia = trim((string)($_POST['anthropic_api_key'] ?? ''));
+    $wise_key = trim((string)($_POST['wise_api_key']   ?? ''));
+    $wise_pid = trim((string)($_POST['wise_profile_id'] ?? ''));
 
     if ($wise && !preg_match('~^https?://~i', $wise)) {
         $flash = ['err', 'O link do Wise precisa começar com http:// ou https://'];
@@ -48,6 +50,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Só atualiza se foi alterado (preserva valor se admin não preencher pra evitar limpar)
         if ($api_ia !== '' && $api_ia !== '••••••••') {
             config_set($db, 'anthropic_api_key', $api_ia);
+        }
+        if ($wise_key !== '' && $wise_key !== '••••••••') {
+            config_set($db, 'wise_api_key', $wise_key);
+        }
+        if ($wise_pid !== '') {
+            config_set($db, 'wise_profile_id', $wise_pid);
         }
 
         // Upload do QR code do Zelle
@@ -178,6 +186,25 @@ require __DIR__ . '/includes/header.php';
       <label>Texto extra (opcional)</label>
       <textarea name="instrucoes" rows="3" placeholder="ex: Após o pagamento, envie o comprovante pelo botão abaixo."><?= e($cfg['instrucoes']) ?></textarea>
     </div>
+  </div>
+
+  <div class="card">
+    <div class="title">🔄 Wise API (sincronizar pagamentos)</div>
+    <p class="muted" style="font-size:13px;">Habilita o botão "Sincronizar Wise" que busca créditos recebidos e tenta casar com cobranças abertas automaticamente. Pegue uma chave em <a href="https://wise.com/settings/api-tokens" target="_blank" rel="noopener" style="color:var(--c-primary-2);">wise.com → Settings → API tokens</a>.</p>
+    <?php $tem_wkey = (bool)config_get($db, 'wise_api_key'); $wise_pid = config_get($db, 'wise_profile_id'); ?>
+    <div class="field">
+      <label>API token</label>
+      <input type="password" name="wise_api_key" value="<?= $tem_wkey ? '••••••••' : '' ?>" placeholder="cole o token aqui" autocomplete="off">
+      <div class="hint"><?= $tem_wkey ? '✓ Token configurado.' : 'Sem token, a sincronização não funciona.' ?></div>
+    </div>
+    <div class="field">
+      <label>Profile ID (numérico)</label>
+      <input type="number" name="wise_profile_id" value="<?= e($wise_pid) ?>" placeholder="ex: 1234567">
+      <div class="hint">Pegue em wise.com → conta. Personal vs Business — use o da conta que recebe pagamentos.</div>
+    </div>
+    <?php if ($tem_wkey && $wise_pid): ?>
+      <a href="<?= e(APP_BASE_URL) ?>/wise_sync.php" class="btn btn-secondary block mt-2">🔄 Sincronizar pagamentos do Wise →</a>
+    <?php endif; ?>
   </div>
 
   <div class="card">
