@@ -284,7 +284,7 @@ $role_label = [
   <div class="card">
     <p><strong>WiseTag:</strong> obrigatório pra receber pagamento. <strong>Você edita em <em>Perfil</em></strong> (campos WiseTag/CPF/País). Se estiver vazio, aparece alerta vermelho avisando.</p>
     <p><strong>📊 Capacidade mensal:</strong> também no <em>Perfil</em>, abaixo dos dados pessoais. Informe quantos Criativos, Pacotes POSTAGEM e Sites/Projetos você absorve por mês. Sistema usa pra mostrar 🟢/🔴 quando admin tentar te atribuir um cliente. <strong>Mantenha atualizado.</strong></p>
-    <p><strong>Aceitando clientes:</strong> peça pro admin desmarcar quando você estiver cheio — sistema vai avisar antes de te atribuir novos clientes.</p>
+    <p><strong>🟢/🔴 Aceitando novos clientes:</strong> checkbox no <em>Perfil</em>. Marque quando estiver com capacidade, desmarque quando estiver no limite. Sistema avisa o admin com alerta antes de tentar te atribuir novo cliente — admin pode forçar a exceção se quiser.</p>
     <p><strong>🔐 2FA + backup codes:</strong> ative em <em>Minha conta → Segurança</em>. Os 8 backup codes te salvam se perder o celular — salva eles em local seguro.</p>
   </div>
 

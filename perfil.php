@@ -6,7 +6,7 @@ $u = require_login();
 $db = db();
 $flash = null;
 
-// Funcionários e admins podem editar wisetag/cpf/país do próprio perfil
+// Funcionários e admins podem editar wisetag/cpf/país/aceitando_clientes do próprio perfil
 $pode_editar_wisetag = in_array($u['role'], ['funcionario','admin','sadmin'], true);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -40,6 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $wisetag = $pode_editar_wisetag ? trim((string)($_POST['wisetag'] ?? '')) : null;
     $cpf = $pode_editar_wisetag ? trim((string)($_POST['cpf'] ?? '')) : null;
     $pais = $pode_editar_wisetag ? trim((string)($_POST['pais'] ?? '')) : null;
+    $aceitando = $pode_editar_wisetag ? (isset($_POST['aceitando_clientes']) ? 1 : 0) : null;
     if ($nome === '') {
         $flash = ['err','Nome obrigatório.'];
     } elseif ($senha !== '' && strlen($senha) < 8) {
@@ -48,11 +49,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // UPDATE adapta colunas conforme persona
         if ($pode_editar_wisetag) {
             if ($senha !== '') {
-                $stmt = $db->prepare('UPDATE usuarios SET nome=?, senha_hash=?, wisetag=?, cpf=?, pais=? WHERE id=?');
-                $stmt->execute([$nome, password_hash($senha, PASSWORD_DEFAULT), $wisetag ?: null, $cpf ?: null, $pais ?: null, $u['id']]);
+                $stmt = $db->prepare('UPDATE usuarios SET nome=?, senha_hash=?, wisetag=?, cpf=?, pais=?, aceitando_clientes=? WHERE id=?');
+                $stmt->execute([$nome, password_hash($senha, PASSWORD_DEFAULT), $wisetag ?: null, $cpf ?: null, $pais ?: null, $aceitando, $u['id']]);
             } else {
-                $stmt = $db->prepare('UPDATE usuarios SET nome=?, wisetag=?, cpf=?, pais=? WHERE id=?');
-                $stmt->execute([$nome, $wisetag ?: null, $cpf ?: null, $pais ?: null, $u['id']]);
+                $stmt = $db->prepare('UPDATE usuarios SET nome=?, wisetag=?, cpf=?, pais=?, aceitando_clientes=? WHERE id=?');
+                $stmt->execute([$nome, $wisetag ?: null, $cpf ?: null, $pais ?: null, $aceitando, $u['id']]);
             }
         } else {
             if ($senha !== '') {
@@ -100,6 +101,13 @@ require __DIR__ . '/includes/header.php';
     <div class="field">
       <label>País (opcional)</label>
       <input name="pais" value="<?= e($u['pais'] ?? '') ?>" placeholder="Brasil">
+    </div>
+    <div class="field">
+      <label class="check" style="font-weight:600;">
+        <input type="checkbox" name="aceitando_clientes" value="1" <?= !empty($u['aceitando_clientes']) ? 'checked' : '' ?>>
+        <?= !empty($u['aceitando_clientes']) ? '🟢' : '🔴' ?> Aceitando novos clientes
+      </label>
+      <div class="hint">Desmarque quando estiver no limite — admin vai ver alerta antes de te atribuir cliente novo.</div>
     </div>
   <?php endif; ?>
 
