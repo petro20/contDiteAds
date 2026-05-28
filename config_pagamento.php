@@ -181,9 +181,12 @@ require __DIR__ . '/includes/header.php';
   </div>
 
   <div class="card">
-    <div class="title">🌍 Wise — Importar pagamentos via CSV</div>
-    <p class="muted" style="font-size:13px;">Sincronize pagamentos recebidos no Wise importando o CSV do extrato. <strong>Mais simples e confiável que API</strong> (a API da Wise exige autenticação reforçada por PSD2 e bloqueia frequentemente).</p>
-    <a href="<?= e(APP_BASE_URL) ?>/wise_sync.php" class="btn btn-secondary block">📤 Abrir importação CSV do Wise</a>
+    <div class="title">🌍 Wise — Sincronização automática</div>
+    <p class="muted" style="font-size:13px;">2 opções para receber pagamentos automaticamente no sistema:</p>
+    <a href="<?= e(APP_BASE_URL) ?>/wise_eventos.php" class="btn btn-brand block">🪝 Webhook em tempo real (recomendado)</a>
+    <div class="hint">Configure 1 vez no painel Wise e pagamentos casam automaticamente assim que chegam.</div>
+    <a href="<?= e(APP_BASE_URL) ?>/wise_sync.php" class="btn btn-secondary block mt-2">📤 Upload de CSV (manual)</a>
+    <div class="hint">Alternativa: baixa o extrato do Wise e sobe aqui.</div>
   </div>
 
   <div class="card">
