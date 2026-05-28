@@ -38,8 +38,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $wise  = trim((string)($_POST['wise_link']   ?? ''));
     $instr = trim((string)($_POST['instrucoes']  ?? ''));
     $api_ia = trim((string)($_POST['anthropic_api_key'] ?? ''));
-    $wise_key = trim((string)($_POST['wise_api_key']   ?? ''));
-    $wise_pid = trim((string)($_POST['wise_profile_id'] ?? ''));
 
     if ($wise && !preg_match('~^https?://~i', $wise)) {
         $flash = ['err', 'O link do Wise precisa começar com http:// ou https://'];
@@ -50,12 +48,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Só atualiza se foi alterado (preserva valor se admin não preencher pra evitar limpar)
         if ($api_ia !== '' && $api_ia !== '••••••••') {
             config_set($db, 'anthropic_api_key', $api_ia);
-        }
-        if ($wise_key !== '' && $wise_key !== '••••••••') {
-            config_set($db, 'wise_api_key', $wise_key);
-        }
-        if ($wise_pid !== '') {
-            config_set($db, 'wise_profile_id', $wise_pid);
         }
 
         // Upload do QR code do Zelle
@@ -189,46 +181,9 @@ require __DIR__ . '/includes/header.php';
   </div>
 
   <div class="card">
-    <div class="title">🔄 Wise API (sincronizar pagamentos)</div>
-    <p class="muted" style="font-size:13px;">Habilita o botão "Sincronizar Wise" que busca créditos recebidos e tenta casar com cobranças abertas automaticamente. Pegue uma chave em <a href="https://wise.com/settings/api-tokens" target="_blank" rel="noopener" style="color:var(--c-primary-2);">wise.com → Settings → API tokens</a>.</p>
-    <?php $tem_wkey = (bool)config_get($db, 'wise_api_key'); $wise_pid = config_get($db, 'wise_profile_id'); ?>
-    <div class="field">
-      <label>API token</label>
-      <input type="password" name="wise_api_key" value="<?= $tem_wkey ? '••••••••' : '' ?>" placeholder="cole o token aqui" autocomplete="off">
-      <div class="hint"><?= $tem_wkey ? '✓ Token configurado.' : 'Sem token, a sincronização não funciona.' ?></div>
-    </div>
-    <div class="field">
-      <label>Profile ID (numérico)</label>
-      <div style="display:flex; gap:6px;">
-        <input type="number" name="wise_profile_id" id="wise_pid_input" value="<?= e($wise_pid) ?>" placeholder="ex: 1234567" style="flex:1;">
-        <?php if ($tem_wkey): ?>
-          <button type="button" class="btn btn-ghost small" onclick="detectarProfile()" title="Detectar automaticamente">🔍 Detectar</button>
-        <?php endif; ?>
-      </div>
-      <div id="wise_pid_result" class="hint" style="margin-top:6px;"></div>
-      <div class="hint">Salve o token primeiro, depois clique 🔍 Detectar pra ver os profiles disponíveis.</div>
-    </div>
-    <?php if ($tem_wkey): ?>
-    <script>
-    async function detectarProfile() {
-      const box = document.getElementById('wise_pid_result');
-      box.innerHTML = 'Consultando Wise...';
-      try {
-        const r = await fetch('<?= e(APP_BASE_URL) ?>/wise_detectar.php');
-        const d = await r.json();
-        if (!d.ok) { box.innerHTML = '<span style="color:var(--c-danger);">' + (d.error || 'Erro') + '</span>'; return; }
-        if (!d.profiles.length) { box.innerHTML = 'Nenhum profile encontrado.'; return; }
-        box.innerHTML = '<strong>Clique no profile que recebe pagamentos:</strong><br>' +
-          d.profiles.map(p => `<button type="button" class="btn btn-ghost small mt-2" onclick="document.getElementById('wise_pid_input').value=${p.id};this.parentElement.innerHTML='✓ ID ${p.id} (${p.type}) selecionado. Clique Salvar.'">${p.type} · ${p.nome} · ID ${p.id}</button>`).join(' ');
-      } catch (e) {
-        box.innerHTML = '<span style="color:var(--c-danger);">Erro: ' + e.message + '</span>';
-      }
-    }
-    </script>
-    <?php endif; ?>
-    <?php if ($tem_wkey && $wise_pid): ?>
-      <a href="<?= e(APP_BASE_URL) ?>/wise_sync.php" class="btn btn-secondary block mt-2">🔄 Sincronizar pagamentos do Wise →</a>
-    <?php endif; ?>
+    <div class="title">🌍 Wise — Importar pagamentos via CSV</div>
+    <p class="muted" style="font-size:13px;">Sincronize pagamentos recebidos no Wise importando o CSV do extrato. <strong>Mais simples e confiável que API</strong> (a API da Wise exige autenticação reforçada por PSD2 e bloqueia frequentemente).</p>
+    <a href="<?= e(APP_BASE_URL) ?>/wise_sync.php" class="btn btn-secondary block">📤 Abrir importação CSV do Wise</a>
   </div>
 
   <div class="card">
