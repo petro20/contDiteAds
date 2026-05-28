@@ -104,8 +104,7 @@ if (!empty($_SESSION['backup_codes_mostrar'])):
       <strong>Estes códigos só serão mostrados UMA vez.</strong> Imprima, anote, ou salve num gerenciador de senhas (1Password, Bitwarden).
       Cada código serve pra UM login se você perder acesso ao app autenticador.
     </div>
-    <pre style="background:var(--bg-input); padding:16px; border-radius:8px; font-family:monospace; font-size:16px; line-height:1.8; margin-top:var(--s-3); text-align:center;"><?php foreach ($codigos_mostrar as $c): ?><?= e($c) ?>
-<?php endforeach; ?></pre>
+    <pre style="background:var(--bg-input); padding:16px; border-radius:8px; font-family:monospace; font-size:16px; line-height:1.8; margin-top:var(--s-3); text-align:center; white-space:pre-line;"><?= e(implode("\n", $codigos_mostrar)) ?></pre>
     <button type="button" class="btn small block" onclick="navigator.clipboard.writeText(`<?= e(implode("\n", $codigos_mostrar)) ?>`).then(()=>{this.innerHTML='✅ Copiado!'})">📋 Copiar todos</button>
   </div>
 <?php endif; ?>
