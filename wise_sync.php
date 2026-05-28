@@ -32,6 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['op'] ?? '') === 'confirmar
 // --- Processar upload de CSV ---
 $transacoes = [];
 $erro_csv = null;
+$debug_csv = null;
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['op'] ?? '') === 'upload_csv') {
     csrf_check();
     if (empty($_FILES['csv']['tmp_name']) || $_FILES['csv']['error'] !== UPLOAD_ERR_OK) {
@@ -41,49 +42,94 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['op'] ?? '') === 'upload_cs
         if (!$h) {
             $erro_csv = 'Não consegui abrir o arquivo.';
         } else {
-            // Detecta separador (Wise usa ; em alguns países, , em outros)
             $primeira = fgets($h);
+            // Remove BOM se houver
+            $primeira = preg_replace('/^\xEF\xBB\xBF/', '', $primeira);
             $sep = (substr_count($primeira, ';') > substr_count($primeira, ',')) ? ';' : ',';
             rewind($h);
+            // Lê e remove BOM da primeira célula
             $header = fgetcsv($h, 0, $sep);
-            // Mapeia colunas comuns do CSV Wise (em PT e EN)
+            if ($header && isset($header[0])) $header[0] = preg_replace('/^\xEF\xBB\xBF/', '', $header[0]);
+
+            // Mapeia colunas (mais agressivo, várias variações)
             $col = [];
             foreach ($header as $i => $h_nome) {
                 $hn = strtolower(trim((string)$h_nome));
-                if (preg_match('/(date|data)/', $hn))         $col['data'] = $i;
-                elseif (preg_match('/(amount|valor)/', $hn) && !isset($col['valor']))  $col['valor'] = $i;
-                elseif (preg_match('/(currency|moeda)/', $hn) && !isset($col['moeda']))  $col['moeda'] = $i;
-                elseif (preg_match('/(direction|tipo|type)/', $hn))    $col['direction'] = $i;
-                elseif (preg_match('/(reference|referência|referencia)/', $hn)) $col['ref'] = $i;
-                elseif (preg_match('/(source name|payer|remetente|sender|from name)/', $hn)) $col['payer'] = $i;
-                elseif (preg_match('/(description|descricao|descrição)/', $hn) && !isset($col['desc'])) $col['desc'] = $i;
+                // Valor: amount, target amount, source amount, valor
+                if (preg_match('/^(target |source )?(amount|valor)/', $hn) && !isset($col['valor']))  $col['valor'] = $i;
+                // Moeda
+                elseif (preg_match('/^(target |source )?(currency|moeda)/', $hn) && !isset($col['moeda']))  $col['moeda'] = $i;
+                // Data: date, created on, completed on, data
+                elseif (preg_match('/(^date|created|completed|finished|data|paid)/', $hn) && !isset($col['data'])) $col['data'] = $i;
+                elseif (preg_match('/(direction|tipo|type)/', $hn) && !isset($col['direction'])) $col['direction'] = $i;
+                elseif (preg_match('/(reference|referência|referencia|payment ref)/', $hn) && !isset($col['ref'])) $col['ref'] = $i;
+                elseif (preg_match('/(source name|payer|remetente|sender|from name|de\b)/', $hn) && !isset($col['payer'])) $col['payer'] = $i;
+                elseif (preg_match('/(description|descrição|descricao|details)/', $hn) && !isset($col['desc'])) $col['desc'] = $i;
+                elseif (preg_match('/^id$|transferwise id|transaction id/', $hn) && !isset($col['id'])) $col['id'] = $i;
             }
+
+            $total_linhas = 0;
+            $rejeitadas_dir = 0;
+            $rejeitadas_valor = 0;
+            $primeiras_linhas = [];
             while (($row = fgetcsv($h, 0, $sep)) !== false) {
-                $valor_raw = $row[$col['valor']] ?? '0';
-                $valor = (float)str_replace([',', '.'], ['.', ''], $valor_raw); // best-effort número
-                // Aceita +1234.56 (Wise às vezes prefixa)
-                $valor = abs($valor);
-                // Direção: se tem coluna 'direction' e for OUT/saída, ignora
+                $total_linhas++;
+                if ($total_linhas <= 3) $primeiras_linhas[] = $row;
+
+                if (!isset($col['valor'])) continue;
+                $valor_raw = $row[$col['valor']] ?? '';
+                // Normaliza número: "1,234.56" → "1234.56" ou "1.234,56" → "1234.56"
+                $v_clean = (string)$valor_raw;
+                $tem_virgula = strpos($v_clean, ',');
+                $tem_ponto = strpos($v_clean, '.');
+                if ($tem_virgula !== false && $tem_ponto !== false) {
+                    // Decide qual é decimal pela posição (último é decimal)
+                    if ($tem_virgula > $tem_ponto) { $v_clean = str_replace('.', '', $v_clean); $v_clean = str_replace(',', '.', $v_clean); }
+                    else                            { $v_clean = str_replace(',', '', $v_clean); }
+                } elseif ($tem_virgula !== false) {
+                    $v_clean = str_replace(',', '.', $v_clean);
+                }
+                $valor_signed = (float)$v_clean;
+                $valor = abs($valor_signed);
+
+                // Direção: usa coluna se houver
+                $is_credito = true;
                 if (isset($col['direction'])) {
                     $dir = strtoupper(trim((string)($row[$col['direction']] ?? '')));
-                    if (in_array($dir, ['OUT','OUTGOING','SAIDA','DEBIT'], true)) continue;
+                    if (in_array($dir, ['OUT','OUTGOING','SAIDA','DEBIT','-'], true)) $is_credito = false;
+                    elseif (in_array($dir, ['IN','INCOMING','ENTRADA','CREDIT','+'], true)) $is_credito = true;
                 } else {
-                    // Sem coluna de direção: pega só valores positivos (entradas)
-                    $v_raw = trim((string)($row[$col['valor']] ?? ''));
-                    if (strpos($v_raw, '-') === 0) continue;
+                    // Pega sinal do valor: positivo = crédito
+                    $is_credito = $valor_signed > 0 || strpos(trim((string)$valor_raw), '-') !== 0;
+                    if (strpos(trim((string)$valor_raw), '-') === 0) $is_credito = false;
                 }
-                if ($valor <= 0) continue;
+                if (!$is_credito) { $rejeitadas_dir++; continue; }
+                if ($valor <= 0) { $rejeitadas_valor++; continue; }
+
                 $transacoes[] = [
                     'data'   => substr((string)($row[$col['data']] ?? ''), 0, 10),
                     'valor'  => $valor,
                     'moeda'  => strtoupper(trim((string)($row[$col['moeda']] ?? ''))) ?: 'USD',
-                    'ref'    => trim((string)($row[$col['ref']]   ?? '')),
+                    'ref'    => trim((string)($row[$col['ref']]   ?? '')) ?: trim((string)($row[$col['id']]  ?? '')),
                     'payer'  => trim((string)($row[$col['payer']] ?? '')),
                     'desc'   => trim((string)($row[$col['desc']]  ?? '')),
                 ];
             }
             fclose($h);
-            if (!$transacoes) $erro_csv = 'Nenhum crédito encontrado no CSV. Verifique se exportou o extrato correto.';
+
+            // Sempre passa info de debug
+            $debug_csv = [
+                'separador' => $sep,
+                'header'    => $header,
+                'colunas_mapeadas' => $col,
+                'total_linhas' => $total_linhas,
+                'rejeitadas_direcao' => $rejeitadas_dir,
+                'rejeitadas_valor'   => $rejeitadas_valor,
+                'aceitas' => count($transacoes),
+                'primeiras_linhas' => $primeiras_linhas,
+            ];
+
+            if (!$transacoes && !$erro_csv) $erro_csv = 'Nenhum crédito encontrado. Veja o debug abaixo pra entender o que aconteceu com seu CSV.';
         }
     }
 }
@@ -138,6 +184,34 @@ require __DIR__ . '/includes/header.php';
 
 <?php if ($flash): ?><div class="flash <?= e($flash[0]) ?>"><?= e($flash[1]) ?></div><?php endif; ?>
 <?php if ($erro_csv): ?><div class="flash err"><?= e($erro_csv) ?></div><?php endif; ?>
+
+<?php if ($debug_csv): ?>
+  <details class="card" style="border-color:var(--c-orange);">
+    <summary style="cursor:pointer; padding:8px 0; color:var(--c-orange);"><strong>🔍 Debug do CSV</strong> (colunas detectadas, linhas processadas)</summary>
+    <div style="font-size:12px; margin-top:8px;">
+      <p><strong>Separador detectado:</strong> <code>"<?= e($debug_csv['separador']) ?>"</code></p>
+      <p><strong>Total de linhas lidas:</strong> <?= (int)$debug_csv['total_linhas'] ?> ·
+         <strong>Aceitas:</strong> <?= (int)$debug_csv['aceitas'] ?> ·
+         <strong>Rejeitadas (saída):</strong> <?= (int)$debug_csv['rejeitadas_direcao'] ?> ·
+         <strong>Rejeitadas (valor zero):</strong> <?= (int)$debug_csv['rejeitadas_valor'] ?></p>
+      <p><strong>Cabeçalhos do CSV:</strong></p>
+      <code style="display:block; background:var(--bg-input); padding:8px; border-radius:4px; word-break:break-all; font-size:11px;">
+        <?= e(implode(' | ', $debug_csv['header'])) ?>
+      </code>
+      <p style="margin-top:8px;"><strong>Colunas mapeadas:</strong></p>
+      <pre style="background:var(--bg-input); padding:8px; border-radius:4px; font-size:11px; overflow-x:auto;"><?= e(print_r($debug_csv['colunas_mapeadas'], true)) ?></pre>
+      <?php if ($debug_csv['primeiras_linhas']): ?>
+        <p style="margin-top:8px;"><strong>Primeiras linhas do CSV (pra você verificar):</strong></p>
+        <?php foreach ($debug_csv['primeiras_linhas'] as $idx => $linha): ?>
+          <code style="display:block; background:var(--bg-input); padding:8px; border-radius:4px; word-break:break-all; font-size:11px; margin-bottom:4px;">
+            #<?= $idx + 1 ?>: <?= e(implode(' | ', array_slice($linha, 0, 12))) ?>
+          </code>
+        <?php endforeach; ?>
+      <?php endif; ?>
+      <p class="hint" style="margin-top:8px;">Se as colunas não foram identificadas corretamente, me envie esse debug pra eu ajustar o parser.</p>
+    </div>
+  </details>
+<?php endif; ?>
 
 <details class="card">
   <summary class="muted" style="cursor:pointer; padding:8px 0;"><strong>📋 Como exportar o CSV do Wise</strong></summary>
