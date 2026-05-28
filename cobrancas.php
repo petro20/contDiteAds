@@ -181,6 +181,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $db->prepare('UPDATE cobrancas SET valor_total = GREATEST(0, valor_total - ?) WHERE id = ?');
             $stmt->execute([$sub, $cid]);
             audit_log('cobranca.item_removido', 'cobranca_itens', $iid);
+            // Reavalia status: se valor_total zerou, vira 'cancelada'.
+            atualiza_status_cobranca($db, $cid);
         }
         header('Location: ' . APP_BASE_URL . '/cobrancas.php?id=' . $cid); exit;
     }

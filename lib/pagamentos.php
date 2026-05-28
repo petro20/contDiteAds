@@ -43,7 +43,11 @@ function atualiza_status_cobranca(PDO $db, int $cobranca_id): void {
         $tem_pendente = false;
     }
 
-    if ($pago_confirmado >= (float)$c['valor_total']) {
+    if ((float)$c['valor_total'] <= 0) {
+        // Cobrança zerada (sem itens) — cancela automaticamente.
+        // Evita ficar como "aberta" indefinidamente e poluir painel/lista de vencidas.
+        $novo = 'cancelada';
+    } elseif ($pago_confirmado >= (float)$c['valor_total']) {
         $novo = 'paga';
     } elseif ($tem_pendente) {
         $novo = 'em_analise';
