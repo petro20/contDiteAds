@@ -35,11 +35,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // Save principal — só roda se o usuário clicou em "Salvar" (não em outros botões)
     $zelle = trim((string)($_POST['zelle_email'] ?? ''));
+    $wise  = trim((string)($_POST['wise_link']   ?? ''));
     $instr = trim((string)($_POST['instrucoes']  ?? ''));
     $api_ia = trim((string)($_POST['anthropic_api_key'] ?? ''));
 
-    {
+    if ($wise && !preg_match('~^https?://~i', $wise)) {
+        $flash = ['err', 'O link do Wise precisa começar com http:// ou https://'];
+    } else {
         config_set($db, 'pagamento_zelle_email', $zelle);
+        config_set($db, 'pagamento_wise_link',   $wise);
         config_set($db, 'pagamento_instrucoes',  $instr);
         // Só atualiza se foi alterado (preserva valor se admin não preencher pra evitar limpar)
         if ($api_ia !== '' && $api_ia !== '••••••••') {
@@ -160,6 +164,15 @@ require __DIR__ . '/includes/header.php';
   </div>
 
   <div class="card">
+    <div class="title">🌍 Wise — Link público de pagamento</div>
+    <div class="field">
+      <label>URL do Wisetag / Quick Pay</label>
+      <input type="url" name="wise_link" value="<?= e($cfg['wise_link'] ?? '') ?>" placeholder="https://wise.com/pay/business/diteadsteams">
+      <div class="hint">Link reusável da sua conta business. Cliente clica, <strong>preenche o valor da cobrança</strong> e paga. O webhook detecta o pagamento e casa com a cobrança automaticamente. Pegue em "Crie um link de pagamento" na página inicial do Wise.</div>
+    </div>
+  </div>
+
+  <div class="card">
     <div class="title">📝 Instruções adicionais</div>
     <div class="field">
       <label>Texto extra (opcional)</label>
@@ -196,6 +209,7 @@ require __DIR__ . '/includes/header.php';
   <ul style="padding-left:20px; color:var(--txt-2);">
     <li><code>{zelle_email}</code> → email cadastrado no Zelle</li>
     <li><code>{zelle_qr_url}</code> → URL pública da imagem do QR Code</li>
+    <li><code>{link_wise}</code> → link público Quick Pay do Wise</li>
     <li><code>{instrucoes_pagamento}</code> → texto extra</li>
   </ul>
 </div>

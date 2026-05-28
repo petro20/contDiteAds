@@ -526,7 +526,7 @@ if ($id) {
     if (in_array($cob['status'], ['aberta','em_analise'], true)):
         require_once __DIR__ . '/lib/configuracoes.php';
         $cfg_pag = config_pagamento($db);
-        $tem_metodo = (bool)$cfg_pag['zelle_email'];
+        $tem_metodo = $cfg_pag['zelle_email'] || $cfg_pag['wise_link'];
         if ($tem_metodo):
     ?>
       <h2 class="mt-5">💳 Formas de pagamento</h2>
@@ -562,6 +562,25 @@ if ($id) {
               <li>Digite o valor: <strong><?= e(money_fmt((float)$saldo, $cob['moeda'])) ?></strong></li>
               <li>Confirme e envie</li>
               <li>Envie o comprovante pelo botão no fim desta página</li>
+            </ol>
+          </details>
+        </div>
+      <?php endif; ?>
+
+      <?php if ($cfg_pag['wise_link']): ?>
+        <div class="card">
+          <div class="title">🌍 Pagar via Wise</div>
+          <div class="desc" style="margin-bottom:var(--s-3);">Internacional, em várias moedas, com taxa baixa. Clique no botão pra abrir a página de pagamento da Dite Ads no Wise — <strong>preencha o valor <?= e(money_fmt((float)$saldo, $cob['moeda'])) ?></strong> e siga as instruções.</div>
+          <a class="btn btn-brand block" href="<?= e($cfg_pag['wise_link']) ?>" target="_blank" rel="noopener">🌍 Abrir Wise ↗</a>
+          <details style="margin-top:var(--s-3);">
+            <summary style="cursor:pointer; color:var(--c-primary-2); font-size:13px;">Como pagar com Wise passo a passo</summary>
+            <ol style="padding-left:20px; color:var(--txt-2); font-size:13px; margin-top:var(--s-2);">
+              <li>Clique no botão "Abrir Wise" acima</li>
+              <li>Faça login (ou crie conta gratuita)</li>
+              <li>Digite o valor: <strong><?= e(money_fmt((float)$saldo, $cob['moeda'])) ?></strong> (importante: valor exato pra cobrança casar automaticamente)</li>
+              <li>Escolha o método (cartão, débito, transferência)</li>
+              <li>Confirme — o pagamento cai direto na conta da Dite Ads</li>
+              <li>O sistema detecta automaticamente; não precisa enviar comprovante</li>
             </ol>
           </details>
         </div>

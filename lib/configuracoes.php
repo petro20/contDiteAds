@@ -27,6 +27,7 @@ function config_pagamento(PDO $db): array {
         'zelle_email' => config_get($db, 'pagamento_zelle_email'),
         'zelle_qr'    => $qr,
         'zelle_qr_url'=> $qr ? (APP_BASE_URL . '/uploads/' . $qr) : '',
+        'wise_link'   => config_get($db, 'pagamento_wise_link'),
         'instrucoes'  => config_get($db, 'pagamento_instrucoes'),
     ];
 }
