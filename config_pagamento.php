@@ -35,15 +35,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // Save principal — só roda se o usuário clicou em "Salvar" (não em outros botões)
     $zelle = trim((string)($_POST['zelle_email'] ?? ''));
-    $wise  = trim((string)($_POST['wise_link']   ?? ''));
     $instr = trim((string)($_POST['instrucoes']  ?? ''));
     $api_ia = trim((string)($_POST['anthropic_api_key'] ?? ''));
 
-    if ($wise && !preg_match('~^https?://~i', $wise)) {
-        $flash = ['err', 'O link do Wise precisa começar com http:// ou https://'];
-    } else {
+    {
         config_set($db, 'pagamento_zelle_email', $zelle);
-        config_set($db, 'pagamento_wise_link',   $wise);
         config_set($db, 'pagamento_instrucoes',  $instr);
         // Só atualiza se foi alterado (preserva valor se admin não preencher pra evitar limpar)
         if ($api_ia !== '' && $api_ia !== '••••••••') {
@@ -164,15 +160,6 @@ require __DIR__ . '/includes/header.php';
   </div>
 
   <div class="card">
-    <div class="title">🌍 Wise</div>
-    <div class="field">
-      <label>Link público de pagamento</label>
-      <input type="url" name="wise_link" value="<?= e($cfg['wise_link']) ?>" placeholder="https://wise.com/pay/me/...">
-      <div class="hint">O link gerado em "Receber → Compartilhar página de pagamento" no Wise.</div>
-    </div>
-  </div>
-
-  <div class="card">
     <div class="title">📝 Instruções adicionais</div>
     <div class="field">
       <label>Texto extra (opcional)</label>
@@ -209,7 +196,6 @@ require __DIR__ . '/includes/header.php';
   <ul style="padding-left:20px; color:var(--txt-2);">
     <li><code>{zelle_email}</code> → email cadastrado no Zelle</li>
     <li><code>{zelle_qr_url}</code> → URL pública da imagem do QR Code</li>
-    <li><code>{link_wise}</code> → link público do Wise</li>
     <li><code>{instrucoes_pagamento}</code> → texto extra</li>
   </ul>
 </div>

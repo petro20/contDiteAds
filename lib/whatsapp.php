@@ -85,7 +85,6 @@ function wa_vars_cobranca(PDO $db, int $cobranca_id): array {
             return $email ? str_replace('@', "\u{200B}@", $email) : '';
         })(),
         'zelle_qr_url'        => (function() use ($db) { require_once __DIR__ . '/configuracoes.php'; $q = config_get($db, 'pagamento_zelle_qr'); return $q ? (APP_BASE_URL . '/uploads/' . $q) : ''; })(),
-        'link_wise'           => (function() use ($db) { require_once __DIR__ . '/configuracoes.php'; return config_get($db, 'pagamento_wise_link'); })(),
         'instrucoes_pagamento'=> (function() use ($db) { require_once __DIR__ . '/configuracoes.php'; return config_get($db, 'pagamento_instrucoes'); })(),
         '_telefone'       => $cob['telefone'] ?? '',
     ];

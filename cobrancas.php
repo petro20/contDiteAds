@@ -526,7 +526,7 @@ if ($id) {
     if (in_array($cob['status'], ['aberta','em_analise'], true)):
         require_once __DIR__ . '/lib/configuracoes.php';
         $cfg_pag = config_pagamento($db);
-        $tem_metodo = $cfg_pag['zelle_email'] || $cfg_pag['wise_link'];
+        $tem_metodo = (bool)$cfg_pag['zelle_email'];
         if ($tem_metodo):
     ?>
       <h2 class="mt-5">💳 Formas de pagamento</h2>
@@ -561,25 +561,6 @@ if ($id) {
               <li>Adicione o destinatário usando o QR Code ou o email acima</li>
               <li>Digite o valor: <strong><?= e(money_fmt((float)$saldo, $cob['moeda'])) ?></strong></li>
               <li>Confirme e envie</li>
-              <li>Envie o comprovante pelo botão no fim desta página</li>
-            </ol>
-          </details>
-        </div>
-      <?php endif; ?>
-
-      <?php if ($cfg_pag['wise_link']): ?>
-        <div class="card">
-          <div class="title">🌍 Pagar via Wise</div>
-          <div class="desc" style="margin-bottom:var(--s-3);">O Wise aceita pagamento internacional em várias moedas, com taxa mais baixa. Clique no botão pra abrir a página de pagamento.</div>
-          <a class="btn btn-brand block" href="<?= e($cfg_pag['wise_link']) ?>" target="_blank" rel="noopener">🌍 Abrir Wise (<?= e(money_fmt((float)$saldo, $cob['moeda'])) ?>) ↗</a>
-          <details style="margin-top:var(--s-3);">
-            <summary style="cursor:pointer; color:var(--c-primary-2); font-size:13px;">Como pagar com Wise passo a passo</summary>
-            <ol style="padding-left:20px; color:var(--txt-2); font-size:13px; margin-top:var(--s-2);">
-              <li>Clique no botão "Abrir Wise" acima</li>
-              <li>Faça login (ou crie conta gratuita)</li>
-              <li>Digite o valor: <strong><?= e(money_fmt((float)$saldo, $cob['moeda'])) ?></strong></li>
-              <li>Escolha o método de pagamento (cartão, débito, transferência)</li>
-              <li>Confirme</li>
               <li>Envie o comprovante pelo botão no fim desta página</li>
             </ol>
           </details>
