@@ -51,21 +51,58 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['op'] ?? '') === 'upload_cs
             $header = fgetcsv($h, 0, $sep);
             if ($header && isset($header[0])) $header[0] = preg_replace('/^\xEF\xBB\xBF/', '', $header[0]);
 
-            // Mapeia colunas (mais agressivo, várias variações)
+            // Mapeia colunas — passa 1: matches EXATOS (PT-BR Wise atual) com prioridade alta
             $col = [];
+            $exact_map = [
+                'direção'         => 'direction',
+                'direcao'         => 'direction',
+                'direction'       => 'direction',
+                'concluída em'    => 'data',
+                'concluida em'    => 'data',
+                'completed on'    => 'data',
+                'finished date'   => 'data',
+                'criada em'       => 'data_fallback',
+                'created on'      => 'data_fallback',
+                'valor de destino (tarifas inclusas)' => 'valor',
+                'target amount (after fees)'          => 'valor',
+                'moeda de destino'    => 'moeda',
+                'target currency'     => 'moeda',
+                'nome de origem'      => 'payer',
+                'source name'         => 'payer',
+                'sender name'         => 'payer',
+                'referência'          => 'ref',
+                'referencia'          => 'ref',
+                'reference'           => 'ref',
+                'número da transferência' => 'id',
+                'numero da transferencia' => 'id',
+                'transferwise id'     => 'id',
+                'transaction id'      => 'id',
+                'mensagem'            => 'desc',
+                'description'         => 'desc',
+                'categoria'           => 'desc_fallback',
+            ];
             foreach ($header as $i => $h_nome) {
                 $hn = strtolower(trim((string)$h_nome));
-                // Valor: amount, target amount, source amount, valor
-                if (preg_match('/^(target |source )?(amount|valor)/', $hn) && !isset($col['valor']))  $col['valor'] = $i;
-                // Moeda
-                elseif (preg_match('/^(target |source )?(currency|moeda)/', $hn) && !isset($col['moeda']))  $col['moeda'] = $i;
-                // Data: date, created on, completed on, data
-                elseif (preg_match('/(^date|created|completed|finished|data|paid)/', $hn) && !isset($col['data'])) $col['data'] = $i;
-                elseif (preg_match('/(direction|tipo|type)/', $hn) && !isset($col['direction'])) $col['direction'] = $i;
-                elseif (preg_match('/(reference|referência|referencia|payment ref)/', $hn) && !isset($col['ref'])) $col['ref'] = $i;
-                elseif (preg_match('/(source name|payer|remetente|sender|from name|de\b)/', $hn) && !isset($col['payer'])) $col['payer'] = $i;
-                elseif (preg_match('/(description|descrição|descricao|details)/', $hn) && !isset($col['desc'])) $col['desc'] = $i;
-                elseif (preg_match('/^id$|transferwise id|transaction id/', $hn) && !isset($col['id'])) $col['id'] = $i;
+                if (isset($exact_map[$hn])) {
+                    $key = $exact_map[$hn];
+                    // data_fallback / desc_fallback só preenche se ainda não houver primary
+                    if ($key === 'data_fallback') { if (!isset($col['data'])) $col['data'] = $i; }
+                    elseif ($key === 'desc_fallback') { if (!isset($col['desc'])) $col['desc'] = $i; }
+                    elseif (!isset($col[$key])) $col[$key] = $i;
+                }
+            }
+            // Passa 2: regex fallback pras colunas que NÃO foram pegas no exato
+            foreach ($header as $i => $h_nome) {
+                $hn = strtolower(trim((string)$h_nome));
+                // Evita pegar "Valor da tarifa" (fee) ou "Source amount" (sem after-fees)
+                if (preg_match('/tarifa|fee/', $hn)) continue;
+                if (!isset($col['valor']) && preg_match('/^(target |destino |source |origem )?(amount|valor)/', $hn)) $col['valor'] = $i;
+                if (!isset($col['moeda']) && preg_match('/(currency|moeda)/', $hn)) $col['moeda'] = $i;
+                if (!isset($col['data']) && preg_match('/(^date|created|completed|finished|data|paid)/', $hn)) $col['data'] = $i;
+                if (!isset($col['direction']) && preg_match('/(direction|tipo|type|direção|direcao)/', $hn)) $col['direction'] = $i;
+                if (!isset($col['ref']) && preg_match('/(reference|referência|referencia)/', $hn)) $col['ref'] = $i;
+                if (!isset($col['payer']) && preg_match('/(source name|payer|remetente|sender|nome de origem)/', $hn)) $col['payer'] = $i;
+                if (!isset($col['desc']) && preg_match('/(description|descrição|descricao|details|mensagem)/', $hn)) $col['desc'] = $i;
             }
 
             $total_linhas = 0;
