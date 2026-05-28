@@ -12,6 +12,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         config_set($db, 'wise_skip_signature', $atual === '1' ? '0' : '1');
         header('Location: ' . APP_BASE_URL . '/wise_eventos.php'); exit;
     }
+    if (($_POST['op'] ?? '') === 'salvar_pub_key') {
+        $pem = trim((string)($_POST['pub_key'] ?? ''));
+        if ($pem === '') {
+            @unlink(__DIR__ . '/wise_public_key.pem');
+            header('Location: ' . APP_BASE_URL . '/wise_eventos.php?ok=key_removed'); exit;
+        }
+        // Valida formato PEM
+        if (!preg_match('/^-----BEGIN [A-Z ]+KEY-----/', $pem)) {
+            header('Location: ' . APP_BASE_URL . '/wise_eventos.php?err=pem_invalid'); exit;
+        }
+        $ok = @file_put_contents(__DIR__ . '/wise_public_key.pem', $pem);
+        header('Location: ' . APP_BASE_URL . '/wise_eventos.php?ok=' . ($ok?'key_saved':'key_fail')); exit;
+    }
+}
+if (isset($_GET['ok'])) {
+    $msg = match($_GET['ok']) {
+        'key_saved'   => 'Chave pública salva. Você pode religar a validação agora.',
+        'key_removed' => 'Chave pública removida.',
+        'key_fail'    => 'Erro ao salvar chave (permissão de escrita?).',
+        default       => 'OK',
+    };
+    $flash = ['ok', $msg];
+}
+if (isset($_GET['err']) && $_GET['err'] === 'pem_invalid') {
+    $flash = ['err', 'A chave deve começar com -----BEGIN PUBLIC KEY----- (formato PEM).'];
 }
 
 $skip_sig = config_get($db, 'wise_skip_signature') === '1';
@@ -43,6 +68,8 @@ require __DIR__ . '/includes/header.php';
   <p class="hint" style="margin-top:8px;">Inscreva pra eventos <code>balances#credit</code> (recebimento de pagamento).</p>
 </div>
 
+<?php if ($flash): ?><div class="flash <?= e($flash[0]) ?>"><?= e($flash[1]) ?></div><?php endif; ?>
+
 <div class="card">
   <form method="post" style="display:flex; align-items:center; gap:12px;">
     <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
@@ -53,8 +80,25 @@ require __DIR__ . '/includes/header.php';
     </span>
     <button type="submit" class="btn btn-ghost small"><?= $skip_sig ? 'Ligar' : 'Desligar (teste)' ?></button>
   </form>
-  <div class="hint">Wise envia assinatura SHA256 do payload. Em produção, mantenha LIGADA. Pra testes iniciais (sem ter cadastrado a chave pública), desligue.</div>
+  <div class="hint">Wise envia assinatura SHA256 do payload. Pra TESTES iniciais (sem chave pública), DESLIGUE. Pra PRODUÇÃO, ligue com chave pública cadastrada abaixo.</div>
 </div>
+
+<details class="card">
+  <summary style="cursor:pointer; padding:8px 0;"><strong>🔑 Chave pública RSA da Wise</strong> <?= file_exists(__DIR__ . '/wise_public_key.pem') ? '<span class="status status-paga">✓ Salva</span>' : '<span class="status status-info">não configurada</span>' ?></summary>
+  <div style="margin-top:12px;">
+    <p class="muted" style="font-size:13px;">Pegue a chave pública na documentação da Wise: <a href="https://api-docs.wise.com/api-docs/guides/webhooks/subscription-event-public-keys" target="_blank" rel="noopener" style="color:var(--c-primary-2);">api-docs.wise.com → Webhooks → Public Keys</a>.</p>
+    <p class="muted" style="font-size:13px;">Procure por <strong>"Live signing key (production)"</strong>. Copia tudo desde <code>-----BEGIN PUBLIC KEY-----</code> até <code>-----END PUBLIC KEY-----</code> e cola aqui.</p>
+    <form method="post">
+      <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
+      <input type="hidden" name="op" value="salvar_pub_key">
+      <div class="field">
+        <textarea name="pub_key" rows="10" placeholder="-----BEGIN PUBLIC KEY-----&#10;MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...&#10;-----END PUBLIC KEY-----" style="font-family:monospace; font-size:11px;"><?= e(@file_get_contents(__DIR__ . '/wise_public_key.pem') ?: '') ?></textarea>
+        <div class="hint">Deixe em branco e salve pra remover a chave.</div>
+      </div>
+      <button class="btn block" type="submit">Salvar chave pública</button>
+    </form>
+  </div>
+</details>
 
 <h2 class="mt-5">Últimos 100 eventos</h2>
 <?php if (!$eventos): ?>
