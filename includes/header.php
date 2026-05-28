@@ -16,8 +16,8 @@ $nav_active   = $nav_active   ?? '';
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0A0A0F">
 <title><?= e($page) ?> · controle e gestão Dite Ads</title>
-<link rel="icon" type="image/png" href="<?= e(APP_BASE_URL) ?>/assets/img/logo.png">
-<link rel="apple-touch-icon" href="<?= e(APP_BASE_URL) ?>/assets/img/logo.png">
+<link rel="icon" type="image/png" sizes="32x32" href="<?= e(APP_BASE_URL) ?>/assets/img/logo-32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="<?= e(APP_BASE_URL) ?>/assets/img/logo-180.png">
 <link rel="manifest" href="<?= e(APP_BASE_URL) ?>/manifest.json">
 <link rel="stylesheet" href="<?= e(APP_BASE_URL) ?>/assets/css/style.css?v=<?= e(@filemtime(__DIR__ . '/../assets/css/style.css') ?: '1') ?>">
 <script>

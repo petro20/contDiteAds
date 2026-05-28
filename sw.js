@@ -1,8 +1,12 @@
 // Service Worker básico — habilita instalação PWA e cache leve dos assets estáticos.
 // Não faz cache de páginas dinâmicas (sempre busca da rede).
-const CACHE_VER = 'diteads-v1';
+// Versão bump: força invalidação do cache antigo (era diteads-v1 com logo de 1.5MB).
+// Trocar essa string sempre que houver mudança nos assets cacheados.
+const CACHE_VER = 'diteads-v2-logo-otimizado';
 const STATIC_ASSETS = [
   '/assets/img/logo.png',
+  '/assets/img/logo-32.png',
+  '/assets/img/logo-180.png',
   '/assets/css/style.css',
 ];
 
