@@ -199,9 +199,33 @@ require __DIR__ . '/includes/header.php';
     </div>
     <div class="field">
       <label>Profile ID (numérico)</label>
-      <input type="number" name="wise_profile_id" value="<?= e($wise_pid) ?>" placeholder="ex: 1234567">
-      <div class="hint">Pegue em wise.com → conta. Personal vs Business — use o da conta que recebe pagamentos.</div>
+      <div style="display:flex; gap:6px;">
+        <input type="number" name="wise_profile_id" id="wise_pid_input" value="<?= e($wise_pid) ?>" placeholder="ex: 1234567" style="flex:1;">
+        <?php if ($tem_wkey): ?>
+          <button type="button" class="btn btn-ghost small" onclick="detectarProfile()" title="Detectar automaticamente">🔍 Detectar</button>
+        <?php endif; ?>
+      </div>
+      <div id="wise_pid_result" class="hint" style="margin-top:6px;"></div>
+      <div class="hint">Salve o token primeiro, depois clique 🔍 Detectar pra ver os profiles disponíveis.</div>
     </div>
+    <?php if ($tem_wkey): ?>
+    <script>
+    async function detectarProfile() {
+      const box = document.getElementById('wise_pid_result');
+      box.innerHTML = 'Consultando Wise...';
+      try {
+        const r = await fetch('<?= e(APP_BASE_URL) ?>/wise_detectar.php');
+        const d = await r.json();
+        if (!d.ok) { box.innerHTML = '<span style="color:var(--c-danger);">' + (d.error || 'Erro') + '</span>'; return; }
+        if (!d.profiles.length) { box.innerHTML = 'Nenhum profile encontrado.'; return; }
+        box.innerHTML = '<strong>Clique no profile que recebe pagamentos:</strong><br>' +
+          d.profiles.map(p => `<button type="button" class="btn btn-ghost small mt-2" onclick="document.getElementById('wise_pid_input').value=${p.id};this.parentElement.innerHTML='✓ ID ${p.id} (${p.type}) selecionado. Clique Salvar.'">${p.type} · ${p.nome} · ID ${p.id}</button>`).join(' ');
+      } catch (e) {
+        box.innerHTML = '<span style="color:var(--c-danger);">Erro: ' + e.message + '</span>';
+      }
+    }
+    </script>
+    <?php endif; ?>
     <?php if ($tem_wkey && $wise_pid): ?>
       <a href="<?= e(APP_BASE_URL) ?>/wise_sync.php" class="btn btn-secondary block mt-2">🔄 Sincronizar pagamentos do Wise →</a>
     <?php endif; ?>
