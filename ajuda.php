@@ -78,9 +78,10 @@ $role_label = [
 
   <h2>🧑‍💼 Equipe (3 abas)</h2>
   <div class="card">
-    <p><strong>👥 Lista:</strong> cadastra usuários (funcionário/admin/sadmin). Define WiseTag, capacidade mensal, valor USD por item.</p>
+    <p><strong>👥 Lista:</strong> cadastra usuários (funcionário/admin/sadmin). Define WiseTag, capacidade mensal, valor USD por item. <strong>Funcionário também edita o próprio WiseTag/CPF/País/capacidade/aceitando clientes</strong> no perfil dele — você só precisa criar a conta.</p>
     <p><strong>👥 Duplas:</strong> overview "Duplas configuradas" no topo + badge "👥 dupla com X" em cada card. Pra criar: edita um funcionário → "Trabalha em dupla com". Ambos veem a mesma agenda, mas pagamento vai todo pro principal.</p>
-    <p><strong>📊 Capacidade:</strong> overview de quanto cada um absorve por mês vs ocupação atual.</p>
+    <p><strong>📊 Capacidade:</strong> overview de quanto cada um absorve por mês vs ocupação atual. Funcionário declara no próprio perfil.</p>
+    <p><strong>🔴 Atribuição com aviso:</strong> ao tentar atribuir nova assinatura a funcionário marcado como "não aceitando clientes", sistema bloqueia e mostra checkbox "Sim, atribuir mesmo assim" pra confirmar exceção.</p>
     <p><strong>💵 Pagamentos:</strong> fila de itens entregues prontos pra pagar (USD). Email automático com PDF do comprovante.</p>
     <p><strong>⚠ Apagar em cascata:</strong> deleta pagamentos recebidos, entregas, capacidades. Cobranças/despesas reatribuídas a você. Trava: não apaga a si mesmo nem o último sadmin.</p>
   </div>
@@ -203,12 +204,14 @@ $role_label = [
   <div class="card">
     <p><strong>+ Novo</strong> ou <strong>Convidar</strong>. Detalhe do cliente tem assinaturas, cobranças, dados.</p>
     <p>Ao trocar moeda do cliente, valores das assinaturas se convertem automaticamente.</p>
+    <p><strong>Apagar:</strong> bloqueado se há pagamentos confirmados. Use "Desativar" pra preservar histórico.</p>
   </div>
 
   <h2>📦 Catálogo</h2>
   <div class="card">
     <p>USD é moeda mestre — só preencha USD, BRL/EUR são calculados.</p>
     <p><strong>📊 Simulador de preço</strong> com IA pra te ajudar a precificar serviços novos.</p>
+    <p><strong>⚠ Variante IA:</strong> se marcar "tem variante com IA", o preço IA em USD vira obrigatório (sistema bloqueia o save sem ele).</p>
   </div>
 
   <h2>📊 Painel financeiro</h2>
@@ -226,6 +229,7 @@ $role_label = [
   <h2>🧑‍💼 Equipe</h2>
   <div class="card">
     <p><strong>💵 Pagamentos:</strong> fila pra liberar pagamento em USD aos funcionários. Email automático com PDF.</p>
+    <p><strong>Funcionário se autorregula:</strong> ele edita capacidade mensal e flag "aceitando novos clientes" no próprio perfil. Ao tentar atribuir cliente a alguém marcado 🔴, sistema bloqueia e pede confirmação explícita.</p>
   </div>
 
   <h2>📋 Acompanhamento geral</h2>
@@ -236,6 +240,7 @@ $role_label = [
   <h2>💎 Distribuição de lucro</h2>
   <div class="card">
     <p>Sua quota = lucro do mês ÷ (nº sócios + 1). Botão Pagar registra recebimento.</p>
+    <p><strong>Trava:</strong> sistema bloqueia valor maior que a quota disponível na competência (mostra quota total / já pago / disponível no erro).</p>
   </div>
 
   <h2>🔐 Segurança</h2>
@@ -260,13 +265,18 @@ $role_label = [
   <h2>📅 Agenda</h2>
   <div class="card">
     <p>Itens pra entregar no mês, agrupados por cliente. Checkbox em cada um — marque ao concluir.</p>
-    <p>Indicador 🟢/🔴 mostra se está dentro da capacidade.</p>
+    <p>Indicador 🟢/🔴 mostra se está dentro da capacidade declarada por você no perfil.</p>
     <p><strong>👥 Trabalha em dupla?</strong> Se você foi vinculado a alguém pelo admin, vê dois botões no topo:
       <ul style="padding-left:20px; color:var(--txt-2);">
         <li><strong>Minha agenda</strong> — clientes atribuídos diretamente a você</li>
         <li><strong>Agenda do [parceiro]</strong> — agenda da dupla (pagamento vai todo pro principal; combinem off-platform)</li>
       </ul>
     </p>
+  </div>
+
+  <h2>📊 Painel</h2>
+  <div class="card">
+    <p>Em <em>Painel</em> você vê suas entregas dos últimos meses, valor recebido e previsão.</p>
   </div>
 
   <h2>🧭 Navegação</h2>
@@ -318,18 +328,22 @@ $role_label = [
 
   <h2>👤 Minha conta</h2>
   <div class="card">
-    <p>Atualize nome e senha. Email é fixo.</p>
+    <p>Atualize nome e senha. Email é fixo (avise a Dite Ads se precisar trocar).</p>
+    <p><strong>🔐 2FA (opcional, recomendado):</strong> ative em <em>Minha conta → Segurança</em> pra adicionar segunda camada de proteção via app autenticador. Sistema gera 8 backup codes pra você guardar caso perca o celular.</p>
+    <p><strong>Esqueceu a senha?</strong> Use "Esqueci a senha" no login — chega email com link pra redefinir.</p>
   </div>
 
   <h2>🧭 Navegação</h2>
   <div class="card">
     <p><strong>← Voltar:</strong> em qualquer tela tem o botão ← no canto superior esquerdo que volta pra tela anterior.</p>
     <p><strong>Menu inferior:</strong> Início · Cobranças · Entregas · Perfil — atalho rápido pras 4 áreas principais.</p>
+    <p><strong>🔍 Busca (Ctrl+K):</strong> achar rápido qualquer cobrança ou entrega digitando o nome ou número.</p>
   </div>
 
   <h2>💬 Precisa de ajuda?</h2>
   <div class="card">
     <p>Email <a href="mailto:contact@diteads.com">contact@diteads.com</a> ou WhatsApp da Dite Ads.</p>
+    <p>Se algo no sistema não funcionar como esperado, manda print pra gente resolver rápido.</p>
   </div>
 
 <?php endif; ?>
