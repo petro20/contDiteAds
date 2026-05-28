@@ -19,8 +19,15 @@ try {
 } catch (Throwable $e) {}
 
 // Funcionário vê só dele; admin pode ver de qualquer um via ?funcionario_id=
-// Se trabalha em dupla, vê a agenda do parceiro (pagamento vai pra ele)
-$funcionario_id = $trabalha_com_id ?: (int)$u['id'];
+// Se trabalha em dupla, default = vê agenda do parceiro (pagamento vai pra ele).
+// Mas pode alternar pra ver as próprias assinaturas via ?ver=eu (caso ele
+// também tenha clientes atribuídos diretamente a ele).
+$ver = $_GET['ver'] ?? null;
+if ($trabalha_com_id) {
+    $funcionario_id = ($ver === 'eu') ? (int)$u['id'] : $trabalha_com_id;
+} else {
+    $funcionario_id = (int)$u['id'];
+}
 if (is_admin() && isset($_GET['funcionario_id'])) {
     $funcionario_id = (int)$_GET['funcionario_id'];
 }
@@ -55,7 +62,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($op === 'remover') {
         entregas_remover($db, (int)($_POST['entrega_id'] ?? 0));
     }
-    header('Location: ' . APP_BASE_URL . '/agenda.php?mes=' . urlencode($comp) . (is_admin() && $funcionario_id !== (int)$u['id'] ? '&funcionario_id=' . $funcionario_id : '')); exit;
+    $redir_qs = '';
+    if (is_admin() && $funcionario_id !== (int)$u['id']) {
+        $redir_qs .= '&funcionario_id=' . $funcionario_id;
+    }
+    if ($trabalha_com_id && !is_admin()) {
+        $redir_qs .= '&ver=' . (($funcionario_id === (int)$u['id']) ? 'eu' : 'parceiro');
+    }
+    header('Location: ' . APP_BASE_URL . '/agenda.php?mes=' . urlencode($comp) . $redir_qs); exit;
 }
 
 $assinaturas = agenda_assinaturas($db, $funcionario_id, $competencia);
@@ -71,16 +85,38 @@ $nav_active = 'agenda';
 require __DIR__ . '/includes/header.php';
 ?>
 <h1 class="page-title">Agenda</h1>
-<?php if ($trabalha_com_id && !is_admin()): ?>
+<?php if ($trabalha_com_id && !is_admin()):
+  $vendo_parceiro = ($funcionario_id === $trabalha_com_id);
+?>
   <div class="card brand">
     <div class="title">👥 Você trabalha em dupla com <?= e($trabalha_com_nome) ?></div>
-    <div class="desc">Esta é a agenda de <strong><?= e($trabalha_com_nome) ?></strong> — você pode ver e marcar entregas, mas o <strong>pagamento vai todo pra ele</strong>.</div>
+    <div class="desc">
+      <?php if ($vendo_parceiro): ?>
+        Esta é a agenda de <strong><?= e($trabalha_com_nome) ?></strong> — você pode ver e marcar entregas, mas o <strong>pagamento vai todo pra ele</strong>.
+      <?php else: ?>
+        Esta é a <strong>sua agenda pessoal</strong> (clientes atribuídos diretamente a você).
+      <?php endif; ?>
+    </div>
+    <div class="spaced mt-2" style="gap:8px;">
+      <a class="btn small <?= !$vendo_parceiro?'':'btn-ghost' ?>" href="?mes=<?= e($competencia) ?>&ver=eu">Minha agenda</a>
+      <a class="btn small <?= $vendo_parceiro?'':'btn-ghost' ?>" href="?mes=<?= e($competencia) ?>&ver=parceiro">Agenda do <?= e($trabalha_com_nome) ?></a>
+    </div>
   </div>
 <?php endif; ?>
+<?php
+  // Preserva ?ver= e ?funcionario_id= ao navegar entre meses
+  $extra_qs = '';
+  if (is_admin() && isset($_GET['funcionario_id'])) {
+      $extra_qs .= '&funcionario_id=' . $funcionario_id;
+  }
+  if ($trabalha_com_id && !is_admin()) {
+      $extra_qs .= '&ver=' . (($funcionario_id === (int)$u['id']) ? 'eu' : 'parceiro');
+  }
+?>
 <div class="spaced mb-3">
-  <a class="btn btn-ghost small" href="?mes=<?= e($mes_anterior_str) ?><?= is_admin() ? '&funcionario_id='.$funcionario_id : '' ?>">← <?= e($mes_anterior_str) ?></a>
+  <a class="btn btn-ghost small" href="?mes=<?= e($mes_anterior_str) ?><?= $extra_qs ?>">← <?= e($mes_anterior_str) ?></a>
   <strong><?= e($nome_mes) ?></strong>
-  <a class="btn btn-ghost small" href="?mes=<?= e($mes_proximo_str) ?><?= is_admin() ? '&funcionario_id='.$funcionario_id : '' ?>"><?= e($mes_proximo_str) ?> →</a>
+  <a class="btn btn-ghost small" href="?mes=<?= e($mes_proximo_str) ?><?= $extra_qs ?>"><?= e($mes_proximo_str) ?> →</a>
 </div>
 
 <?php if (!$assinaturas): ?>

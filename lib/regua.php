@@ -61,8 +61,20 @@ function regua_executar(PDO $db, DateTimeImmutable $hoje): array {
 
         foreach ($etapas as $etapa) {
             // etapa.dias_apos_vencimento pode ser negativo (envio ANTES do vencimento)
-            // ou positivo (depois). Só dispara quando bate exato.
-            if ((int)$etapa['dias_apos_vencimento'] !== $dias_atraso) continue;
+            // ou positivo (depois).
+            //
+            // Antes a checagem era estrita (!==), o que significava que se o cron
+            // pulasse um dia (manutenção, deploy, falha), a etapa NUNCA mais
+            // dispararia pra aquela cobrança.
+            //
+            // Agora usamos uma JANELA de tolerância: dispara se hoje >= dia da etapa
+            // mas não muito antigo (até 14 dias atrás). A checagem de regua_ja_disparou
+            // garante idempotência — não duplica disparo.
+            //
+            // Limite de 14 dias evita que cobranças muito atrasadas/antigas
+            // disparem TODAS as etapas em sequência (spam).
+            $diff = $dias_atraso - (int)$etapa['dias_apos_vencimento'];
+            if ($diff < 0 || $diff > 14) continue;
 
             // EMAIL
             if ($etapa['template_email_id'] && $cob['email']) {

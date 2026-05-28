@@ -14,6 +14,18 @@ function db(): PDO {
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
             PDO::ATTR_EMULATE_PREPARES   => false,
         ]);
+        // Alinha o timezone do MySQL com o do PHP (America/Sao_Paulo definido
+        // em includes/config.php). Sem isso, CURDATE() e NOW() no MySQL ficam
+        // em UTC enquanto date() do PHP fica em -03, podendo divergir o
+        // "dia atual" em até 3h (cobranças vencendo no dia errado, etc).
+        try {
+            $offset = (new DateTime('now', new DateTimeZone(date_default_timezone_get())))
+                ->format('P'); // ex: '-03:00'
+            $pdo->exec("SET time_zone = '" . $offset . "'");
+        } catch (Throwable $e) {
+            // Tolera servidores sem tabelas de timezone — o offset numérico funciona em qualquer MySQL
+            error_log('SET time_zone failed: ' . $e->getMessage());
+        }
     } catch (PDOException $e) {
         error_log('DB connection failed: ' . $e->getMessage());
         http_response_code(500);

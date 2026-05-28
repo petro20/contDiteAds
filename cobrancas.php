@@ -71,8 +71,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $quantidades = $_POST['quantidade'] ?? [];
         $valores = $_POST['valor'] ?? [];
 
+        // Valida vencimento: precisa ser data válida e não pode ser no passado
+        // (evita admin digitar ano errado e disparar régua em cascata).
+        $venc_ts = strtotime((string)$vencimento);
+        $hoje_ts = strtotime(date('Y-m-d'));
+
         if (!$cliente_id || !is_array($descricoes) || count($descricoes) === 0) {
             $flash = ['err', 'Cliente e ao menos 1 item são obrigatórios.'];
+        } elseif ($venc_ts === false) {
+            $flash = ['err', 'Data de vencimento inválida.'];
+        } elseif ($venc_ts < $hoje_ts) {
+            $flash = ['err', 'Vencimento não pode ser no passado. Use uma data futura ou hoje.'];
         } else {
             $stmt = $db->prepare('SELECT moeda FROM clientes WHERE id = ?');
             $stmt->execute([$cliente_id]);
@@ -129,6 +138,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($op === 'cancelar' && is_admin()) {
         $cid = (int)($_POST['id'] ?? 0);
+        // Proteção: não permite cancelar cobrança paga com dinheiro confirmado.
+        // Admin teria que estornar os pagamentos primeiro pra evitar perder histórico.
+        try {
+            $stmt = $db->prepare('SELECT COALESCE(SUM(valor_pago), 0) FROM pagamentos_cliente WHERE cobranca_id = ? AND pendente = 0');
+            $stmt->execute([$cid]);
+            $pago_confirmado = (float)$stmt->fetchColumn();
+        } catch (PDOException $e) {
+            $pago_confirmado = 0.0;
+        }
+        if ($pago_confirmado > 0) {
+            header('Location: ' . APP_BASE_URL . '/cobrancas.php?id=' . $cid . '&err=cancelar_paga'); exit;
+        }
         $stmt = $db->prepare("UPDATE cobrancas SET status='cancelada' WHERE id=?");
         $stmt->execute([$cid]);
         audit_log('cobranca.cancelada', 'cobrancas', $cid);
@@ -316,6 +337,10 @@ if (isset($_GET['ok'])) {
     $msgs = ['comp' => 'Comprovante enviado. Admin vai conferir e confirmar.',
              'pag'  => 'Pagamento registrado.'];
     $flash = ['ok', $msgs[$_GET['ok']] ?? 'OK.'];
+}
+if (isset($_GET['err'])) {
+    $errs = ['cancelar_paga' => 'Não dá pra cancelar esta cobrança: ela já tem pagamentos confirmados. Estorne os pagamentos primeiro (em "Pagamento detalhado") e tente de novo.'];
+    $flash = ['err', $errs[$_GET['err']] ?? 'Erro.'];
 }
 
 // Download de comprovante (com auth check)
