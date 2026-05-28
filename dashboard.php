@@ -19,7 +19,7 @@ require __DIR__ . '/includes/header.php';
 
   // Comprovantes em análise (cliente enviou, aguardando admin aceitar/rejeitar)
   $tot_em_analise = 0;
-  try { $tot_em_analise = (int)$db->query("SELECT COUNT(*) FROM cobrancas WHERE status='em_analise'")->fetchColumn(); } catch (Throwable $e) {}
+  try { $tot_em_analise = (int)$db->query("SELECT COUNT(*) FROM cobrancas WHERE status='em_analise'")->fetchColumn(); } catch (Throwable $e) { error_log('dashboard: ' . $e->getMessage()); }
 
   // Cobranças abertas (a receber) — neste mês
   $tot_abertas = 0; $val_abertas_brl = 0.0; $val_abertas_usd = 0.0; $val_abertas_eur = 0.0;
@@ -33,7 +33,7 @@ require __DIR__ . '/includes/header.php';
           elseif ($r['moeda'] === 'USD') $val_abertas_usd = (float)$r['total'];
           elseif ($r['moeda'] === 'EUR') $val_abertas_eur = (float)$r['total'];
       }
-  } catch (Throwable $e) {}
+  } catch (Throwable $e) { error_log('dashboard: ' . $e->getMessage()); }
 
   // Recebido este mês (pagamentos confirmados)
   $rec_brl = 0.0; $rec_usd = 0.0; $rec_eur = 0.0;
@@ -48,7 +48,7 @@ require __DIR__ . '/includes/header.php';
           elseif ($r['moeda'] === 'USD') $rec_usd = (float)$r['total'];
           elseif ($r['moeda'] === 'EUR') $rec_eur = (float)$r['total'];
       }
-  } catch (Throwable $e) {}
+  } catch (Throwable $e) { error_log('dashboard: ' . $e->getMessage()); }
 
   // A pagar funcionários (fila USD)
   $a_pagar_func = 0.0;
@@ -56,7 +56,7 @@ require __DIR__ . '/includes/header.php';
       require_once __DIR__ . '/lib/pagamentos.php';
       $fila = fila_pagamentos_funcionarios($db);
       $a_pagar_func = (float)array_sum(array_column($fila, 'total_usd'));
-  } catch (Throwable $e) {}
+  } catch (Throwable $e) { error_log('dashboard: ' . $e->getMessage()); }
 
   // Lucro líquido do mês (receita - despesas - pag func USD)
   $desp_mes_data = despesas_do_mes($db, $competencia_now);
@@ -65,7 +65,7 @@ require __DIR__ . '/includes/header.php';
       $stmt = $db->prepare("SELECT COALESCE(SUM(valor_usd),0) FROM pagamentos_funcionario WHERE data_pagamento BETWEEN ? AND ?");
       $stmt->execute([$ini_mes, $fim_mes]);
       $pag_func_mes_usd = (float)$stmt->fetchColumn();
-  } catch (Throwable $e) {}
+  } catch (Throwable $e) { error_log('dashboard: ' . $e->getMessage()); }
   $lucro_brl = $rec_brl - ($desp_mes_data['totais']['BRL'] ?? 0);
   $lucro_usd = $rec_usd - ($desp_mes_data['totais']['USD'] ?? 0) - $pag_func_mes_usd;
   $lucro_eur = $rec_eur - ($desp_mes_data['totais']['EUR'] ?? 0);
@@ -79,7 +79,7 @@ require __DIR__ . '/includes/header.php';
       $stmt = $db->query("SELECT moeda, COUNT(*) AS qtd, COALESCE(SUM(valor_total),0) AS total
                           FROM cobrancas WHERE status='aberta' AND vencimento < CURDATE() GROUP BY moeda");
       foreach ($stmt->fetchAll() as $r) { $tot_vencidas += (int)$r['qtd']; $val_vencidas[$r['moeda']] = (float)$r['total']; }
-  } catch (Throwable $e) {}
+  } catch (Throwable $e) { error_log('dashboard: ' . $e->getMessage()); }
 
   // 2. Funcionários sobrecarregados (entregas do mês > capacidade declarada)
   $sobrecarga = 0;
@@ -93,7 +93,7 @@ require __DIR__ . '/includes/header.php';
           HAVING COUNT(e.id) > c.capacidade_mensal
       ");
       $sobrecarga = (int)$stmt->rowCount();
-  } catch (Throwable $e) {}
+  } catch (Throwable $e) { error_log('dashboard: ' . $e->getMessage()); }
 
   // 3. Funcionários sem WiseTag mas com USD pendente (impede pagar)
   $sem_wisetag_com_grana = 0;
@@ -106,7 +106,7 @@ require __DIR__ . '/includes/header.php';
           WHERE c.status='paga' AND pfi.id IS NULL AND (u.wisetag IS NULL OR u.wisetag='')
       ");
       $sem_wisetag_com_grana = (int)$stmt->fetchColumn();
-  } catch (Throwable $e) {}
+  } catch (Throwable $e) { error_log('dashboard: ' . $e->getMessage()); }
 
   // Previsão de faturamento do mês = recebido + a receber + em análise + assinaturas ainda sem cobrança
   $prev_faturamento = ['BRL'=>0.0,'USD'=>0.0,'EUR'=>0.0];
@@ -118,7 +118,7 @@ require __DIR__ . '/includes/header.php';
                             FROM cobrancas WHERE status='em_analise' AND competencia_mes = ? GROUP BY moeda");
       $stmt->execute([$competencia_now]);
       foreach ($stmt->fetchAll() as $r) { $prev_faturamento[$r['moeda']] += (float)$r['total']; }
-  } catch (Throwable $e) {}
+  } catch (Throwable $e) { error_log('dashboard: ' . $e->getMessage()); }
   // Assinaturas ativas mensais que ainda não geraram cobrança neste mês
   try {
       $stmt = $db->prepare("
@@ -136,7 +136,7 @@ require __DIR__ . '/includes/header.php';
           GROUP BY cl.moeda");
       $stmt->execute([$fim_mes, $ini_mes, $competencia_now]);
       foreach ($stmt->fetchAll() as $r) { $prev_faturamento[$r['moeda']] += (float)$r['total']; }
-  } catch (Throwable $e) {}
+  } catch (Throwable $e) { error_log('dashboard: ' . $e->getMessage()); }
   $tem_prev = ($prev_faturamento['BRL'] + $prev_faturamento['USD'] + $prev_faturamento['EUR']) > 0;
 
   // Previsão de pagamento a funcionários (USD): total do que a empresa vai
@@ -157,7 +157,7 @@ require __DIR__ . '/includes/header.php';
             AND (a.encerrada_em IS NULL OR a.encerrada_em >= ?)");
       $stmt->execute([$fim_mes, $ini_mes]);
       $pag_func_previsto = (float)$stmt->fetchColumn();
-  } catch (Throwable $e) {}
+  } catch (Throwable $e) { error_log('dashboard: ' . $e->getMessage()); }
 
   // Contagens pra ajudar o usuário a entender as previsões
   $qtd_assin_func = 0;
@@ -177,7 +177,7 @@ require __DIR__ . '/includes/header.php';
       $row = $stmt->fetch();
       $qtd_assin_func = (int)($row['total'] ?? 0);
       $qtd_assin_sem_valor = (int)($row['sem_valor'] ?? 0);
-  } catch (Throwable $e) {}
+  } catch (Throwable $e) { error_log('dashboard: ' . $e->getMessage()); }
   $qtd_despesas = count($desp_mes_data['detalhes'] ?? []);
 
   // Breakdown das despesas por moeda
@@ -206,7 +206,7 @@ require __DIR__ . '/includes/header.php';
           if ($ja_distribuido < ($lucro_brl + $lucro_usd + $lucro_eur) * 0.5) {
               $dist_pendente = true;
           }
-      } catch (Throwable $e) {}
+      } catch (Throwable $e) { error_log('dashboard: ' . $e->getMessage()); }
   }
   ?>
 
@@ -482,7 +482,7 @@ require __DIR__ . '/includes/header.php';
         $row = $stmt->fetch();
         $prev_func = (float)($row['total'] ?? 0);
         $qtd_assin_minhas = (int)($row['qtd'] ?? 0);
-    } catch (Throwable $e) {}
+    } catch (Throwable $e) { error_log('dashboard: ' . $e->getMessage()); }
   ?>
 
   <a class="card brand" href="<?= e(APP_BASE_URL) ?>/meus_pagamentos.php" style="text-decoration:none;">
@@ -543,8 +543,21 @@ require __DIR__ . '/includes/header.php';
     } else { $cli = null; $em_aberto = 0; $vencidas = 0; }
   ?>
 
-  <?php if (!$cli): ?>
-    <div class="card attention"><div class="title">⚠ Conta sem empresa vinculada</div><div class="desc">Avise o admin pra ligar sua conta a um cliente cadastrado.</div></div>
+  <?php if (!$cli):
+    // Busca contato de um admin pra cliente conseguir pedir ajuda
+    $admin_email = '';
+    try {
+        $admin_email = (string)$db->query("SELECT email FROM usuarios WHERE role IN ('sadmin','admin') AND ativo=1 AND email IS NOT NULL AND email != '' ORDER BY role DESC LIMIT 1")->fetchColumn();
+    } catch (Throwable $e) { error_log('dashboard: ' . $e->getMessage()); }
+  ?>
+    <div class="card attention">
+      <div class="title">⚠ Conta sem empresa vinculada</div>
+      <div class="desc">Sua conta de cliente ainda não foi associada a uma empresa cadastrada — então não conseguimos exibir suas cobranças e entregas. O administrador precisa fazer essa ligação.</div>
+      <?php if ($admin_email): ?>
+        <a class="btn block mt-3" href="mailto:<?= e($admin_email) ?>?subject=<?= e(rawurlencode('Vincular minha conta a uma empresa')) ?>&body=<?= e(rawurlencode("Olá, sou " . $u['nome'] . " (usuário #" . $u['id'] . " · email " . ($u['email'] ?? '') . ").\n\nMinha conta ainda não está vinculada a uma empresa no painel. Pode fazer essa associação?\n\nObrigado!")) ?>">✉ Pedir vínculo ao admin</a>
+      <?php endif; ?>
+      <a class="btn btn-ghost block mt-2" href="<?= e(APP_BASE_URL) ?>/logout.php">Sair</a>
+    </div>
   <?php else:
     // Previsão MENSAL do cliente: já pago + em aberto + em análise — só do mês corrente
     $competencia_cli = date('Y-m');
@@ -555,21 +568,21 @@ require __DIR__ . '/includes/header.php';
                               WHERE c.cliente_id = ? AND c.competencia_mes = ? AND COALESCE(p.pendente,0)=0");
         $stmt->execute([$cid, $competencia_cli]);
         $ja_pago_cli = (float)$stmt->fetchColumn();
-    } catch (Throwable $e) {}
+    } catch (Throwable $e) { error_log('dashboard: ' . $e->getMessage()); }
     $em_aberto_mes = 0.0;
     try {
         $stmt = $db->prepare("SELECT COALESCE(SUM(valor_total),0) FROM cobrancas
                               WHERE cliente_id = ? AND status='aberta' AND competencia_mes = ?");
         $stmt->execute([$cid, $competencia_cli]);
         $em_aberto_mes = (float)$stmt->fetchColumn();
-    } catch (Throwable $e) {}
+    } catch (Throwable $e) { error_log('dashboard: ' . $e->getMessage()); }
     $em_analise_cli = 0.0;
     try {
         $stmt = $db->prepare("SELECT COALESCE(SUM(valor_total),0) FROM cobrancas
                               WHERE cliente_id = ? AND status='em_analise' AND competencia_mes = ?");
         $stmt->execute([$cid, $competencia_cli]);
         $em_analise_cli = (float)$stmt->fetchColumn();
-    } catch (Throwable $e) {}
+    } catch (Throwable $e) { error_log('dashboard: ' . $e->getMessage()); }
     // Assinaturas ativas mensais dele sem cobrança gerada ainda neste mês
     $prev_assin_cli = 0.0;
     try {
@@ -588,7 +601,7 @@ require __DIR__ . '/includes/header.php';
               )");
         $stmt->execute([$cid, $fim_mes_c, $ini_mes_c, $competencia_cli]);
         $prev_assin_cli = (float)$stmt->fetchColumn();
-    } catch (Throwable $e) {}
+    } catch (Throwable $e) { error_log('dashboard: ' . $e->getMessage()); }
     $prev_cli = $ja_pago_cli + $em_aberto_mes + $em_analise_cli + $prev_assin_cli;
   ?>
     <a class="card brand" href="<?= e(APP_BASE_URL) ?>/cobrancas.php" style="text-decoration:none;">

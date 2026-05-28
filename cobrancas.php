@@ -747,7 +747,13 @@ $where = ['1=1']; $params = [];
 if ($me['role'] === 'cliente') {
     $where[] = 'c.cliente_id = ?'; $params[] = (int)$me['cliente_id'];
 } elseif ($me['role'] === 'funcionario') {
-    $where[] = 'c.id IN (SELECT ci.cobranca_id FROM cobranca_itens ci JOIN assinaturas a ON a.id = ci.assinatura_id WHERE a.funcionario_id = ?)';
+    // EXISTS é mais barato que IN (SELECT) — para de buscar no primeiro match.
+    // Com os índices da migration 015, a checagem fica em O(log n) por cobrança.
+    $where[] = 'EXISTS (
+        SELECT 1 FROM cobranca_itens ci
+        JOIN assinaturas a ON a.id = ci.assinatura_id
+        WHERE ci.cobranca_id = c.id AND a.funcionario_id = ?
+    )';
     $params[] = (int)$me['id'];
 }
 if (in_array($f_status, ['aberta','em_analise','paga','cancelada'], true)) {
