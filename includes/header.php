@@ -17,7 +17,14 @@ $nav_active   = $nav_active   ?? '';
 <meta name="theme-color" content="#0A0A0F">
 <title><?= e($page) ?> · controle e gestão Dite Ads</title>
 <link rel="icon" type="image/png" href="<?= e(APP_BASE_URL) ?>/assets/img/logo.png">
+<link rel="apple-touch-icon" href="<?= e(APP_BASE_URL) ?>/assets/img/logo.png">
+<link rel="manifest" href="<?= e(APP_BASE_URL) ?>/manifest.json">
 <link rel="stylesheet" href="<?= e(APP_BASE_URL) ?>/assets/css/style.css?v=<?= e(@filemtime(__DIR__ . '/../assets/css/style.css') ?: '1') ?>">
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('<?= e(APP_BASE_URL) ?>/sw.js').catch(()=>{});
+}
+</script>
 </head>
 <body>
 <?php if ($u && !$hide_nav): ?>
