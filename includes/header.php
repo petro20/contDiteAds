@@ -87,10 +87,10 @@ if ('serviceWorker' in navigator) {
   ?>
   <div class="actions">
     <button type="button" onclick="abrirBusca()" aria-label="Buscar" title="Buscar (Ctrl+K)" style="font-size:18px;">🔍</button>
-    <button type="button" onclick="toggleNotif()" aria-label="Notificações" title="Notificações" style="font-size:18px; position:relative;">
+    <button type="button" onclick="toggleNotif(event)" aria-label="Notificações" title="Notificações" style="font-size:18px; position:relative;">
       🔔
       <?php if ($notif_count > 0): ?>
-        <span style="position:absolute; top:2px; right:2px; background:var(--c-danger); color:#fff; border-radius:10px; padding:1px 5px; font-size:10px; font-weight:700; min-width:16px; text-align:center;"><?= $notif_count > 99 ? '99+' : $notif_count ?></span>
+        <span style="position:absolute; top:2px; right:2px; background:var(--c-danger); color:#fff; border-radius:10px; padding:1px 5px; font-size:10px; font-weight:700; min-width:16px; text-align:center; pointer-events:none;"><?= $notif_count > 99 ? '99+' : $notif_count ?></span>
       <?php endif; ?>
     </button>
     <a href="<?= e(APP_BASE_URL) ?>/perfil.php" aria-label="Perfil">👤</a>
@@ -116,13 +116,20 @@ if ('serviceWorker' in navigator) {
 </div>
 
 <script>
-function toggleNotif() {
+function toggleNotif(e) {
+  if (e) { e.stopPropagation(); e.preventDefault(); }
   const d = document.getElementById('notif_drop');
+  if (!d) return;
   d.style.display = d.style.display === 'block' ? 'none' : 'block';
 }
-document.addEventListener('click', e => {
+document.addEventListener('click', function(e) {
   const d = document.getElementById('notif_drop');
-  if (d && d.style.display === 'block' && !d.contains(e.target) && !e.target.closest('[aria-label="Notificações"]')) d.style.display = 'none';
+  if (!d || d.style.display !== 'block') return;
+  // Não fecha se clicou dentro do dropdown ou no próprio botão do sino
+  if (d.contains(e.target)) return;
+  const btn = e.target.closest('button[aria-label="Notificações"]');
+  if (btn) return;
+  d.style.display = 'none';
 });
 
 <!-- Modal de busca global -->
