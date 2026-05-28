@@ -6,24 +6,45 @@ $u = require_login();
 $db = db();
 $flash = null;
 
+// Funcionários e admins podem editar wisetag/cpf/país do próprio perfil
+$pode_editar_wisetag = in_array($u['role'], ['funcionario','admin','sadmin'], true);
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_check();
     $nome = trim((string)($_POST['nome'] ?? ''));
     $senha = (string)($_POST['senha'] ?? '');
+    $wisetag = $pode_editar_wisetag ? trim((string)($_POST['wisetag'] ?? '')) : null;
+    $cpf = $pode_editar_wisetag ? trim((string)($_POST['cpf'] ?? '')) : null;
+    $pais = $pode_editar_wisetag ? trim((string)($_POST['pais'] ?? '')) : null;
     if ($nome === '') {
         $flash = ['err','Nome obrigatório.'];
     } elseif ($senha !== '' && strlen($senha) < 8) {
         $flash = ['err','Nova senha precisa ter 8+ caracteres.'];
     } else {
-        if ($senha !== '') {
-            $stmt = $db->prepare('UPDATE usuarios SET nome=?, senha_hash=? WHERE id=?');
-            $stmt->execute([$nome, password_hash($senha, PASSWORD_DEFAULT), $u['id']]);
+        // UPDATE adapta colunas conforme persona
+        if ($pode_editar_wisetag) {
+            if ($senha !== '') {
+                $stmt = $db->prepare('UPDATE usuarios SET nome=?, senha_hash=?, wisetag=?, cpf=?, pais=? WHERE id=?');
+                $stmt->execute([$nome, password_hash($senha, PASSWORD_DEFAULT), $wisetag ?: null, $cpf ?: null, $pais ?: null, $u['id']]);
+            } else {
+                $stmt = $db->prepare('UPDATE usuarios SET nome=?, wisetag=?, cpf=?, pais=? WHERE id=?');
+                $stmt->execute([$nome, $wisetag ?: null, $cpf ?: null, $pais ?: null, $u['id']]);
+            }
         } else {
-            $stmt = $db->prepare('UPDATE usuarios SET nome=? WHERE id=?');
-            $stmt->execute([$nome, $u['id']]);
+            if ($senha !== '') {
+                $stmt = $db->prepare('UPDATE usuarios SET nome=?, senha_hash=? WHERE id=?');
+                $stmt->execute([$nome, password_hash($senha, PASSWORD_DEFAULT), $u['id']]);
+            } else {
+                $stmt = $db->prepare('UPDATE usuarios SET nome=? WHERE id=?');
+                $stmt->execute([$nome, $u['id']]);
+            }
         }
         audit_log('perfil.editado', 'usuarios', (int)$u['id']);
         $flash = ['ok','Salvo.'];
+        // Recarrega dados do usuário pra refletir mudanças
+        $stmt = $db->prepare('SELECT * FROM usuarios WHERE id = ?');
+        $stmt->execute([$u['id']]);
+        $u = array_merge($u, $stmt->fetch() ?: []);
     }
 }
 
@@ -40,6 +61,23 @@ require __DIR__ . '/includes/header.php';
   <div class="field"><label>Nome</label><input name="nome" required value="<?= e($u['nome']) ?>"></div>
   <div class="field"><label>Email</label><input value="<?= e($u['email']) ?>" disabled></div>
   <div class="field"><label>Perfil</label><input value="<?= e($u['role']) ?>" disabled></div>
+
+  <?php if ($pode_editar_wisetag): ?>
+    <div class="field">
+      <label>WiseTag <?= empty($u['wisetag']) ? '<span style="color:var(--c-danger); font-size:11px;">⚠ obrigatório pra receber pagamento</span>' : '' ?></label>
+      <input name="wisetag" value="<?= e($u['wisetag'] ?? '') ?>" placeholder="@seu-wisetag">
+      <div class="hint">Sem WiseTag você fica fora da fila de pagamentos automáticos da Dite Ads.</div>
+    </div>
+    <div class="field">
+      <label>CPF (opcional)</label>
+      <input name="cpf" value="<?= e($u['cpf'] ?? '') ?>" placeholder="000.000.000-00">
+    </div>
+    <div class="field">
+      <label>País (opcional)</label>
+      <input name="pais" value="<?= e($u['pais'] ?? '') ?>" placeholder="Brasil">
+    </div>
+  <?php endif; ?>
+
   <div class="field"><label>Nova senha (opcional)</label><input type="password" name="senha" autocomplete="new-password" placeholder="deixe em branco para manter"></div>
   <button class="btn block" type="submit">Salvar alterações</button>
 </form>

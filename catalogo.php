@@ -52,6 +52,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($nome === '') {
             $flash = ['err', 'Nome é obrigatório.'];
             $acao = $pid ? 'editar' : 'novo'; $id = $pid;
+        } elseif ($variante && !$a_negociar && ($preco_ia_usd === null || $preco_ia_usd <= 0)) {
+            // Marcou "tem variante IA" mas não preencheu preço IA — bug protege contra
+            // assinaturas sendo criadas com valor zero/null.
+            $flash = ['err', 'Você marcou "tem variante IA" mas não preencheu o preço IA em USD. Preencha o valor ou desmarque a opção.'];
+            $acao = $pid ? 'editar' : 'novo'; $id = $pid;
         } elseif ($pid) {
             $stmt = $db->prepare('UPDATE itens_catalogo SET nome=?, descricao=?, tipo=?, periodo_minimo_meses=?, preco_usd=?, preco_brl=?, preco_eur=?, a_negociar=?, e_pacote=?, tem_variante_ia=?, preco_ia_usd=?, preco_ia_brl=?, preco_ia_eur=?, resp_agencia=?, resp_funcionario=?, resp_cliente=?, ativo=? WHERE id=?');
             $stmt->execute([$nome,$descricao,$tipo,$periodo_min,$preco_usd,$preco_brl,$preco_eur,$a_negociar,$e_pacote,$variante,$preco_ia_usd,$preco_ia_brl,$preco_ia_eur,$resp_a,$resp_f,$resp_c,$ativo,$pid]);

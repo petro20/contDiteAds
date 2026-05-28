@@ -125,8 +125,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $assunto = trim((string)($_POST['assunto'] ?? '')) ?: null;
         $corpo   = trim((string)($_POST['corpo'] ?? ''));
         $ativo   = isset($_POST['ativo']) ? 1 : 0;
+        // Lista de variáveis suportadas (deve bater com a hint mostrada ao admin)
+        $vars_suportadas = [
+            'nome_cliente','nome_empresa','valor','moeda','vencimento','mes_referencia',
+            'itens','link_recibo','link_comprovante','link_sistema',
+            'zelle_email','zelle_qr_url','link_wise','instrucoes_pagamento',
+        ];
+        $orfas = wa_validar_variaveis(($assunto ?? '') . ' ' . $corpo, $vars_suportadas);
+
         if ($codigo === '' || $corpo === '') {
             $flash = ['err', 'Código e corpo obrigatórios.'];
+        } elseif (!empty($orfas)) {
+            // Não bloqueia — apenas avisa. Admin pode estar querendo um placeholder novo.
+            $flash = ['err', 'Variáveis desconhecidas no template: ' . implode(', ', array_map(fn($v) => '{' . $v . '}', $orfas)) . '. Verifique se digitou corretamente (vai chegar como texto vazio se não for substituída).'];
         } else {
             try {
                 if ($id) {

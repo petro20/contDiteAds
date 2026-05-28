@@ -15,6 +15,28 @@ declare(strict_types=1);
 function hard_delete_cliente(PDO $db, int $cliente_id): void {
     if ($cliente_id <= 0) throw new InvalidArgumentException('cliente_id inválido.');
 
+    // Trava: bloqueia apagar cliente com pagamentos confirmados em cima.
+    // Apagar destruiria histórico financeiro real (lucro mensal, distribuição
+    // a sócios já realizada). Admin precisa usar "desativar" nesses casos.
+    try {
+        $stmt = $db->prepare("
+            SELECT COUNT(*) FROM pagamentos_cliente pc
+            JOIN cobrancas c ON c.id = pc.cobranca_id
+            WHERE c.cliente_id = ? AND pc.pendente = 0
+        ");
+        $stmt->execute([$cliente_id]);
+        $n_pagamentos = (int)$stmt->fetchColumn();
+    } catch (PDOException $e) {
+        $n_pagamentos = 0; // schema antigo — não consegue checar
+    }
+    if ($n_pagamentos > 0) {
+        throw new RuntimeException(
+            "Este cliente tem $n_pagamentos pagamento(s) confirmado(s) no histórico. " .
+            "Apagar destruiria o registro financeiro (lucro mensal, distribuição a sócios). " .
+            "Use 'Desativar' em vez de 'Apagar', ou estorne os pagamentos primeiro."
+        );
+    }
+
     $db->beginTransaction();
     try {
         // 1. Cobranças desse cliente → CASCADE em cobranca_itens, pagamentos_cliente, regua_eventos

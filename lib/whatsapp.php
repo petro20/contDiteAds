@@ -33,7 +33,31 @@ function wa_render(string $corpo, array $vars): string {
     foreach ($vars as $k => $v) {
         $corpo = str_replace('{' . $k . '}', (string)$v, $corpo);
     }
+    // Detecta variáveis não substituídas — typo do admin no template,
+    // ex: {nome_do_cliente} (correto é {nome_cliente}).
+    // Loga warning e substitui por string vazia pra não constranger o cliente.
+    if (preg_match_all('/\{[a-z_]+\}/', $corpo, $sobras)) {
+        $unicas = array_unique($sobras[0]);
+        error_log('wa_render: variáveis não substituídas — ' . implode(', ', $unicas));
+        foreach ($unicas as $var_orfa) {
+            $corpo = str_replace($var_orfa, '', $corpo);
+        }
+    }
     return $corpo;
+}
+
+/**
+ * Valida um template — retorna lista de variáveis usadas que NÃO estão na lista
+ * de suportadas. Usado no save de templates pra avisar admin antes de salvar.
+ *
+ * @param string $corpo Texto com {variaveis}
+ * @param array $suportadas Lista de chaves válidas (sem chaves)
+ * @return string[] Variáveis órfãs encontradas no corpo
+ */
+function wa_validar_variaveis(string $corpo, array $suportadas): array {
+    if (!preg_match_all('/\{([a-z_]+)\}/', $corpo, $m)) return [];
+    $usadas = array_unique($m[1]);
+    return array_values(array_diff($usadas, $suportadas));
 }
 
 /**

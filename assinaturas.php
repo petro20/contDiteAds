@@ -37,7 +37,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $valor     = (float)str_replace(',', '.', (string)($_POST['valor_cobrado'] ?? '0'));
         $iniciada  = $_POST['iniciada_em'] ?? date('Y-m-d');
         $status    = $_POST['status'] ?? 'ativa';
+        $forcar_atribuicao = isset($_POST['forcar_func_lotado']);
         if (!in_array($status, ['ativa','pausada','cancelada'], true)) $status = 'ativa';
+
+        // Aviso: funcionário marcado como NÃO aceitando clientes
+        if ($func && !$forcar_atribuicao) {
+            try {
+                $stmt = $db->prepare('SELECT aceitando_clientes, nome FROM usuarios WHERE id = ?');
+                $stmt->execute([$func]);
+                $f = $stmt->fetch();
+                if ($f && (int)$f['aceitando_clientes'] === 0) {
+                    $flash = ['err', '🔴 ' . htmlspecialchars($f['nome']) . ' está marcado como NÃO aceitando novos clientes. Se for proposital, marque o checkbox de força abaixo e salve de novo.'];
+                    $a = ['id'=>$pid,'cliente_id'=>$cliente,'item_id'=>$item,'funcionario_id'=>$func,'variante'=>$variante,'valor_cobrado'=>$valor,'status'=>$status,'iniciada_em'=>$iniciada];
+                    $acao = $pid ? 'editar' : 'novo'; $id = $pid;
+                    $mostrar_forcar = true;
+                    goto fim_save_assinatura;
+                }
+            } catch (PDOException $e) {}
+        }
 
         if (!$cliente || !$item || $valor <= 0) {
             $flash = ['err', 'Cliente, item e valor (>0) são obrigatórios.'];
@@ -80,8 +97,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $acao = $pid ? 'editar' : 'novo'; $id = $pid;
             }
         }
+        fim_save_assinatura:;
     }
 }
+$mostrar_forcar = $mostrar_forcar ?? false;
 
 if (isset($_GET['ok'])) {
     $msg = $_GET['ok'] === 'add' ? 'Assinatura criada.' : 'Assinatura atualizada.';
@@ -175,6 +194,12 @@ if ($acao === 'novo' || $acao === 'editar') {
             <?php endforeach; ?>
           </select>
           <div class="hint">Troca vale para o mês seguinte; histórico fica preservado.</div>
+          <?php if ($mostrar_forcar): ?>
+            <label class="check" style="margin-top:8px; color:var(--c-attention);">
+              <input type="checkbox" name="forcar_func_lotado" value="1">
+              Sim, atribuir mesmo que o funcionário esteja marcado como não aceitando clientes
+            </label>
+          <?php endif; ?>
         </div>
 
         <div class="field">
