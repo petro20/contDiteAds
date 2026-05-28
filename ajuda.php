@@ -84,6 +84,23 @@ $role_label = [
     <p><strong>⚠ Apagar em cascata:</strong> deleta pagamentos recebidos, entregas, capacidades. Cobranças/despesas reatribuídas a você. Trava: não apaga a si mesmo nem o último sadmin.</p>
   </div>
 
+  <h2>📋 Acompanhamento geral (todos os funcionários)</h2>
+  <div class="card">
+    <p>Dashboard → <strong>📋 Acompanhamento geral</strong>. Visão consolidada do que cada funcionário e admin executa no mês.</p>
+    <p><strong>3 vistas (botões no topo):</strong></p>
+    <ul style="padding-left:20px; color:var(--txt-2);">
+      <li><strong>📋 Lista:</strong> resumo por pessoa (contagem de assinaturas/entregas/clientes)</li>
+      <li><strong>📅 Por pessoa:</strong> expande cada um mostrando suas assinaturas + status de progresso</li>
+      <li><strong>🗓 Calendário:</strong> grid mensal com todas as entregas de todos coloridas por funcionário</li>
+    </ul>
+    <p>Clica em qualquer card pra ir pra agenda detalhada daquela pessoa.</p>
+  </div>
+
+  <h2>🔐 Matriz de acesso (PDF)</h2>
+  <div class="card">
+    <p>Dashboard → <strong>🔐 Matriz de acesso (PDF)</strong>. Documento completo com quem pode o quê no sistema, organizado por área. Botão "🖨 Imprimir / Salvar como PDF" salva como arquivo.</p>
+  </div>
+
   <h2>💰 Finanças (3 abas)</h2>
   <div class="card">
     <p><strong>💸 Despesas:</strong> ferramentas, software, marketing — recorrência única/mensal/anual.</p>
@@ -172,6 +189,11 @@ $role_label = [
     <p><strong>💵 Pagamentos:</strong> fila pra liberar pagamento em USD aos funcionários. Email automático com PDF.</p>
   </div>
 
+  <h2>📋 Acompanhamento geral</h2>
+  <div class="card">
+    <p>Visão consolidada do que cada funcionário está executando. 3 vistas: Lista · Por pessoa · 🗓 Calendário (grid mensal colorido por funcionário).</p>
+  </div>
+
   <h2>💎 Distribuição de lucro</h2>
   <div class="card">
     <p>Sua quota = lucro do mês ÷ (nº sócios + 1). Botão Pagar registra recebimento.</p>
@@ -199,7 +221,13 @@ $role_label = [
   <div class="card">
     <p>Itens pra entregar no mês, agrupados por cliente. Checkbox em cada um — marque ao concluir.</p>
     <p>Indicador 🟢/🔴 mostra se está dentro da capacidade.</p>
-    <p><strong>👥 Trabalha em dupla?</strong> Se você foi vinculado a alguém pelo admin, vai ver a agenda do principal aqui — pode marcar entregas, mas o pagamento vai todo pra ele (combinem como dividir off-platform).</p>
+    <p><strong>👥 Trabalha em dupla?</strong> Se você foi vinculado a alguém pelo admin, vai ver a agenda do principal aqui — pode marcar entregas, mas o pagamento vai todo pra ele (combinem como dividir off-platform). Card laranja no topo deixa isso claro: "Você trabalha em dupla com [nome]".</p>
+  </div>
+
+  <h2>🧭 Navegação</h2>
+  <div class="card">
+    <p><strong>← Voltar:</strong> em qualquer tela (exceto dashboard), o botão ← no canto superior esquerdo volta pra tela anterior (usa o histórico do navegador). Funciona como o "voltar" do navegador.</p>
+    <p><strong>🏠 Logo:</strong> no dashboard, o logo aparece no canto. Em outras telas, clica em "Início" no menu inferior pra voltar pro dashboard.</p>
   </div>
 
   <h2>💵 Meus pagamentos</h2>
@@ -245,6 +273,12 @@ $role_label = [
   <h2>👤 Minha conta</h2>
   <div class="card">
     <p>Atualize nome e senha. Email é fixo.</p>
+  </div>
+
+  <h2>🧭 Navegação</h2>
+  <div class="card">
+    <p><strong>← Voltar:</strong> em qualquer tela tem o botão ← no canto superior esquerdo que volta pra tela anterior.</p>
+    <p><strong>Menu inferior:</strong> Início · Cobranças · Entregas · Perfil — atalho rápido pras 4 áreas principais.</p>
   </div>
 
   <h2>💬 Precisa de ajuda?</h2>
