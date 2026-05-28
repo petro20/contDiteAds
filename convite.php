@@ -46,15 +46,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $erro = 'A senha precisa ter pelo menos 8 caracteres.';
     } else {
         try {
+            // Pré-check: email já em uso? (evita criar cliente órfão se INSERT
+            // em usuarios falhar por UNIQUE depois)
+            $stmt = $db->prepare('SELECT id FROM usuarios WHERE email = ? LIMIT 1');
+            $stmt->execute([$email]);
+            if ($stmt->fetchColumn()) {
+                $erro = 'Já existe usuário com este email.';
+                goto fim_convite;
+            }
+
             $db->beginTransaction();
             if ($convite['tipo'] === 'cliente') {
                 $nome_empresa = trim((string)($_POST['nome_empresa'] ?? '')) ?: $nome;
+                // Cria usuário PRIMEIRO (tabela tem UNIQUE em email — falha rápido).
+                // Depois cria cliente e linka.
+                $stmt = $db->prepare("INSERT INTO usuarios (nome, email, senha_hash, role, ativo) VALUES (?,?,?,?, 1)");
+                $stmt->execute([$nome, $email, password_hash($senha, PASSWORD_DEFAULT), 'cliente']);
+                $uid = (int)$db->lastInsertId();
                 $stmt = $db->prepare('INSERT INTO clientes (nome, nome_empresa, nome_contato, email, telefone, endereco, moeda, ativo) VALUES (?,?,?,?,?,?,?,1)');
                 $stmt->execute([$nome_empresa, $nome_empresa, $nome, $email, $telefone, $endereco, 'BRL']);
                 $cliente_id = (int)$db->lastInsertId();
-                $stmt = $db->prepare("INSERT INTO usuarios (nome, email, senha_hash, role, cliente_id, ativo) VALUES (?,?,?,?,?,1)");
-                $stmt->execute([$nome, $email, password_hash($senha, PASSWORD_DEFAULT), 'cliente', $cliente_id]);
-                $uid = (int)$db->lastInsertId();
+                $stmt = $db->prepare('UPDATE usuarios SET cliente_id = ? WHERE id = ?');
+                $stmt->execute([$cliente_id, $uid]);
             } else {
                 $cpf = trim((string)($_POST['cpf'] ?? '')) ?: null;
                 $wisetag = trim((string)($_POST['wisetag'] ?? ''));
@@ -82,6 +95,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($db->inTransaction()) $db->rollBack();
             $erro = $e->getMessage();
         }
+        fim_convite:;
     }
 }
 

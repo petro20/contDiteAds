@@ -22,6 +22,16 @@ require_once __DIR__ . '/../includes/config.php';
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../lib/cobrancas.php';
 
+// Lock exclusivo: impede 2 invocações simultâneas (cron lento + nova invocação,
+// ou admin disparando "gerar manual" enquanto cron roda). Sem isso podem
+// acontecer deadlocks ou erros em race condition.
+$lockFile = sys_get_temp_dir() . '/contditeads_gerar_cobr.lock';
+$fpLock = fopen($lockFile, 'c');
+if (!$fpLock || !flock($fpLock, LOCK_EX | LOCK_NB)) {
+    echo "[" . date('Y-m-d H:i:s') . "] Outra execução de gerar_cobrancas já está rodando. Saindo.\n";
+    exit(0);
+}
+
 $dataArg = $argv[1] ?? null;
 $hoje = $dataArg ? new DateTimeImmutable($dataArg) : new DateTimeImmutable('today');
 
@@ -41,5 +51,9 @@ foreach ($log['detalhes'] as $d) {
     if (!empty($d['mensagem']))    echo " — {$d['mensagem']}";
     echo "\n";
 }
+
+// Libera o lock (será liberado de qualquer forma ao fim do script, mas explícito é melhor)
+flock($fpLock, LOCK_UN);
+fclose($fpLock);
 
 exit($log['erros'] > 0 ? 1 : 0);

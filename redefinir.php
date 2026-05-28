@@ -41,8 +41,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $db->beginTransaction();
         $stmt = $db->prepare('UPDATE usuarios SET senha_hash = ? WHERE id = ?');
         $stmt->execute([password_hash($senha, PASSWORD_DEFAULT), (int)$reset['usuario_id']]);
-        $stmt = $db->prepare('UPDATE senha_resets SET usado_em = NOW() WHERE id = ?');
-        $stmt->execute([(int)$reset['id']]);
+        // Marca o token usado E invalida TODOS os outros tokens pendentes do mesmo usuário
+        // (proteção contra requests paralelos: se atacante e vítima pediram reset, só um vale)
+        $stmt = $db->prepare('UPDATE senha_resets SET usado_em = NOW() WHERE usuario_id = ? AND usado_em IS NULL');
+        $stmt->execute([(int)$reset['usuario_id']]);
+        // Invalida sessões ativas do usuário em outros dispositivos.
+        // Como armazenamos sessões em arquivo, não dá pra apagar diretamente — mas
+        // ao trocar a senha, qualquer sessão existente fica "presa" porque dependerá
+        // do próximo login. Pra reforçar, regeneramos um nonce de sessão no usuário:
+        try {
+            $db->prepare('UPDATE usuarios SET session_nonce = ? WHERE id = ?')
+               ->execute([bin2hex(random_bytes(16)), (int)$reset['usuario_id']]);
+        } catch (PDOException $e) { /* coluna session_nonce ainda não existe — migration 017 cria */ }
         $db->commit();
         audit_log('senha.redefinida', 'usuarios', (int)$reset['usuario_id']);
         $ok = true;

@@ -63,3 +63,70 @@ function totp_otpauth_uri(string $label, string $secret_b32, string $issuer = 'D
     return sprintf('otpauth://totp/%s:%s?secret=%s&issuer=%s',
         rawurlencode($issuer), rawurlencode($label), $secret_b32, rawurlencode($issuer));
 }
+
+/**
+ * Gera N backup codes (default 8) no formato XXXX-XXXX (alfanumérico maiúsculo).
+ * Salva o HASH no banco e retorna os códigos em plaintext UMA ÚNICA VEZ
+ * (mostrar pro usuário guardar — impressão, gerenciador de senhas etc).
+ *
+ * Apaga códigos antigos não-usados do mesmo usuário antes.
+ *
+ * @return string[] Códigos em plaintext (mostrar ao usuário)
+ */
+function totp_gerar_backup_codes(PDO $db, int $usuario_id, int $quantos = 8): array {
+    // Limpa códigos antigos não-usados (regeneração descarta os anteriores)
+    try {
+        $db->prepare('DELETE FROM totp_backup_codes WHERE usuario_id = ? AND usado_em IS NULL')->execute([$usuario_id]);
+    } catch (PDOException $e) { /* tabela ainda não existe */ }
+
+    $chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // sem 0/O/1/I pra reduzir ambiguidade
+    $clen = strlen($chars);
+    $plain = [];
+    $stmt = $db->prepare('INSERT INTO totp_backup_codes (usuario_id, codigo_hash) VALUES (?, ?)');
+    for ($i = 0; $i < $quantos; $i++) {
+        $codigo = '';
+        for ($k = 0; $k < 8; $k++) $codigo .= $chars[random_int(0, $clen - 1)];
+        // Formato XXXX-XXXX pra facilitar leitura
+        $codigo = substr($codigo, 0, 4) . '-' . substr($codigo, 4);
+        $hash = password_hash($codigo, PASSWORD_BCRYPT);
+        $stmt->execute([$usuario_id, $hash]);
+        $plain[] = $codigo;
+    }
+    return $plain;
+}
+
+/**
+ * Tenta consumir um backup code. Retorna true se conseguiu (e marca como usado).
+ * Aceita formato com ou sem hífen, case-insensitive.
+ */
+function totp_consumir_backup_code(PDO $db, int $usuario_id, string $codigo_user): bool {
+    $codigo_user = strtoupper(preg_replace('/[^A-Z0-9]/i', '', $codigo_user));
+    if (strlen($codigo_user) !== 8) return false;
+    $codigo_norm = substr($codigo_user, 0, 4) . '-' . substr($codigo_user, 4);
+
+    try {
+        $stmt = $db->prepare('SELECT id, codigo_hash FROM totp_backup_codes WHERE usuario_id = ? AND usado_em IS NULL');
+        $stmt->execute([$usuario_id]);
+        foreach ($stmt->fetchAll() as $row) {
+            if (password_verify($codigo_norm, $row['codigo_hash'])) {
+                $upd = $db->prepare('UPDATE totp_backup_codes SET usado_em = NOW() WHERE id = ?');
+                $upd->execute([(int)$row['id']]);
+                return true;
+            }
+        }
+    } catch (PDOException $e) { /* tabela não existe */ }
+    return false;
+}
+
+/**
+ * Conta backup codes ainda válidos pra um usuário.
+ */
+function totp_backup_codes_restantes(PDO $db, int $usuario_id): int {
+    try {
+        $stmt = $db->prepare('SELECT COUNT(*) FROM totp_backup_codes WHERE usuario_id = ? AND usado_em IS NULL');
+        $stmt->execute([$usuario_id]);
+        return (int)$stmt->fetchColumn();
+    } catch (PDOException $e) {
+        return 0;
+    }
+}

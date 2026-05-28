@@ -8,12 +8,32 @@ function current_user(): ?array {
     if (empty($_SESSION['user_id'])) return null;
     static $cache = null;
     if ($cache !== null) return $cache;
-    $stmt = db()->prepare('SELECT id, nome, email, role, ativo, cliente_id, cpf, wisetag, pais, aceitando_clientes, percentual_comissao FROM usuarios WHERE id = ? LIMIT 1');
-    $stmt->execute([$_SESSION['user_id']]);
-    $u = $stmt->fetch() ?: null;
+    // Tenta selecionar com session_nonce; fallback pro schema antigo
+    try {
+        $stmt = db()->prepare('SELECT id, nome, email, role, ativo, cliente_id, cpf, wisetag, pais, aceitando_clientes, percentual_comissao, session_nonce FROM usuarios WHERE id = ? LIMIT 1');
+        $stmt->execute([$_SESSION['user_id']]);
+        $u = $stmt->fetch() ?: null;
+    } catch (PDOException $e) {
+        $stmt = db()->prepare('SELECT id, nome, email, role, ativo, cliente_id, cpf, wisetag, pais, aceitando_clientes, percentual_comissao FROM usuarios WHERE id = ? LIMIT 1');
+        $stmt->execute([$_SESSION['user_id']]);
+        $u = $stmt->fetch() ?: null;
+    }
     if ($u && !$u['ativo']) {
         logout();
         return null;
+    }
+    // Validação de nonce: se a senha foi trocada (nonce no banco mudou),
+    // forçar logout de sessões antigas.
+    if ($u && isset($u['session_nonce']) && $u['session_nonce']) {
+        $sess_nonce = $_SESSION['session_nonce'] ?? null;
+        if ($sess_nonce === null) {
+            // Primeira request após login — adota o nonce atual
+            $_SESSION['session_nonce'] = $u['session_nonce'];
+        } elseif ($sess_nonce !== $u['session_nonce']) {
+            // Nonce mudou no banco (senha trocada em outro dispositivo) — derruba
+            logout();
+            return null;
+        }
     }
     $cache = $u;
     return $u;
@@ -92,7 +112,15 @@ function verificar_2fa_e_logar(string $codigo): bool {
     $stmt = db()->prepare('SELECT totp_secret FROM usuarios WHERE id = ?');
     $stmt->execute([(int)$uid]);
     $sec = (string)$stmt->fetchColumn();
-    if (!totp_verificar($sec, $codigo)) return false;
+
+    // Primeiro tenta TOTP (6 dígitos numéricos)
+    $ok = totp_verificar($sec, $codigo);
+    // Se falhou, tenta como backup code (8 alfanuméricos, com ou sem hífen)
+    if (!$ok) {
+        $ok = totp_consumir_backup_code(db(), (int)$uid, $codigo);
+    }
+    if (!$ok) return false;
+
     unset($_SESSION['pending_2fa_user_id']);
     $_SESSION['user_id'] = (int)$uid;
     return true;
