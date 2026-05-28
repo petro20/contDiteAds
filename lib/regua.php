@@ -45,7 +45,8 @@ function regua_executar(PDO $db, DateTimeImmutable $hoje): array {
 
     if (!$etapas) return $log;
 
-    $stmt = $db->prepare("SELECT c.id, c.cliente_id, c.vencimento, c.silenciada, cl.email, cl.telefone, cl.nome_empresa, cl.nome_contato
+    $stmt = $db->prepare("SELECT c.id, c.cliente_id, c.vencimento, c.silenciada, c.valor_total,
+                                 cl.email, cl.telefone, cl.nome_empresa, cl.nome_contato
                           FROM cobrancas c JOIN clientes cl ON cl.id = c.cliente_id
                           WHERE c.status = 'aberta' AND c.silenciada = 0");
     $stmt->execute();
@@ -53,6 +54,20 @@ function regua_executar(PDO $db, DateTimeImmutable $hoje): array {
     $log['cobrancas_avaliadas'] = count($cobrancas);
 
     foreach ($cobrancas as $cob) {
+        // Calcula saldo atual: valor_total - pagamentos confirmados.
+        // Se saldo <= 0, mesmo que cobrança ainda esteja 'aberta' (status não foi
+        // recalculado), pulamos a régua — cliente não deve receber lembrança de algo
+        // que já pagou.
+        try {
+            $stmt2 = $db->prepare('SELECT COALESCE(SUM(valor_pago), 0) FROM pagamentos_cliente WHERE cobranca_id = ? AND pendente = 0');
+            $stmt2->execute([(int)$cob['id']]);
+            $pago = (float)$stmt2->fetchColumn();
+        } catch (PDOException $e) {
+            $pago = 0.0;
+        }
+        $saldo = (float)$cob['valor_total'] - $pago;
+        if ($saldo <= 0.01) continue; // já quitado, não cobra
+
         $venc = new DateTimeImmutable($cob['vencimento']);
         // diferença em dias (positivo = atraso, negativo = ainda vai vencer)
         $dias_atraso = (int)$venc->diff($hoje)->format('%r%a');

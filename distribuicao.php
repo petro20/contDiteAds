@@ -34,11 +34,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $data     = $_POST['data_pagamento'] ?? date('Y-m-d');
         $obs      = trim((string)($_POST['observacao'] ?? '')) ?: null;
         if ($valor > 0) {
+            // Trava: valor pago não pode exceder a quota disponível pro sócio na competência.
+            // Cálculo: receita - despesas - pagamentos_funcionário, dividido pelo nº de quotas (sócios + empresa).
+            // Subtrai o que já foi pago a esse sócio/empresa no mês.
             try {
-                $stmt = $db->prepare('INSERT INTO pagamentos_socio (socio_id, competencia_mes, moeda, valor, data_pagamento, observacao, criado_por) VALUES (?,?,?,?,?,?,?)');
-                $stmt->execute([$socio_id, $comp, $moeda, $valor, $data, $obs, (int)$u['id']]);
-                audit_log('socio.pago', 'pagamentos_socio', (int)$db->lastInsertId());
-                header('Location: ' . APP_BASE_URL . '/distribuicao.php?mes=' . urlencode($comp) . '&ok=1'); exit;
+                $socios_atuais = socios_ativos($db);
+                $n_q = count($socios_atuais) + 1; // +1 empresa
+                $rec_m  = receita_mes($db, $comp);
+                $desp_m = despesas_do_mes($db, $comp);
+                $ini = $comp . '-01';
+                $fim = date('Y-m-t', strtotime($ini));
+                $pag_func = 0.0;
+                try {
+                    $stq = $db->prepare("SELECT COALESCE(SUM(valor_usd),0) FROM pagamentos_funcionario WHERE data_pagamento BETWEEN ? AND ?");
+                    $stq->execute([$ini, $fim]);
+                    $pag_func = (float)$stq->fetchColumn();
+                } catch (PDOException $e) {}
+                $liq = $rec_m[$moeda] - ($desp_m['totais'][$moeda] ?? 0);
+                if ($moeda === 'USD') $liq -= $pag_func;
+                $quota = $liq / $n_q;
+
+                // Já pago a esse beneficiário (sócio ou empresa) na competência+moeda
+                $sql_jp = $socio_id === null
+                    ? 'SELECT COALESCE(SUM(valor),0) FROM pagamentos_socio WHERE socio_id IS NULL AND competencia_mes=? AND moeda=?'
+                    : 'SELECT COALESCE(SUM(valor),0) FROM pagamentos_socio WHERE socio_id=? AND competencia_mes=? AND moeda=?';
+                $stj = $db->prepare($sql_jp);
+                $stj->execute($socio_id === null ? [$comp, $moeda] : [$socio_id, $comp, $moeda]);
+                $ja_pago = (float)$stj->fetchColumn();
+                $disponivel = $quota - $ja_pago;
+
+                if ($disponivel <= 0) {
+                    $flash = ['err', 'Esse beneficiário já recebeu o total da quota disponível (' . number_format($quota, 2, ',', '.') . ' ' . $moeda . ') nesta competência.'];
+                } elseif ($valor > $disponivel + 0.01) {
+                    $flash = ['err', sprintf('Valor excede a quota disponível. Quota total: %.2f %s · Já pago: %.2f %s · Disponível: %.2f %s', $quota, $moeda, $ja_pago, $moeda, $disponivel, $moeda)];
+                } else {
+                    $stmt = $db->prepare('INSERT INTO pagamentos_socio (socio_id, competencia_mes, moeda, valor, data_pagamento, observacao, criado_por) VALUES (?,?,?,?,?,?,?)');
+                    $stmt->execute([$socio_id, $comp, $moeda, $valor, $data, $obs, (int)$u['id']]);
+                    audit_log('socio.pago', 'pagamentos_socio', (int)$db->lastInsertId());
+                    header('Location: ' . APP_BASE_URL . '/distribuicao.php?mes=' . urlencode($comp) . '&ok=1'); exit;
+                }
             } catch (PDOException $e) {
                 $flash = ['err', 'Erro: ' . $e->getMessage()];
             }

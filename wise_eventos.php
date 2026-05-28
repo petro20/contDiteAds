@@ -1,12 +1,52 @@
 <?php
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/lib/configuracoes.php';
+require_once __DIR__ . '/lib/pagamentos.php';
+require_once __DIR__ . '/lib/audit.php';
 $me = require_sadmin();
 $db = db();
 $flash = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_check();
+    if (($_POST['op'] ?? '') === 'confirmar_wise_pag') {
+        // Aceita pagamento Wise pendente: marca pendente=0 e atualiza status da cobrança.
+        $pag_id = (int)($_POST['pagamento_id'] ?? 0);
+        if ($pag_id) {
+            try {
+                $stmt = $db->prepare('UPDATE pagamentos_cliente SET pendente=0 WHERE id=? AND pendente=1');
+                $stmt->execute([$pag_id]);
+                $stmt = $db->prepare('SELECT cobranca_id FROM pagamentos_cliente WHERE id=?');
+                $stmt->execute([$pag_id]);
+                $cid = (int)$stmt->fetchColumn();
+                if ($cid) atualiza_status_cobranca($db, $cid);
+                audit_log('wise.pag_confirmado', 'pagamentos_cliente', $pag_id);
+                $flash = ['ok', 'Pagamento Wise confirmado.'];
+            } catch (Throwable $e) {
+                $flash = ['err', 'Erro ao confirmar: ' . $e->getMessage()];
+            }
+        }
+    }
+    if (($_POST['op'] ?? '') === 'rejeitar_wise_pag') {
+        // Rejeita pagamento Wise pendente: apaga o registro (não tinha comprovante físico).
+        $pag_id = (int)($_POST['pagamento_id'] ?? 0);
+        if ($pag_id) {
+            try {
+                $stmt = $db->prepare('SELECT cobranca_id FROM pagamentos_cliente WHERE id=? AND pendente=1');
+                $stmt->execute([$pag_id]);
+                $cid = (int)$stmt->fetchColumn();
+                if ($cid) {
+                    $stmt = $db->prepare('DELETE FROM pagamentos_cliente WHERE id=? AND pendente=1');
+                    $stmt->execute([$pag_id]);
+                    atualiza_status_cobranca($db, $cid);
+                    audit_log('wise.pag_rejeitado', 'pagamentos_cliente', $pag_id);
+                    $flash = ['ok', 'Pagamento Wise rejeitado e removido.'];
+                }
+            } catch (Throwable $e) {
+                $flash = ['err', 'Erro ao rejeitar: ' . $e->getMessage()];
+            }
+        }
+    }
     if (($_POST['op'] ?? '') === 'toggle_skip_sig') {
         $atual = config_get($db, 'wise_skip_signature');
         config_set($db, 'wise_skip_signature', $atual === '1' ? '0' : '1');
@@ -50,6 +90,22 @@ $eventos = $db->query("
     ORDER BY we.recebido_em DESC LIMIT 100
 ")->fetchAll();
 
+// Pagamentos Wise aguardando reconciliação (vindo do webhook como pendente=1)
+$pendentes = [];
+try {
+    $pendentes = $db->query("
+        SELECT pc.id AS pagamento_id, pc.valor_pago, pc.data_pagamento, pc.observacao,
+               pc.cobranca_id, c.competencia_mes, c.moeda, c.valor_total,
+               cl.nome_empresa
+        FROM pagamentos_cliente pc
+        JOIN cobrancas c  ON c.id = pc.cobranca_id
+        JOIN clientes  cl ON cl.id = c.cliente_id
+        WHERE pc.pendente = 1
+          AND pc.metodo = 'Wise'
+        ORDER BY pc.data_pagamento DESC, pc.id DESC
+    ")->fetchAll();
+} catch (Throwable $e) {}
+
 $page = 'Wise — Eventos webhook';
 $show_back = true;
 $back_to = APP_BASE_URL . '/config_pagamento.php';
@@ -69,6 +125,45 @@ require __DIR__ . '/includes/header.php';
 </div>
 
 <?php if ($flash): ?><div class="flash <?= e($flash[0]) ?>"><?= e($flash[1]) ?></div><?php endif; ?>
+
+<?php if ($pendentes): ?>
+<div class="card attention">
+  <div class="title">⏳ <?= count($pendentes) ?> pagamento(s) Wise aguardando reconciliação</div>
+  <p class="muted" style="font-size:13px;">O webhook detectou esses pagamentos automaticamente, mas só viram "pago" depois que você confirmar. Revise valor + cliente e clique em Confirmar (ou Rejeitar se for falso positivo).</p>
+  <?php foreach ($pendentes as $p): ?>
+    <div class="card" style="border-left:3px solid var(--c-attention); margin-top:var(--s-3);">
+      <div class="spaced">
+        <div style="flex:1;">
+          <strong><?= e($p['nome_empresa']) ?></strong> · cobrança #<?= (int)$p['cobranca_id'] ?> (<?= e($p['competencia_mes']) ?>)
+          <div class="muted" style="font-size:12px; margin-top:4px;">
+            Cobrança: <strong><?= e($p['moeda']) ?> <?= number_format((float)$p['valor_total'], 2, ',', '.') ?></strong>
+            · Pagamento Wise: <strong><?= e($p['moeda']) ?> <?= number_format((float)$p['valor_pago'], 2, ',', '.') ?></strong>
+            · <?= e(date('d/m/Y', strtotime($p['data_pagamento']))) ?>
+          </div>
+          <?php if ($p['observacao']): ?>
+            <div class="muted" style="font-size:11px; margin-top:4px;"><?= e($p['observacao']) ?></div>
+          <?php endif; ?>
+        </div>
+        <div class="spaced" style="gap:6px;">
+          <a class="btn btn-ghost small" href="<?= e(APP_BASE_URL) ?>/cobrancas.php?id=<?= (int)$p['cobranca_id'] ?>" target="_blank">Ver cobrança ↗</a>
+          <form method="post" style="display:inline;" onsubmit="return confirm('Confirmar este pagamento Wise?\nValor: <?= e($p['moeda']) ?> <?= number_format((float)$p['valor_pago'], 2, ',', '.') ?>\nCliente: <?= e(addslashes($p['nome_empresa'])) ?>');">
+            <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
+            <input type="hidden" name="op" value="confirmar_wise_pag">
+            <input type="hidden" name="pagamento_id" value="<?= (int)$p['pagamento_id'] ?>">
+            <button type="submit" class="btn small btn-brand">✓ Confirmar</button>
+          </form>
+          <form method="post" style="display:inline;" onsubmit="return confirm('Rejeitar e apagar este pagamento Wise? (não pode ser desfeito)');">
+            <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
+            <input type="hidden" name="op" value="rejeitar_wise_pag">
+            <input type="hidden" name="pagamento_id" value="<?= (int)$p['pagamento_id'] ?>">
+            <button type="submit" class="btn btn-ghost small" style="color:var(--c-danger);">✗ Rejeitar</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  <?php endforeach; ?>
+</div>
+<?php endif; ?>
 
 <div class="card">
   <form method="post" style="display:flex; align-items:center; gap:12px;">

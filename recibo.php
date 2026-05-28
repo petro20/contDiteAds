@@ -18,11 +18,30 @@ $stmt = $db->prepare('SELECT * FROM cobranca_itens WHERE cobranca_id = ? ORDER B
 $stmt->execute([$cid]);
 $itens = $stmt->fetchAll();
 
-$stmt = $db->prepare('SELECT * FROM pagamentos_cliente WHERE cobranca_id = ? ORDER BY data_pagamento');
-$stmt->execute([$cid]);
-$pagamentos = $stmt->fetchAll();
+// Recibo só lista pagamentos CONFIRMADOS (pendente=0). Comprovante recém-enviado
+// fica como pendente até admin aceitar — não pode aparecer como "pago" no recibo
+// ou cliente acha que tá quitado antes da confirmação.
+try {
+    $stmt = $db->prepare('SELECT * FROM pagamentos_cliente WHERE cobranca_id = ? AND pendente = 0 ORDER BY data_pagamento');
+    $stmt->execute([$cid]);
+    $pagamentos = $stmt->fetchAll();
+} catch (PDOException $e) {
+    // Schema antigo sem coluna pendente
+    $stmt = $db->prepare('SELECT * FROM pagamentos_cliente WHERE cobranca_id = ? ORDER BY data_pagamento');
+    $stmt->execute([$cid]);
+    $pagamentos = $stmt->fetchAll();
+}
 $total_pago = (float)array_sum(array_column($pagamentos, 'valor_pago'));
 $saldo = max((float)$cob['valor_total'] - $total_pago, 0);
+
+// Conta pagamentos pendentes (aguardando aprovação) só pra informar visualmente
+try {
+    $stmt = $db->prepare('SELECT COUNT(*) FROM pagamentos_cliente WHERE cobranca_id = ? AND pendente = 1');
+    $stmt->execute([$cid]);
+    $tem_pendentes = (int)$stmt->fetchColumn();
+} catch (PDOException $e) {
+    $tem_pendentes = 0;
+}
 ?><!doctype html>
 <html lang="pt-br">
 <head>
@@ -110,6 +129,11 @@ $saldo = max((float)$cob['valor_total'] - $total_pago, 0);
   <div style="text-align:right; padding:12px; margin-top:8px; font-size:13px;">
     Total pago: <strong><?= e(money_fmt($total_pago, $cob['moeda'])) ?></strong>
     <?php if ($saldo > 0): ?><br>Saldo: <strong style="color:#dc2626;"><?= e(money_fmt($saldo, $cob['moeda'])) ?></strong><?php endif; ?>
+    <?php if ($tem_pendentes > 0): ?>
+      <br><span style="color:#d97706; font-style:italic; font-size:12px;">
+        ⏳ <?= $tem_pendentes ?> pagamento(s) aguardando confirmação do admin não aparecem aqui.
+      </span>
+    <?php endif; ?>
   </div>
   <?php endif; ?>
 

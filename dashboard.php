@@ -285,6 +285,20 @@ require __DIR__ . '/includes/header.php';
     </a>
   <?php endif; ?>
 
+  <?php
+  // Pagamentos Wise pendentes (vindo do webhook como pendente=1)
+  $tot_wise_pend = 0;
+  try {
+    $tot_wise_pend = (int)$db->query("SELECT COUNT(*) FROM pagamentos_cliente WHERE pendente=1 AND metodo='Wise'")->fetchColumn();
+  } catch (Throwable $e) { error_log('dashboard: ' . $e->getMessage()); }
+  if ($tot_wise_pend > 0):
+  ?>
+    <a class="card attention" href="<?= e(APP_BASE_URL) ?>/wise_eventos.php">
+      <div class="title" style="color:var(--c-orange);">🪝 <?= $tot_wise_pend ?> pagamento<?= $tot_wise_pend>1?'s':'' ?> Wise aguardando reconciliação</div>
+      <div class="desc">Webhook detectou pagamentos automaticamente. Revise e confirme/rejeite no painel Wise.</div>
+    </a>
+  <?php endif; ?>
+
   <?php if ($tot_vencidas > 0): ?>
     <a class="card danger" href="<?= e(APP_BASE_URL) ?>/cobrancas.php?status=aberta">
       <div class="title" style="color:var(--c-danger);">💢 <?= $tot_vencidas ?> cobrança<?= $tot_vencidas>1?'s':'' ?> vencida<?= $tot_vencidas>1?'s':'' ?></div>
