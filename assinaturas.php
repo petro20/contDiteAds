@@ -260,6 +260,12 @@ if ($acao === 'novo' || $acao === 'editar') {
     document.getElementById('cliente_id')?.addEventListener('change', atualizaPreco);
     document.getElementById('variante')?.addEventListener('change', atualizaPreco);
     document.getElementById('valor_cobrado')?.addEventListener('input', function(){ this.dataset.touched = '1'; });
+
+    // Bug fix: se já existe valor (modo edição), marca como "tocado" antes de
+    // chamar atualizaPreco(). Senão, o autopreencher sobrescreveria o override
+    // que o admin gravou pra esse cliente.
+    const _vci = document.getElementById('valor_cobrado');
+    if (_vci && _vci.value !== '') _vci.dataset.touched = '1';
     atualizaPreco();
     </script>
     <?php
