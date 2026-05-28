@@ -10,8 +10,8 @@ $stmt->execute([$pid]);
 $pag = $stmt->fetch();
 if (!$pag) { http_response_code(404); exit('Pagamento não encontrado.'); }
 
-// Auth: admin ou o próprio funcionário
-if ($u['role'] !== 'admin' && (int)$u['id'] !== (int)$pag['funcionario_id']) {
+// Auth: admin/sadmin ou o próprio funcionário
+if (!is_admin() && (int)$u['id'] !== (int)$pag['funcionario_id']) {
     http_response_code(403); exit('Acesso negado.');
 }
 
