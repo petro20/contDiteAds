@@ -187,6 +187,19 @@ $role_label = [
     <p class="hint" style="color:var(--c-attention);">💡 Recomendado: baixe manualmente 1x por mês pra um lugar fora da Hostinger (Drive, Dropbox, HD).</p>
   </div>
 
+  <h2>🧹 Limpeza mensal automática</h2>
+  <div class="card">
+    <p>Em <code>/limpeza.php</code>: cron mensal apaga registros antigos pra manter banco ágil + recupera espaço com OPTIMIZE TABLE.</p>
+    <ul style="padding-left:20px; color:var(--txt-2);">
+      <li><strong>Cron mensal dia 1 às 03:00</strong> (antes do backup das 04:00)</li>
+      <li><strong>audit_log</strong> > 18 meses · <strong>wise_eventos</strong> processados > 6 meses · <strong>regua_eventos</strong> > 1 ano</li>
+      <li><strong>senha_resets</strong> usados > 30 dias · <strong>totp_backup_codes</strong> usados > 90 dias · <strong>convites</strong> aceitos > 30 dias</li>
+      <li><strong>Tabela com tamanho atual</strong> de cada tabela (linhas + KB) pra você ver o que tá crescendo</li>
+      <li><strong>Botão "Rodar limpeza agora"</strong> pra forçar fora do cron</li>
+    </ul>
+    <p class="hint" style="color:var(--c-success);">✓ Dados financeiros (cobranças, pagamentos, distribuição) NUNCA são apagados.</p>
+  </div>
+
 <?php elseif ($role === 'admin'): ?>
 
   <div class="card brand">
