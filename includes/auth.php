@@ -83,46 +83,38 @@ function login(string $email, string $senha): bool {
     if (!$u || !$u['ativo'] || !password_verify($senha, $u['senha_hash'])) {
         return false;
     }
-    // Checa 2FA tolerando ausência das colunas (antes da migration_003)
-    $totp_enabled = 0;
-    try {
-        $st2 = db()->prepare('SELECT totp_enabled FROM usuarios WHERE id = ?');
-        $st2->execute([(int)$u['id']]);
-        $totp_enabled = (int)$st2->fetchColumn();
-    } catch (Throwable $e) { /* migration 003 ainda não rodou */ }
-    if ($totp_enabled === 1) {
-        // Senha OK, mas precisa confirmar TOTP — guarda em pending
-        session_regenerate_id(true);
-        $_SESSION['pending_2fa_user_id'] = (int)$u['id'];
-        return true;
-    }
+    // 2FA NÃO é exigido no login — agora serve só como meio de recuperação
+    // (esqueci a senha → entrar com código TOTP/backup).
     session_regenerate_id(true);
     $_SESSION['user_id'] = (int) $u['id'];
     return true;
 }
 
-function login_pendente_2fa(): bool {
-    return !empty($_SESSION['pending_2fa_user_id']) && empty($_SESSION['user_id']);
-}
-
-function verificar_2fa_e_logar(string $codigo): bool {
+/**
+ * Tenta autenticar via 2FA (TOTP ou backup code) como meio de recuperação.
+ * Usado em esqueci.php pra entrar sem precisar do email de reset.
+ * Retorna true e loga o user; false se código inválido ou 2FA desativado.
+ */
+function login_via_2fa(string $email, string $codigo): bool {
     require_once __DIR__ . '/../lib/totp.php';
-    $uid = $_SESSION['pending_2fa_user_id'] ?? null;
-    if (!$uid) return false;
-    $stmt = db()->prepare('SELECT totp_secret FROM usuarios WHERE id = ?');
-    $stmt->execute([(int)$uid]);
-    $sec = (string)$stmt->fetchColumn();
+    $stmt = db()->prepare('SELECT id, ativo, totp_enabled, totp_secret FROM usuarios WHERE email = ? LIMIT 1');
+    $stmt->execute([$email]);
+    $u = $stmt->fetch();
+    if (!$u || !$u['ativo']) return false;
+    if ((int)$u['totp_enabled'] !== 1) return false; // só pra quem tem 2FA ativo
 
-    // Primeiro tenta TOTP (6 dígitos numéricos)
+    $sec = (string)$u['totp_secret'];
+
+    // Primeiro tenta TOTP (6 dígitos)
     $ok = totp_verificar($sec, $codigo);
-    // Se falhou, tenta como backup code (8 alfanuméricos, com ou sem hífen)
+    // Se falhou, tenta como backup code (8 alfanuméricos)
     if (!$ok) {
-        $ok = totp_consumir_backup_code(db(), (int)$uid, $codigo);
+        $ok = totp_consumir_backup_code(db(), (int)$u['id'], $codigo);
     }
     if (!$ok) return false;
 
-    unset($_SESSION['pending_2fa_user_id']);
-    $_SESSION['user_id'] = (int)$uid;
+    session_regenerate_id(true);
+    $_SESSION['user_id'] = (int)$u['id'];
     return true;
 }
 

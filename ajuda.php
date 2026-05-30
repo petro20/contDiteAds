@@ -168,9 +168,9 @@ $role_label = [
 
   <h2>🔐 Segurança e auditoria</h2>
   <div class="card">
-    <p><strong>2FA:</strong> ativa em <em>Minha conta → 🔐 Segurança</em>.</p>
-    <p><strong>🔑 Backup codes:</strong> ao ativar 2FA, sistema gera 8 códigos one-time-use. <strong>Salve em local seguro</strong> (impressão + gerenciador de senhas). Se perder o celular, cada código te deixa entrar 1 vez. Você pode regerar a qualquer momento.</p>
-    <p><strong>Reset de senha:</strong> ao trocar senha, todas as sessões em outros dispositivos são invalidadas automaticamente.</p>
+    <p><strong>2FA (meio de recuperação):</strong> ativa em <em>Minha conta → 🔐 Segurança</em>. <strong>NÃO é exigido no login normal</strong> — serve apenas como alternativa ao email pra recuperar acesso quando você esquece a senha (em <em>Esqueci minha senha → 🔐 Via 2FA</em>, entra direto com código do app).</p>
+    <p><strong>🔑 Backup codes:</strong> ao ativar 2FA, sistema gera 8 códigos one-time-use. <strong>Salve em local seguro</strong> (impressão + gerenciador de senhas). Cada código serve como alternativa ao TOTP se você perder o celular. Você pode regerar a qualquer momento.</p>
+    <p><strong>Reset de senha:</strong> ao trocar senha (via email ou após entrar pelo 2FA), todas as sessões em outros dispositivos são invalidadas automaticamente.</p>
     <p><strong>🔍 Auditoria:</strong> histórico de tudo no sistema. Só sadmin acessa.</p>
   </div>
 
@@ -258,8 +258,8 @@ $role_label = [
 
   <h2>🔐 Segurança</h2>
   <div class="card">
-    <p>Ative 2FA em <em>Minha conta → 🔐 Segurança</em>.</p>
-    <p><strong>🔑 Backup codes:</strong> ao ativar 2FA o sistema gera 8 códigos one-time-use. Salve em local seguro — se perder o celular você ainda consegue entrar.</p>
+    <p><strong>2FA (recuperação):</strong> ative em <em>Minha conta → 🔐 Segurança</em>. NÃO é pedido no login normal — serve como alternativa ao email se você esquecer a senha (use "Esqueci minha senha → Via 2FA").</p>
+    <p><strong>🔑 Backup codes:</strong> ao ativar 2FA o sistema gera 8 códigos one-time-use. Salve em local seguro pra usar caso perca o celular.</p>
   </div>
 
 <?php elseif ($role === 'funcionario'): ?>
@@ -308,7 +308,7 @@ $role_label = [
     <p><strong>WiseTag:</strong> obrigatório pra receber pagamento. <strong>Você edita em <em>Perfil</em></strong> (campos WiseTag/CPF/País). Se estiver vazio, aparece alerta vermelho avisando.</p>
     <p><strong>📊 Capacidade mensal:</strong> também no <em>Perfil</em>, abaixo dos dados pessoais. Informe quantos Criativos, Pacotes POSTAGEM e Sites/Projetos você absorve por mês. Sistema usa pra mostrar 🟢/🔴 quando admin tentar te atribuir um cliente. <strong>Mantenha atualizado.</strong></p>
     <p><strong>🟢/🔴 Aceitando novos clientes:</strong> checkbox no <em>Perfil</em>. Marque quando estiver com capacidade, desmarque quando estiver no limite. Sistema avisa o admin com alerta antes de tentar te atribuir novo cliente — admin pode forçar a exceção se quiser.</p>
-    <p><strong>🔐 2FA + backup codes:</strong> ative em <em>Minha conta → Segurança</em>. Os 8 backup codes te salvam se perder o celular — salva eles em local seguro.</p>
+    <p><strong>🔐 2FA + backup codes (recuperação):</strong> ative em <em>Minha conta → Segurança</em>. Não é pedido no login — serve pra recuperar conta se esquecer a senha. Os 8 backup codes te salvam se perder o celular — salva eles em local seguro.</p>
   </div>
 
 <?php else: // cliente ?>
@@ -342,8 +342,8 @@ $role_label = [
   <h2>👤 Minha conta</h2>
   <div class="card">
     <p>Atualize nome e senha. Email é fixo (avise a Dite Ads se precisar trocar).</p>
-    <p><strong>🔐 2FA (opcional, recomendado):</strong> ative em <em>Minha conta → Segurança</em> pra adicionar segunda camada de proteção via app autenticador. Sistema gera 8 backup codes pra você guardar caso perca o celular.</p>
-    <p><strong>Esqueceu a senha?</strong> Use "Esqueci a senha" no login — chega email com link pra redefinir.</p>
+    <p><strong>🔐 2FA (opcional, recuperação):</strong> ative em <em>Minha conta → Segurança</em> pra ter um app autenticador como alternativa ao email caso você esqueça a senha. Sistema gera 8 backup codes pra guardar caso perca o celular.</p>
+    <p><strong>Esqueceu a senha?</strong> Use "Esqueci a senha" no login — pode escolher: receber link por email OU entrar direto com código do app 2FA (se tiver ativo).</p>
   </div>
 
   <h2>🧭 Navegação</h2>

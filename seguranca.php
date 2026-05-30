@@ -90,6 +90,16 @@ require_once __DIR__ . '/includes/grupos.php';
 <h1 class="page-title">Minha conta</h1>
 <?php render_group_tabs('conta', 'seguranca'); ?>
 <h2>Segurança · 2FA</h2>
+
+<div class="card brand">
+  <div class="title">ℹ Pra que serve o 2FA aqui</div>
+  <div class="desc">
+    O 2FA <strong>não é exigido no login normal</strong> — você entra só com email + senha.<br>
+    Ele serve como <strong>meio de recuperação</strong>: se esquecer a senha e não receber o email de reset, vai em
+    "Esqueci minha senha" → aba <strong>🔐 Via 2FA</strong> e entra direto com o código do app autenticador (ou um backup code).
+  </div>
+</div>
+
 <?php if ($flash): ?><div class="flash <?= e($flash[0]) ?>"><?= e($flash[1]) ?></div><?php endif; ?>
 
 <?php
