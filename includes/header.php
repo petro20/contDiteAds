@@ -42,10 +42,32 @@ function togglePassword(btn) {
 // 3. Verificação no DOMContentLoaded (cobre o caso inicial)
 function _markAutofilled(input) {
   try {
-    if (input.matches(':-webkit-autofill') || input.matches(':autofill')) {
+    const isAutofilled = input.matches(':-webkit-autofill') || input.matches(':autofill');
+    if (isAutofilled) {
       input.classList.add('autofilled');
+      // Solução nuclear: aplica style INLINE direto no elemento.
+      // Style inline tem specificity (1,0,0,0) — mais forte que qualquer regra CSS,
+      // inclusive !important. Garante 100% mesmo se o Chrome sincronizar autofill
+      // entre sessões anônima/normal via conta Google.
+      const cssText =
+        'background-color: var(--bg-input) !important;' +
+        'background-image: none !important;' +
+        'color: var(--txt-1) !important;' +
+        '-webkit-text-fill-color: var(--txt-1) !important;' +
+        '-webkit-box-shadow: 0 0 0 1000px var(--bg-input) inset !important;' +
+                'box-shadow: 0 0 0 1000px var(--bg-input) inset !important;' +
+        'caret-color: var(--txt-1) !important;' +
+        'border: 1px solid var(--border) !important;' +
+        'border-radius: var(--r-md) !important;' +
+        '-webkit-transition: background-color 99999s ease 0s !important;' +
+                'transition: background-color 99999s ease 0s !important;';
+      input.style.cssText = cssText;
     } else {
       input.classList.remove('autofilled');
+      // Se já tinha style inline forçado, mas não está mais autofilled, limpa
+      if (input.style.cssText.indexOf('var(--bg-input)') !== -1) {
+        input.style.cssText = '';
+      }
     }
   } catch (e) { /* :autofill não suportado, ignora */ }
 }
