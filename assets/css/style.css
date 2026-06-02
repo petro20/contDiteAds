@@ -639,13 +639,45 @@ input[type=url], select, textarea {
         box-shadow 0.25s var(--ease-out),
         background 0.2s var(--ease-out);
 }
-input:hover:not(:focus), select:hover:not(:focus), textarea:hover:not(:focus) {
+input:hover:not(:focus):not(:disabled), select:hover:not(:focus):not(:disabled), textarea:hover:not(:focus):not(:disabled) {
     border-color: var(--border-strong);
     background: var(--bg-elevated-2);
 }
-input:disabled, select:disabled, textarea:disabled {
-    opacity: 0.6;
+
+/* Inputs desabilitados — manter o tema dark consistente */
+input:disabled, select:disabled, textarea:disabled,
+input[disabled], select[disabled], textarea[disabled],
+input[readonly], select[readonly], textarea[readonly] {
+    background: var(--bg-input);
+    color: var(--txt-2);
     cursor: not-allowed;
+    opacity: 0.7;
+    border-color: var(--border);
+}
+
+/* === Autofill do Chrome/Safari — força tema dark ===
+ * Sem isso o navegador pinta o input de branco/amarelo amareloso ao preencher
+ * automaticamente com senhas/dados salvos, quebrando o visual luxury.
+ */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus,
+select:-webkit-autofill {
+    -webkit-box-shadow: 0 0 0 1000px var(--bg-input) inset !important;
+    -webkit-text-fill-color: var(--txt-1) !important;
+    caret-color: var(--txt-1) !important;
+    border-color: var(--border) !important;
+    /* Transição absurdamente longa evita o "flash" amarelo durante o autofill */
+    transition: background-color 5000s ease-in-out 0s, color 5000s ease-in-out 0s;
+}
+
+input:-webkit-autofill:focus {
+    -webkit-box-shadow: 0 0 0 1000px var(--bg-input) inset, var(--shadow-glow) !important;
+    border-color: var(--c-primary) !important;
 }
 textarea {
     height: auto;
