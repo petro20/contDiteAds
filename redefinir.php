@@ -75,8 +75,20 @@ require __DIR__ . '/includes/header.php';
     <?php if ($erro): ?><div class="flash err"><?= e($erro) ?></div><?php endif; ?>
     <form method="post">
       <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
-      <div class="field"><label>Nova senha (mín. 8)</label><input type="password" name="senha" required autofocus autocomplete="new-password"></div>
-      <div class="field"><label>Confirmar senha</label><input type="password" name="senha2" required autocomplete="new-password"></div>
+      <div class="field">
+        <label>Nova senha (mín. 8)</label>
+        <div class="field-password">
+          <input type="password" name="senha" required autofocus autocomplete="new-password">
+          <button type="button" class="password-toggle" onclick="togglePassword(this)" aria-label="Mostrar senha">👁</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>Confirmar senha</label>
+        <div class="field-password">
+          <input type="password" name="senha2" required autocomplete="new-password">
+          <button type="button" class="password-toggle" onclick="togglePassword(this)" aria-label="Mostrar senha">👁</button>
+        </div>
+      </div>
       <button class="btn block" type="submit">Redefinir</button>
     </form>
   <?php endif; ?>

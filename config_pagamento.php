@@ -195,7 +195,10 @@ require __DIR__ . '/includes/header.php';
     <div class="field">
       <label>API key</label>
       <?php $tem_key = (bool)config_get($db, 'anthropic_api_key'); ?>
-      <input type="password" name="anthropic_api_key" value="<?= $tem_key ? '••••••••' : '' ?>" placeholder="sk-ant-..." autocomplete="off">
+      <div class="field-password">
+        <input type="password" name="anthropic_api_key" value="<?= $tem_key ? '••••••••' : '' ?>" placeholder="sk-ant-..." autocomplete="off">
+        <button type="button" class="password-toggle" onclick="togglePassword(this)" aria-label="Mostrar chave">👁</button>
+      </div>
       <div class="hint"><?= $tem_key ? '✓ Chave já configurada. Deixe em branco pra manter, ou cole uma nova pra trocar.' : 'Nenhuma chave configurada — o botão "✨ Preencher com IA" do simulador não funciona sem isso.' ?></div>
     </div>
   </div>

@@ -41,7 +41,10 @@ require __DIR__ . '/includes/header.php';
     </div>
     <div class="field">
       <label>Senha</label>
-      <input type="password" name="senha" required autocomplete="current-password">
+      <div class="field-password">
+        <input type="password" name="senha" required autocomplete="current-password">
+        <button type="button" class="password-toggle" onclick="togglePassword(this)" aria-label="Mostrar senha">👁</button>
+      </div>
     </div>
     <button class="btn block" type="submit">Entrar</button>
     <p class="center mt-5"><a href="<?= e(APP_BASE_URL) ?>/esqueci.php" class="muted">Esqueci minha senha</a></p>

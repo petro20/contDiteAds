@@ -24,6 +24,17 @@ $nav_active   = $nav_active   ?? '';
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('<?= e(APP_BASE_URL) ?>/sw.js').catch(()=>{});
 }
+
+// Toggle "olho" pra mostrar/esconder senha em campos type=password
+// Uso: <button type="button" class="password-toggle" onclick="togglePassword(this)">👁</button>
+function togglePassword(btn) {
+  const input = btn.previousElementSibling;
+  if (!input || (input.type !== 'password' && input.type !== 'text')) return;
+  const showing = input.type === 'text';
+  input.type = showing ? 'password' : 'text';
+  btn.innerHTML = showing ? '👁' : '🙈';
+  btn.setAttribute('aria-label', showing ? 'Mostrar senha' : 'Esconder senha');
+}
 </script>
 </head>
 <body>

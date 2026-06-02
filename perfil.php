@@ -111,7 +111,13 @@ require __DIR__ . '/includes/header.php';
     </div>
   <?php endif; ?>
 
-  <div class="field"><label>Nova senha (opcional)</label><input type="password" name="senha" autocomplete="new-password" placeholder="deixe em branco para manter"></div>
+  <div class="field">
+    <label>Nova senha (opcional)</label>
+    <div class="field-password">
+      <input type="password" name="senha" autocomplete="new-password" placeholder="deixe em branco para manter">
+      <button type="button" class="password-toggle" onclick="togglePassword(this)" aria-label="Mostrar senha">👁</button>
+    </div>
+  </div>
   <button class="btn block" type="submit">Salvar alterações</button>
 </form>
 

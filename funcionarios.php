@@ -208,7 +208,13 @@ if ($acao === 'novo' || $acao === 'editar') {
         <div class="field"><label>CPF (opcional)</label><input name="cpf" value="<?= e($func['cpf']) ?>"></div>
         <div class="field"><label>WiseTag (recebe USD)</label><input name="wisetag" value="<?= e($func['wisetag']) ?>" placeholder="@wisetag"></div>
         <div class="field"><label>País</label><input name="pais" value="<?= e($func['pais']) ?>"></div>
-        <div class="field"><label>Senha <?= $func['id'] ? '(deixe em branco para manter)' : '*' ?></label><input type="password" name="senha" <?= $func['id']?'':'required' ?> autocomplete="new-password"></div>
+        <div class="field">
+          <label>Senha <?= $func['id'] ? '(deixe em branco para manter)' : '*' ?></label>
+          <div class="field-password">
+            <input type="password" name="senha" <?= $func['id']?'':'required' ?> autocomplete="new-password">
+            <button type="button" class="password-toggle" onclick="togglePassword(this)" aria-label="Mostrar senha">👁</button>
+          </div>
+        </div>
         <label class="check"><input type="checkbox" name="ativo" <?= $func['ativo']?'checked':'' ?>> Ativo</label>
         <label class="check"><input type="checkbox" name="aceitando_clientes" <?= $func['aceitando_clientes']?'checked':'' ?>> Aceitando novos clientes</label>
 

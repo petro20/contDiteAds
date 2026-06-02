@@ -207,7 +207,13 @@ if ($acao === 'novo' || $acao === 'editar') {
             <input type="hidden" name="op" value="criar_login">
             <input type="hidden" name="cliente_id" value="<?= (int)$c['id'] ?>">
             <div class="field"><label>Email de login</label><input type="email" name="login_email" required value="<?= e($c['email']) ?>"></div>
-            <div class="field"><label>Senha inicial</label><input type="password" name="login_senha" required></div>
+            <div class="field">
+              <label>Senha inicial</label>
+              <div class="field-password">
+                <input type="password" name="login_senha" required>
+                <button type="button" class="password-toggle" onclick="togglePassword(this)" aria-label="Mostrar senha">👁</button>
+              </div>
+            </div>
             <button class="btn block" type="submit">Criar login</button>
           </form>
         <?php endif; ?>

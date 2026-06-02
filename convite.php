@@ -125,8 +125,20 @@ require __DIR__ . '/includes/header.php';
     <div class="field"><label>Email (será seu login) *</label><input type="email" name="email" required value="<?= e($_POST['email'] ?? '') ?>" autocomplete="email"></div>
     <div class="field"><label>Telefone (com DDI)</label><input name="telefone" value="<?= e($_POST['telefone'] ?? '') ?>" placeholder="+55 11 99999-9999"></div>
     <div class="field"><label>Endereço</label><input name="endereco" value="<?= e($_POST['endereco'] ?? '') ?>"></div>
-    <div class="field"><label>Senha (mínimo 8 caracteres) *</label><input type="password" name="senha" required autocomplete="new-password"></div>
-    <div class="field"><label>Confirmar senha *</label><input type="password" name="senha2" required autocomplete="new-password"></div>
+    <div class="field">
+      <label>Senha (mínimo 8 caracteres) *</label>
+      <div class="field-password">
+        <input type="password" name="senha" required autocomplete="new-password">
+        <button type="button" class="password-toggle" onclick="togglePassword(this)" aria-label="Mostrar senha">👁</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>Confirmar senha *</label>
+      <div class="field-password">
+        <input type="password" name="senha2" required autocomplete="new-password">
+        <button type="button" class="password-toggle" onclick="togglePassword(this)" aria-label="Mostrar senha">👁</button>
+      </div>
+    </div>
 
     <button class="btn block" type="submit">Criar minha conta</button>
   </form>
