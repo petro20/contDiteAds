@@ -656,40 +656,76 @@ input[readonly], select[readonly], textarea[readonly] {
 }
 
 /* === Autofill do Chrome/Safari/Edge — força tema dark ===
- * Quando o navegador preenche automaticamente (senhas salvas, autocomplete),
- * ele PINTA o input de branco/amarelo, ignorando background-color.
- * A única forma confiável de contornar é box-shadow inset gigante.
- *
- * Suporta tanto :-webkit-autofill (Chrome/Safari/Edge antigos) quanto
- * a spec nova :autofill (Chrome 116+, Firefox 86+).
+ * Selectors específicos por TYPE pra garantir specificity alta o suficiente
+ * pra sobrescrever qualquer regra base. Usa box-shadow inset técnica padrão.
  */
-body input:-webkit-autofill,
-body input:-webkit-autofill:hover,
-body input:-webkit-autofill:focus,
-body input:-webkit-autofill:active,
-body textarea:-webkit-autofill,
-body textarea:-webkit-autofill:hover,
-body textarea:-webkit-autofill:focus,
-body select:-webkit-autofill,
-body input:autofill,
-body input:autofill:hover,
-body input:autofill:focus,
-body textarea:autofill,
-body select:autofill {
+input[type="text"]:-webkit-autofill,
+input[type="text"]:-webkit-autofill:hover,
+input[type="text"]:-webkit-autofill:focus,
+input[type="text"]:-webkit-autofill:active,
+input[type="email"]:-webkit-autofill,
+input[type="email"]:-webkit-autofill:hover,
+input[type="email"]:-webkit-autofill:focus,
+input[type="email"]:-webkit-autofill:active,
+input[type="password"]:-webkit-autofill,
+input[type="password"]:-webkit-autofill:hover,
+input[type="password"]:-webkit-autofill:focus,
+input[type="password"]:-webkit-autofill:active,
+input[type="number"]:-webkit-autofill,
+input[type="number"]:-webkit-autofill:hover,
+input[type="number"]:-webkit-autofill:focus,
+input[type="tel"]:-webkit-autofill,
+input[type="tel"]:-webkit-autofill:hover,
+input[type="tel"]:-webkit-autofill:focus,
+input[type="url"]:-webkit-autofill,
+input[type="url"]:-webkit-autofill:hover,
+input[type="url"]:-webkit-autofill:focus,
+input[type="date"]:-webkit-autofill,
+input[type="date"]:-webkit-autofill:hover,
+input[type="date"]:-webkit-autofill:focus,
+input:not([type]):-webkit-autofill,
+input:not([type]):-webkit-autofill:hover,
+input:not([type]):-webkit-autofill:focus,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus,
+select:-webkit-autofill,
+/* Spec nova (Chrome 116+, Firefox 86+) sem prefixo */
+input[type="text"]:autofill,
+input[type="email"]:autofill,
+input[type="password"]:autofill,
+input[type="number"]:autofill,
+input[type="tel"]:autofill,
+input[type="url"]:autofill,
+input[type="date"]:autofill,
+input:not([type]):autofill,
+textarea:autofill,
+select:autofill {
     -webkit-box-shadow: 0 0 0 1000px var(--bg-input) inset !important;
             box-shadow: 0 0 0 1000px var(--bg-input) inset !important;
     -webkit-text-fill-color: var(--txt-1) !important;
-            text-fill-color: var(--txt-1) !important;
     caret-color: var(--txt-1) !important;
+    background-color: var(--bg-input) !important;
+    background-clip: content-box !important;
+    -webkit-background-clip: content-box !important;
+    color: var(--txt-1) !important;
     border: 1px solid var(--border) !important;
     border-radius: var(--r-md) !important;
-    /* Transição absurdamente longa evita o "flash" branco durante o autofill */
     -webkit-transition: background-color 99999s ease-in-out 0s, color 99999s ease-in-out 0s !important;
             transition: background-color 99999s ease-in-out 0s, color 99999s ease-in-out 0s !important;
 }
 
-body input:-webkit-autofill:focus,
-body input:autofill:focus {
+/* Focus com glow ring premium preservado */
+input[type="text"]:-webkit-autofill:focus,
+input[type="email"]:-webkit-autofill:focus,
+input[type="password"]:-webkit-autofill:focus,
+input[type="number"]:-webkit-autofill:focus,
+input[type="tel"]:-webkit-autofill:focus,
+input[type="url"]:-webkit-autofill:focus,
+input[type="date"]:-webkit-autofill:focus,
+input[type="text"]:autofill:focus,
+input[type="email"]:autofill:focus,
+input[type="password"]:autofill:focus {
     -webkit-box-shadow: 0 0 0 1000px var(--bg-input) inset, var(--shadow-glow) !important;
             box-shadow: 0 0 0 1000px var(--bg-input) inset, var(--shadow-glow) !important;
     border-color: var(--c-primary) !important;
