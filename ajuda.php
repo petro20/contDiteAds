@@ -100,7 +100,27 @@ $role_label = [
 
   <h2>🔐 Matriz de acesso (PDF)</h2>
   <div class="card">
-    <p>Dashboard → <strong>🔐 Matriz de acesso (PDF)</strong>. Documento completo com quem pode o quê no sistema, organizado por área. Botão "🖨 Imprimir / Salvar como PDF" salva como arquivo.</p>
+    <p>Dashboard → <strong>🔐 Matriz de acesso (PDF)</strong>. Documento completo com quem pode o quê no sistema (16 seções: navegação, perfil, pessoas, catálogo, cobranças, Wise, agenda, finanças, comunicação, alertas, manutenção, segurança, crons, travas globais e comportamentos automáticos). Botão "🖨 Imprimir / Salvar como PDF" salva como arquivo. Útil pra compliance/onboarding/contador.</p>
+  </div>
+
+  <h2>⏰ Crons em produção (6 agendados)</h2>
+  <div class="card">
+    <p>Sistema roda sozinho com 6 tarefas agendadas no Hostinger:</p>
+    <table style="width:100%; font-size:13px; border-collapse:collapse;">
+      <thead><tr style="border-bottom:1px solid var(--border);">
+        <th style="text-align:left; padding:6px;">Quando</th>
+        <th style="text-align:left; padding:6px;">Script</th>
+        <th style="text-align:left; padding:6px;">O quê</th>
+      </tr></thead>
+      <tbody>
+        <tr><td style="padding:6px;">Dia 1 · 03:00</td><td><code>limpeza_mensal.php</code></td><td>Apaga logs antigos + OPTIMIZE TABLE</td></tr>
+        <tr><td style="padding:6px;">Todo dia · 04:00</td><td><code>backup_db.php</code></td><td>Backup gzip (retém 14 dias)</td></tr>
+        <tr><td style="padding:6px;">Todo dia · 05:00</td><td><code>gerar_cobrancas.php</code></td><td>Gera cobranças mensais</td></tr>
+        <tr><td style="padding:6px;">Todo dia · 06:00</td><td><code>regua_executar.php</code></td><td>Régua de cobrança</td></tr>
+        <tr><td style="padding:6px;">Qua + Sex · 09:00</td><td><code>alerta_postagens.php</code></td><td>Lembrete POSTAGEM</td></tr>
+      </tbody>
+    </table>
+    <p class="hint">Todos os crons têm <code>flock</code> pra evitar execuções concorrentes. Audit_log registra cada execução.</p>
   </div>
 
   <h2>💰 Finanças (3 abas)</h2>
@@ -261,6 +281,12 @@ $role_label = [
     <p>Visão consolidada do que cada funcionário está executando. 3 vistas: Lista · Por pessoa · 🗓 Calendário (grid mensal colorido por funcionário).</p>
   </div>
 
+  <h2>🔔 Alertas automáticos pra funcionários</h2>
+  <div class="card">
+    <p>Sistema envia <strong>email automático</strong> pros funcionários toda quarta e sexta às 09:00 quando eles têm assinaturas de POSTAGEM ativas sem nenhuma entrega marcada na semana. <em>Você não precisa fazer nada</em> — o cron cuida disso. Audit_log registra cada execução.</p>
+    <p>Se quiser disparar fora dos horários (ex: terça-feira), pode pedir pro sadmin rodar pela tela <code>/alertas.php</code>.</p>
+  </div>
+
   <h2>💎 Distribuição de lucro</h2>
   <div class="card">
     <p>Sua quota = lucro do mês ÷ (nº sócios + 1). Botão Pagar registra recebimento.</p>
@@ -301,6 +327,16 @@ $role_label = [
   <h2>📊 Painel</h2>
   <div class="card">
     <p>Em <em>Painel</em> você vê suas entregas dos últimos meses, valor recebido e previsão.</p>
+  </div>
+
+  <h2>📧 Lembretes automáticos por email</h2>
+  <div class="card">
+    <p>Toda <strong>quarta e sexta às 09:00</strong>, o sistema verifica se você tem assinaturas de <strong>POSTAGEM ativas sem nenhuma entrega marcada nessa semana</strong>. Se houver, você recebe um email com:</p>
+    <ul style="padding-left:20px; color:var(--txt-2);">
+      <li>Lista dos clientes pendentes</li>
+      <li>Botão direto pra abrir sua agenda</li>
+    </ul>
+    <p class="hint">Pra não receber o email: marque suas entregas na agenda durante a semana (mesmo que parcial). Se você já entregou tudo e marcou, o sistema sabe que tá em dia e não envia nada.</p>
   </div>
 
   <h2>🧭 Navegação</h2>
