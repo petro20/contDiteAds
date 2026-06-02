@@ -22,7 +22,39 @@ $nav_active   = $nav_active   ?? '';
 <link rel="stylesheet" href="<?= e(APP_BASE_URL) ?>/assets/css/style.css?v=<?= e(@filemtime(__DIR__ . '/../assets/css/style.css') ?: '1') ?>">
 <script>
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('<?= e(APP_BASE_URL) ?>/sw.js').catch(()=>{});
+  navigator.serviceWorker.register('<?= e(APP_BASE_URL) ?>/sw.js').then(reg => {
+    // Força check de atualização ao carregar página
+    reg.update();
+    // Quando uma nova versão é instalada, força refresh automático
+    reg.addEventListener('updatefound', () => {
+      const nw = reg.installing;
+      if (!nw) return;
+      nw.addEventListener('statechange', () => {
+        if (nw.state === 'activated' && navigator.serviceWorker.controller) {
+          // Nova versão ativada — recarrega 1x pra pegar CSS/JS novos
+          if (!sessionStorage.getItem('_sw_reloaded')) {
+            sessionStorage.setItem('_sw_reloaded', '1');
+            window.location.reload();
+          }
+        }
+      });
+    });
+  }).catch(()=>{});
+
+  // Kill switch: desregistra SWs antigos (versões anteriores a v13)
+  // E força reload pra pegar tudo novo. Roda 1x por sessão.
+  if (!sessionStorage.getItem('_sw_purged_v13')) {
+    sessionStorage.setItem('_sw_purged_v13', '1');
+    caches.keys().then(keys => {
+      const oldCaches = keys.filter(k => k.startsWith('diteads-') && !k.includes('v13') && !k.includes('v14') && !k.includes('v15'));
+      if (oldCaches.length > 0) {
+        Promise.all(oldCaches.map(k => caches.delete(k))).then(() => {
+          console.log('Caches antigos removidos:', oldCaches);
+          window.location.reload();
+        });
+      }
+    });
+  }
 }
 
 // Toggle "olho" pra mostrar/esconder senha em campos type=password
