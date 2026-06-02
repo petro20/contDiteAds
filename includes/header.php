@@ -35,9 +35,24 @@ function togglePassword(btn) {
   btn.setAttribute('aria-label', showing ? 'Mostrar senha' : 'Esconder senha');
 }
 
-// Detecta autofill do Chrome via animationstart e força tema dark
-// (Chrome ignora background-color em inputs autofilled. O CSS dispara uma
-// animação invisível ao autofill, e este JS marca a classe pra força !important.)
+// === Detecção de autofill (3 camadas defensivas) ===
+// O Chrome pinta inputs autofilled de branco/amarelo. Pra forçar tema dark:
+// 1. animationstart event (rápido, mas pode falhar em alguns Chromes)
+// 2. setInterval polling com :-webkit-autofill (backup brute-force)
+// 3. Verificação no DOMContentLoaded (cobre o caso inicial)
+function _markAutofilled(input) {
+  try {
+    if (input.matches(':-webkit-autofill') || input.matches(':autofill')) {
+      input.classList.add('autofilled');
+    } else {
+      input.classList.remove('autofilled');
+    }
+  } catch (e) { /* :autofill não suportado, ignora */ }
+}
+function _scanAutofill() {
+  document.querySelectorAll('input, textarea').forEach(_markAutofilled);
+}
+// Camada 1: animationstart
 document.addEventListener('animationstart', function(e) {
   if (e.animationName === 'onAutoFillStart') {
     e.target.classList.add('autofilled');
@@ -45,6 +60,19 @@ document.addEventListener('animationstart', function(e) {
     e.target.classList.remove('autofilled');
   }
 }, true);
+// Camada 2: scan inicial assim que DOM carregar
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', _scanAutofill);
+} else {
+  _scanAutofill();
+}
+// Camada 3: polling defensivo nos primeiros 5 segundos (autofill às vezes
+// acontece depois do load, especialmente em PWA / Safari)
+let _autofillPolls = 0;
+const _autofillInterval = setInterval(function() {
+  _scanAutofill();
+  if (++_autofillPolls > 10) clearInterval(_autofillInterval); // 10 × 500ms = 5s
+}, 500);
 </script>
 </head>
 <body>
