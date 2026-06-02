@@ -26,7 +26,6 @@ if ('serviceWorker' in navigator) {
 }
 
 // Toggle "olho" pra mostrar/esconder senha em campos type=password
-// Uso: <button type="button" class="password-toggle" onclick="togglePassword(this)">👁</button>
 function togglePassword(btn) {
   const input = btn.previousElementSibling;
   if (!input || (input.type !== 'password' && input.type !== 'text')) return;
@@ -35,6 +34,17 @@ function togglePassword(btn) {
   btn.innerHTML = showing ? '👁' : '🙈';
   btn.setAttribute('aria-label', showing ? 'Mostrar senha' : 'Esconder senha');
 }
+
+// Detecta autofill do Chrome via animationstart e força tema dark
+// (Chrome ignora background-color em inputs autofilled. O CSS dispara uma
+// animação invisível ao autofill, e este JS marca a classe pra força !important.)
+document.addEventListener('animationstart', function(e) {
+  if (e.animationName === 'onAutoFillStart') {
+    e.target.classList.add('autofilled');
+  } else if (e.animationName === 'onAutoFillCancel') {
+    e.target.classList.remove('autofilled');
+  }
+}, true);
 </script>
 </head>
 <body>

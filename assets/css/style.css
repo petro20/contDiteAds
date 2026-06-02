@@ -656,9 +656,44 @@ input[readonly], select[readonly], textarea[readonly] {
 }
 
 /* === Autofill do Chrome/Safari/Edge — força tema dark ===
- * Selectors específicos por TYPE pra garantir specificity alta o suficiente
- * pra sobrescrever qualquer regra base. Usa box-shadow inset técnica padrão.
+ *
+ * O Chrome é AGRESSIVO em pintar inputs autofilled de branco/amarelo,
+ * ignorando qualquer background-color do CSS. A única forma 100% confiável
+ * é combinar 3 técnicas:
+ *
+ * 1) box-shadow inset gigante (hack clássico, funciona em quase tudo)
+ * 2) animationstart event (CSS dispara animação ao autofill → JS reage)
+ * 3) Seletores por TYPE específico (specificity alta)
+ *
+ * O JS no includes/header.php escuta o evento animationstart com nome
+ * "onAutoFillStart" e adiciona a classe .autofilled — que tem regra
+ * !important garantindo o background dark.
  */
+
+/* Dispara animação invisível quando navegador faz autofill (detectada via JS) */
+@keyframes onAutoFillStart { from { /* trigger */ } to { /* trigger */ } }
+@keyframes onAutoFillCancel { from { /* trigger */ } to { /* trigger */ } }
+input:-webkit-autofill { animation-name: onAutoFillStart; animation-duration: 0.001s; }
+input:not(:-webkit-autofill) { animation-name: onAutoFillCancel; animation-duration: 0.001s; }
+
+/* Classe aplicada via JS quando autofill é detectado — força tema dark */
+input.autofilled,
+input.autofilled:hover,
+input.autofilled:focus {
+    background-color: var(--bg-input) !important;
+    background-image: none !important;
+    color: var(--txt-1) !important;
+    -webkit-text-fill-color: var(--txt-1) !important;
+    caret-color: var(--txt-1) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--r-md) !important;
+}
+input.autofilled:focus {
+    border-color: var(--c-primary) !important;
+    box-shadow: var(--shadow-glow) !important;
+}
+
+
 input[type="text"]:-webkit-autofill,
 input[type="text"]:-webkit-autofill:hover,
 input[type="text"]:-webkit-autofill:focus,
