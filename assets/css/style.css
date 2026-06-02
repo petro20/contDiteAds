@@ -626,9 +626,10 @@ input[type=url], select, textarea {
     width: 100%;
     height: 50px;
     padding: 0 var(--s-4);
-    background: var(--bg-input);
-    border: 1px solid var(--border);
-    border-radius: var(--r-md);
+    background: var(--bg-input) !important;
+    background-color: var(--bg-input) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--r-md) !important;
     color: var(--txt-1);
     font: inherit;
     font-size: 15px;

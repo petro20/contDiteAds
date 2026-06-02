@@ -2,7 +2,7 @@
 // Não faz cache de páginas dinâmicas (sempre busca da rede).
 // Versão bump: força invalidação do cache antigo (era diteads-v1 com logo de 1.5MB).
 // Trocar essa string sempre que houver mudança nos assets cacheados.
-const CACHE_VER = 'diteads-v11-autofill-inline-style';
+const CACHE_VER = 'diteads-v12-input-radius-forced';
 const STATIC_ASSETS = [
   '/assets/img/logo.png',
   '/assets/img/logo-32.png',
