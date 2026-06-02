@@ -187,6 +187,17 @@ $role_label = [
     <p class="hint" style="color:var(--c-attention);">💡 Recomendado: baixe manualmente 1x por mês pra um lugar fora da Hostinger (Drive, Dropbox, HD).</p>
   </div>
 
+  <h2>🔔 Alertas automáticos pra funcionários</h2>
+  <div class="card">
+    <p><strong>Postagens sem marcação:</strong> cron quarta e sexta às 09:00 verifica funcionários com assinaturas de POSTAGEM ativas que não marcaram nenhuma entrega nessa semana.</p>
+    <ul style="padding-left:20px; color:var(--txt-2);">
+      <li>Critério: item do catálogo com 'POSTAGEM' no nome + 0 entregas com data_marcada entre seg e hoje</li>
+      <li>Email vai pro funcionário direto com lista dos clientes pendentes + botão pra agenda</li>
+      <li>Audit log registra cada execução</li>
+      <li>Testar: <code>cron/alerta_postagens.php?dry_run=1</code> (sadmin via HTTP) — lista sem enviar</li>
+    </ul>
+  </div>
+
   <h2>🧹 Limpeza mensal automática</h2>
   <div class="card">
     <p>Em <code>/limpeza.php</code>: cron mensal apaga registros antigos pra manter banco ágil + recupera espaço com OPTIMIZE TABLE.</p>
