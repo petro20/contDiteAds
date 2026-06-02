@@ -1,13 +1,13 @@
 // Service Worker básico — habilita instalação PWA e cache leve dos assets estáticos.
 // Não faz cache de páginas dinâmicas (sempre busca da rede).
-// Versão bump: força invalidação do cache antigo (era diteads-v1 com logo de 1.5MB).
-// Trocar essa string sempre que houver mudança nos assets cacheados.
-const CACHE_VER = 'diteads-v12-input-radius-forced';
+// Versão bump: força invalidação do cache antigo.
+const CACHE_VER = 'diteads-v13-css-network-first';
+// CSS removido da pré-cache: agora sempre vai pela rede (network-first)
+// pra refletir mudanças de design imediatamente.
 const STATIC_ASSETS = [
   '/assets/img/logo.png',
   '/assets/img/logo-32.png',
   '/assets/img/logo-180.png',
-  '/assets/css/style.css',
 ];
 
 self.addEventListener('install', e => {
@@ -26,7 +26,22 @@ self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
   // PHP / API / POST → sempre da rede (não cacheia)
   if (e.request.method !== 'GET' || url.pathname.endsWith('.php') || url.pathname.includes('/uploads/')) return;
-  // Assets estáticos: cache first, network fallback
+
+  // CSS/JS → NETWORK-FIRST (sempre busca rede; cache só como fallback offline).
+  // Garante que mudanças de design sejam refletidas imediatamente.
+  if (url.pathname.endsWith('.css') || url.pathname.endsWith('.js')) {
+    e.respondWith(
+      fetch(e.request).then(resp => {
+        // Atualiza o cache em background
+        const copy = resp.clone();
+        caches.open(CACHE_VER).then(c => c.put(e.request, copy));
+        return resp;
+      }).catch(() => caches.match(e.request)) // só usa cache se rede falhar
+    );
+    return;
+  }
+
+  // Imagens estáticas: cache-first (não mudam frequentemente)
   if (url.pathname.startsWith('/assets/')) {
     e.respondWith(
       caches.match(e.request).then(cached => cached || fetch(e.request).then(resp => {
