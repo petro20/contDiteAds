@@ -655,28 +655,43 @@ input[readonly], select[readonly], textarea[readonly] {
     border-color: var(--border);
 }
 
-/* === Autofill do Chrome/Safari — força tema dark ===
- * Sem isso o navegador pinta o input de branco/amarelo amareloso ao preencher
- * automaticamente com senhas/dados salvos, quebrando o visual luxury.
+/* === Autofill do Chrome/Safari/Edge — força tema dark ===
+ * Quando o navegador preenche automaticamente (senhas salvas, autocomplete),
+ * ele PINTA o input de branco/amarelo, ignorando background-color.
+ * A única forma confiável de contornar é box-shadow inset gigante.
+ *
+ * Suporta tanto :-webkit-autofill (Chrome/Safari/Edge antigos) quanto
+ * a spec nova :autofill (Chrome 116+, Firefox 86+).
  */
-input:-webkit-autofill,
-input:-webkit-autofill:hover,
-input:-webkit-autofill:focus,
-input:-webkit-autofill:active,
-textarea:-webkit-autofill,
-textarea:-webkit-autofill:hover,
-textarea:-webkit-autofill:focus,
-select:-webkit-autofill {
+body input:-webkit-autofill,
+body input:-webkit-autofill:hover,
+body input:-webkit-autofill:focus,
+body input:-webkit-autofill:active,
+body textarea:-webkit-autofill,
+body textarea:-webkit-autofill:hover,
+body textarea:-webkit-autofill:focus,
+body select:-webkit-autofill,
+body input:autofill,
+body input:autofill:hover,
+body input:autofill:focus,
+body textarea:autofill,
+body select:autofill {
     -webkit-box-shadow: 0 0 0 1000px var(--bg-input) inset !important;
+            box-shadow: 0 0 0 1000px var(--bg-input) inset !important;
     -webkit-text-fill-color: var(--txt-1) !important;
+            text-fill-color: var(--txt-1) !important;
     caret-color: var(--txt-1) !important;
-    border-color: var(--border) !important;
-    /* Transição absurdamente longa evita o "flash" amarelo durante o autofill */
-    transition: background-color 5000s ease-in-out 0s, color 5000s ease-in-out 0s;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--r-md) !important;
+    /* Transição absurdamente longa evita o "flash" branco durante o autofill */
+    -webkit-transition: background-color 99999s ease-in-out 0s, color 99999s ease-in-out 0s !important;
+            transition: background-color 99999s ease-in-out 0s, color 99999s ease-in-out 0s !important;
 }
 
-input:-webkit-autofill:focus {
+body input:-webkit-autofill:focus,
+body input:autofill:focus {
     -webkit-box-shadow: 0 0 0 1000px var(--bg-input) inset, var(--shadow-glow) !important;
+            box-shadow: 0 0 0 1000px var(--bg-input) inset, var(--shadow-glow) !important;
     border-color: var(--c-primary) !important;
 }
 textarea {
