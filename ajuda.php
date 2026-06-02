@@ -194,7 +194,7 @@ $role_label = [
       <li>Critério: item do catálogo com 'POSTAGEM' no nome + 0 entregas com data_marcada entre seg e hoje</li>
       <li>Email vai pro funcionário direto com lista dos clientes pendentes + botão pra agenda</li>
       <li>Audit log registra cada execução</li>
-      <li>Testar: <code>cron/alerta_postagens.php?dry_run=1</code> (sadmin via HTTP) — lista sem enviar</li>
+      <li><strong>Testar / disparar manual:</strong> tela <code>/alertas.php</code> com botões "Dry-run" (só lista) e "Rodar agora" (envia emails)</li>
     </ul>
   </div>
 
