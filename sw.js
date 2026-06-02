@@ -1,7 +1,7 @@
 // Service Worker básico — habilita instalação PWA e cache leve dos assets estáticos.
 // Não faz cache de páginas dinâmicas (sempre busca da rede).
 // Versão bump: força invalidação do cache antigo.
-const CACHE_VER = 'diteads-v14-autopurge';
+const CACHE_VER = 'diteads-v15-input-no-type';
 // CSS removido da pré-cache: agora sempre vai pela rede (network-first)
 // pra refletir mudanças de design imediatamente.
 const STATIC_ASSETS = [
