@@ -29,6 +29,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $link_grp  = trim((string)($_POST['link_grupo'] ?? '')) ?: null;
         $obs       = trim((string)($_POST['observacoes'] ?? '')) ?: null;
         $ativo     = isset($_POST['ativo']) ? 1 : 0;
+        // dia_cobranca: dia do mês (1-31) em que o cliente paga. Cron gera a
+        // cobrança 7 dias antes desse dia. Se vazio → NULL (cron pula esse cliente).
+        $dia_cob_raw = trim((string)($_POST['dia_cobranca'] ?? ''));
+        $dia_cob   = ($dia_cob_raw === '') ? null : max(1, min(31, (int)$dia_cob_raw));
         if ($nome_emp === '') {
             $flash = ['err','Nome da empresa é obrigatório.'];
             $acao = $pid ? 'editar' : 'novo'; $id = $pid;
@@ -37,8 +41,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $db->prepare('SELECT moeda FROM clientes WHERE id = ?');
             $stmt->execute([$pid]);
             $moeda_antiga = $stmt->fetchColumn();
-            $stmt = $db->prepare('UPDATE clientes SET nome=?, nome_empresa=?, nome_contato=?, documento=?, email=?, moeda=?, telefone=?, endereco=?, link_grupo=?, observacoes=?, ativo=? WHERE id=?');
-            $stmt->execute([$nome_emp, $nome_emp, $nome_cnt, $doc, $email, $moeda, $tel, $end, $link_grp, $obs, $ativo, $pid]);
+            $stmt = $db->prepare('UPDATE clientes SET nome=?, nome_empresa=?, nome_contato=?, documento=?, email=?, moeda=?, telefone=?, endereco=?, link_grupo=?, observacoes=?, dia_cobranca=?, ativo=? WHERE id=?');
+            $stmt->execute([$nome_emp, $nome_emp, $nome_cnt, $doc, $email, $moeda, $tel, $end, $link_grp, $obs, $dia_cob, $ativo, $pid]);
             audit_log('cliente.editado', 'clientes', $pid);
 
             $extra_query = '';
@@ -80,8 +84,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             header('Location: ' . APP_BASE_URL . '/clientes.php?acao=editar&id=' . $pid . '&ok=upd' . $extra_query); exit;
         } else {
-            $stmt = $db->prepare('INSERT INTO clientes (nome, nome_empresa, nome_contato, documento, email, moeda, telefone, endereco, link_grupo, observacoes, ativo) VALUES (?,?,?,?,?,?,?,?,?,?,?)');
-            $stmt->execute([$nome_emp, $nome_emp, $nome_cnt, $doc, $email, $moeda, $tel, $end, $link_grp, $obs, $ativo]);
+            $stmt = $db->prepare('INSERT INTO clientes (nome, nome_empresa, nome_contato, documento, email, moeda, telefone, endereco, link_grupo, observacoes, dia_cobranca, ativo) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)');
+            $stmt->execute([$nome_emp, $nome_emp, $nome_cnt, $doc, $email, $moeda, $tel, $end, $link_grp, $obs, $dia_cob, $ativo]);
             $newId = (int)$db->lastInsertId();
             audit_log('cliente.criado', 'clientes', $newId);
             header('Location: ' . APP_BASE_URL . '/clientes.php?acao=editar&id=' . $newId . '&ok=add'); exit;
@@ -136,7 +140,7 @@ if (($acao === 'novo' || $acao === 'editar') && !is_admin()) {
 if ($acao === 'novo' || $acao === 'editar') {
     $show_back = true;
     $back_to = APP_BASE_URL . '/clientes.php';
-    $c = ['id'=>0,'nome_empresa'=>'','nome_contato'=>'','documento'=>'','email'=>'','moeda'=>'BRL','telefone'=>'','endereco'=>'','link_grupo'=>'','observacoes'=>'','ativo'=>1];
+    $c = ['id'=>0,'nome_empresa'=>'','nome_contato'=>'','documento'=>'','email'=>'','moeda'=>'BRL','telefone'=>'','endereco'=>'','link_grupo'=>'','observacoes'=>'','dia_cobranca'=>null,'ativo'=>1];
     if ($acao === 'editar' && $id) {
         $stmt = $db->prepare('SELECT * FROM clientes WHERE id=?');
         $stmt->execute([$id]);
@@ -168,6 +172,11 @@ if ($acao === 'novo' || $acao === 'editar') {
               <option value="<?= $k ?>" <?= $c['moeda']===$k?'selected':'' ?>><?= e($v) ?></option>
             <?php endforeach; ?>
           </select>
+        </div>
+        <div class="field">
+          <label>Dia de vencimento (1 a 31)</label>
+          <input type="number" name="dia_cobranca" min="1" max="31" value="<?= $c['dia_cobranca'] !== null ? (int)$c['dia_cobranca'] : '' ?>" placeholder="ex: 10">
+          <div class="hint">Dia do mês em que este cliente paga. O sistema gera a cobrança automaticamente <strong>7 dias antes</strong> desse dia. Deixe em branco pra não gerar automático.</div>
         </div>
         <div class="field"><label>Telefone (com DDI)</label><input name="telefone" value="<?= e($c['telefone']) ?>" placeholder="+55 11 99999-9999"></div>
         <div class="field"><label>Endereço</label><input name="endereco" value="<?= e($c['endereco']) ?>"></div>
