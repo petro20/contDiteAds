@@ -202,8 +202,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $db->prepare('UPDATE cobrancas SET valor_total = GREATEST(0, valor_total - ?) WHERE id = ?');
             $stmt->execute([$sub, $cid]);
             audit_log('cobranca.item_removido', 'cobranca_itens', $iid);
-            // Reavalia status: se valor_total zerou, vira 'cancelada'.
+            // Reavalia: se valor_total zerou (sem itens) e não há pagamento
+            // confirmado, a cobrança é DELETADA automaticamente aqui dentro.
             atualiza_status_cobranca($db, $cid);
+        }
+        // Se a cobrança foi auto-deletada (zerou), volta pra lista
+        $stmt = $db->prepare('SELECT id FROM cobrancas WHERE id = ?');
+        $stmt->execute([$cid]);
+        if (!$stmt->fetchColumn()) {
+            header('Location: ' . APP_BASE_URL . '/cobrancas.php?ok=del'); exit;
         }
         header('Location: ' . APP_BASE_URL . '/cobrancas.php?id=' . $cid); exit;
     }
@@ -335,7 +342,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 if (isset($_GET['ok'])) {
     $msgs = ['comp' => 'Comprovante enviado. Admin vai conferir e confirmar.',
-             'pag'  => 'Pagamento registrado.'];
+             'pag'  => 'Pagamento registrado.',
+             'del'  => 'Cobrança removida.'];
     $flash = ['ok', $msgs[$_GET['ok']] ?? 'OK.'];
 }
 if (isset($_GET['err'])) {

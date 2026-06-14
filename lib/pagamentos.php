@@ -60,8 +60,19 @@ function atualiza_status_cobranca(PDO $db, int $cobranca_id): void {
         }
 
         if ((float)$c['valor_total'] <= 0) {
-            // Cobrança zerada (sem itens) — cancela automaticamente.
-            // Evita ficar como "aberta" indefinidamente e poluir painel/lista de vencidas.
+            // Cobrança zerada (sem itens). Se NÃO tem pagamento confirmado,
+            // DELETA automaticamente (não deixa lixo no histórico). Se por algum
+            // motivo tiver pagamento confirmado, só cancela (preserva o registro).
+            if ($pago_confirmado <= 0) {
+                // Apaga linhas-filhas antes (evita erro de foreign key)
+                try { $db->prepare('DELETE FROM cobranca_itens WHERE cobranca_id = ?')->execute([$cobranca_id]); } catch (Throwable $e) {}
+                try { $db->prepare('DELETE FROM regua_eventos WHERE cobranca_id = ?')->execute([$cobranca_id]); } catch (Throwable $e) {}
+                try { $db->prepare('DELETE FROM pagamentos_cliente WHERE cobranca_id = ?')->execute([$cobranca_id]); } catch (Throwable $e) {}
+                try { $db->prepare('UPDATE wise_eventos SET cobranca_id = NULL WHERE cobranca_id = ?')->execute([$cobranca_id]); } catch (Throwable $e) {}
+                $db->prepare('DELETE FROM cobrancas WHERE id = ?')->execute([$cobranca_id]);
+                if (!$in_tx) $db->commit();
+                return;
+            }
             $novo = 'cancelada';
         } elseif ($pago_confirmado >= (float)$c['valor_total']) {
             $novo = 'paga';
