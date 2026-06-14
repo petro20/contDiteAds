@@ -232,38 +232,73 @@ function gerar_cobranca_mensal(PDO $db, int $cliente_id, string $competencia, ?s
 }
 
 /**
+ * Calcula a PRÓXIMA data de vencimento >= hoje, dado o dia de cobrança do
+ * cliente. Trata o caso "dia 31 em fevereiro" (cai no último dia do mês).
+ */
+function proxima_data_vencimento(DateTimeImmutable $hoje, int $dia_cobranca): DateTimeImmutable {
+    // Tenta o vencimento NESTE mês
+    $eff_este = min($dia_cobranca, (int)$hoje->format('t'));
+    $venc_este = $hoje->setDate((int)$hoje->format('Y'), (int)$hoje->format('n'), $eff_este);
+    if ($venc_este >= $hoje->setTime(0, 0, 0)) {
+        return $venc_este->setTime(0, 0, 0);
+    }
+    // Já passou neste mês — usa o próximo mês
+    $prox = $hoje->modify('first day of next month');
+    $eff_prox = min($dia_cobranca, (int)$prox->format('t'));
+    return $prox->setDate((int)$prox->format('Y'), (int)$prox->format('n'), $eff_prox)->setTime(0, 0, 0);
+}
+
+/**
  * Roda a geração para TODOS os clientes elegíveis numa data específica.
  * Usado pelo cron diário.
  *
- * Regra: cobrança é EMITIDA 7 dias antes da data de cobrança do cliente.
- *  - Hoje + 7 dias = data alvo (será o vencimento)
- *  - Se hoje+7 cai no dia_cobranca efetivo do cliente, gera agora
- *  - Vencimento da cobrança = hoje + 7 dias
+ * Regra: cobrança é EMITIDA 7 dias antes do vencimento do cliente.
+ *
+ * IMPORTANTE — usa JANELA de catch-up (não "dia exato"):
+ *  - Pra cada cliente, calcula a próxima data de vencimento >= hoje
+ *  - Se faltam 7 dias OU MENOS pro vencimento, gera a cobrança agora
+ *  - O check "já existe?" dentro de gerar_cobranca_mensal garante que não
+ *    duplica — então é seguro rodar todo dia.
+ *
+ * Por que janela em vez de "dia exato"? Se o cron pular UM dia (deploy,
+ * manutenção, config tardia), a versão antiga (igualdade estrita) deixava o
+ * cliente SEM cobrança naquele mês inteiro. Com a janela, ele se recupera no
+ * próximo dia que o cron rodar.
  *
  * @return array Log de execução com contagens.
  */
 function executar_geracao_diaria(PDO $db, DateTimeImmutable $hoje): array {
-    $target = $hoje->modify('+7 days'); // emitir 7 dias antes do vencimento
-    $target_month = $target->format('Y-m');
-    $target_day = (int)$target->format('d');
+    $hoje = $hoje->setTime(0, 0, 0);
 
-    $sql = 'SELECT id, dia_cobranca FROM clientes WHERE ativo = 1 AND dia_cobranca IS NOT NULL';
+    $sql = 'SELECT id, dia_cobranca FROM clientes WHERE ativo = 1 AND dia_cobranca IS NOT NULL AND dia_cobranca > 0';
     $clientes = $db->query($sql)->fetchAll();
 
     $log = [
         'data' => $hoje->format('Y-m-d'),
-        'alvo_vencimento' => $target->format('Y-m-d'),
+        'janela' => '7 dias antes do vencimento (com catch-up)',
         'avaliados' => count($clientes),
         'criadas' => 0, 'puladas' => 0, 'vazias' => 0, 'erros' => 0,
         'detalhes' => []
     ];
 
     foreach ($clientes as $c) {
-        $eff = dia_cobranca_efetivo((int)$c['dia_cobranca'], $target);
-        if ($eff !== $target_day) continue; // não é o cliente desse ciclo
+        $dia = (int)$c['dia_cobranca'];
+        $venc = proxima_data_vencimento($hoje, $dia);
+        $dias_ate_venc = (int)$hoje->diff($venc)->format('%a');
+
+        // Fora da janela de 7 dias — ainda não é hora (ou já passou)
+        if ($dias_ate_venc > 7) continue;
+
+        $competencia = $venc->format('Y-m');
         try {
-            $r = gerar_cobranca_mensal($db, (int)$c['id'], $target_month, $target->format('Y-m-d'));
-            $log['detalhes'][] = ['cliente_id' => (int)$c['id'], 'status' => $r['status'], 'cobranca_id' => $r['cobranca_id']];
+            $r = gerar_cobranca_mensal($db, (int)$c['id'], $competencia, $venc->format('Y-m-d'));
+            $log['detalhes'][] = [
+                'cliente_id'  => (int)$c['id'],
+                'status'      => $r['status'],
+                'cobranca_id' => $r['cobranca_id'],
+                'vencimento'  => $venc->format('Y-m-d'),
+                'dias_ate'    => $dias_ate_venc,
+            ];
             if ($r['status'] === 'created') $log['criadas']++;
             elseif ($r['status'] === 'exists') $log['puladas']++;
             elseif ($r['status'] === 'empty') $log['vazias']++;
