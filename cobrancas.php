@@ -63,6 +63,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $flash = ['err', $map[$r['status']] ?? 'Falhou.'];
     }
 
+    if ($op === 'rodar_cron_geracao' && is_admin()) {
+        // Roda EXATAMENTE o que o cron das 05:00 faz: varre todos os clientes
+        // com dia_cobranca, gera quem está na janela de 7 dias do vencimento.
+        $log = executar_geracao_diaria($db, new DateTimeImmutable('today'));
+        audit_log('cobranca.cron_testado', 'cobrancas', $log['criadas']);
+        $resultado_cron = $log; // exibido na tela (var lida no HTML)
+    }
+
     if ($op === 'nova_avulsa' && is_admin()) {
         $cliente_id = (int)($_POST['cliente_id'] ?? 0);
         $vencimento = $_POST['vencimento'] ?? date('Y-m-d', strtotime('+5 days'));
@@ -827,22 +835,64 @@ $cls = is_admin() ? $db->query('SELECT id, nome_empresa FROM clientes WHERE ativ
     </script>
   </details>
 
-  <details class="card mt-3">
-    <summary><strong>🔧 Gerar cobrança mensal automática</strong> (testar cron)</summary>
+  <details class="card mt-3" <?= !empty($resultado_cron) ? 'open' : '' ?>>
+    <summary><strong>⏰ Testar geração automática</strong> (igual ao cron das 05:00)</summary>
+    <p class="muted mt-2" style="font-size:13px;">Roda agora exatamente o que o cron faz todo dia: varre os clientes com <strong>dia de vencimento</strong> definido e gera cobrança pra quem está dentro da janela de 7 dias. Não duplica (se já existe, pula).</p>
     <form method="post" class="mt-3">
       <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
-      <input type="hidden" name="op" value="gerar_manual">
-      <div class="field"><label>Cliente</label>
-        <select name="cliente_id" required>
-          <option value="">— selecione —</option>
-          <?php foreach ($cls as $c): ?>
-            <option value="<?= (int)$c['id'] ?>"><?= e($c['nome_empresa']) ?></option>
-          <?php endforeach; ?>
-        </select>
-      </div>
-      <div class="field"><label>Competência (YYYY-MM)</label><input name="competencia" value="<?= e(date('Y-m')) ?>" pattern="\d{4}-\d{2}" required></div>
-      <button class="btn block" type="submit">Gerar agora</button>
+      <input type="hidden" name="op" value="rodar_cron_geracao">
+      <button class="btn block" type="submit">▶ Rodar geração automática agora</button>
     </form>
+
+    <?php if (!empty($resultado_cron)): $rc = $resultado_cron; ?>
+      <div class="card mt-3" style="background:var(--bg-input);">
+        <div class="title">📊 Resultado</div>
+        <div class="info-pair"><span class="l">Data de referência</span><span class="v"><?= e($rc['data']) ?></span></div>
+        <div class="info-pair"><span class="l">Clientes avaliados</span><span class="v"><?= (int)$rc['avaliados'] ?></span></div>
+        <div class="info-pair"><span class="l">✅ Cobranças criadas</span><span class="v" style="color:var(--c-success);"><strong><?= (int)$rc['criadas'] ?></strong></span></div>
+        <div class="info-pair"><span class="l">⏭ Já existiam (puladas)</span><span class="v"><?= (int)$rc['puladas'] ?></span></div>
+        <div class="info-pair"><span class="l">∅ Sem itens (vazias)</span><span class="v"><?= (int)$rc['vazias'] ?></span></div>
+        <div class="info-pair"><span class="l">❌ Erros</span><span class="v"><?= (int)$rc['erros'] ?></span></div>
+      </div>
+      <?php if (!empty($rc['detalhes'])): ?>
+        <details class="mt-2">
+          <summary class="muted" style="cursor:pointer; font-size:12px;">Detalhes por cliente</summary>
+          <pre style="background:var(--bg-input); padding:10px; border-radius:8px; font-size:11px; overflow:auto; max-height:300px;"><?php
+            foreach ($rc['detalhes'] as $d) {
+                $nome = '';
+                foreach ($cls as $cl) { if ((int)$cl['id'] === (int)($d['cliente_id'] ?? 0)) { $nome = $cl['nome_empresa']; break; } }
+                echo e('cliente ' . ($nome ?: '#' . ($d['cliente_id'] ?? '?')) . ' → ' . ($d['status'] ?? '?')
+                    . (isset($d['vencimento']) ? ' (vence ' . $d['vencimento'] . ', faltam ' . ($d['dias_ate'] ?? '?') . ' dias)' : '')
+                    . (isset($d['cobranca_id']) && $d['cobranca_id'] ? ' [cobrança #' . $d['cobranca_id'] . ']' : '')
+                    . (isset($d['mensagem']) ? ' — ' . $d['mensagem'] : '')) . "\n";
+            }
+          ?></pre>
+        </details>
+      <?php endif; ?>
+      <?php if ($rc['criadas'] == 0 && $rc['avaliados'] == 0): ?>
+        <div class="flash err mt-2">Nenhum cliente tem "Dia de vencimento" definido. Configure no cadastro do cliente.</div>
+      <?php elseif ($rc['criadas'] == 0): ?>
+        <div class="flash ok mt-2" style="background:rgba(148,163,184,0.12); color:var(--txt-2); border-color:var(--border);">Nenhuma cobrança nova nesse ciclo — ou ninguém está na janela de 7 dias, ou já tinham cobrança.</div>
+      <?php endif; ?>
+    <?php endif; ?>
+
+    <details class="mt-3">
+      <summary class="muted" style="cursor:pointer; font-size:12px;">Gerar pra um cliente específico (forçar)</summary>
+      <form method="post" class="mt-2">
+        <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
+        <input type="hidden" name="op" value="gerar_manual">
+        <div class="field"><label>Cliente</label>
+          <select name="cliente_id" required>
+            <option value="">— selecione —</option>
+            <?php foreach ($cls as $c): ?>
+              <option value="<?= (int)$c['id'] ?>"><?= e($c['nome_empresa']) ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+        <div class="field"><label>Competência (YYYY-MM)</label><input name="competencia" value="<?= e(date('Y-m')) ?>" pattern="\d{4}-\d{2}" required></div>
+        <button class="btn btn-ghost block" type="submit">Gerar pra este cliente</button>
+      </form>
+    </details>
   </details>
 
   <form method="get" class="card">
