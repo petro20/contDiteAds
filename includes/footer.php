@@ -114,6 +114,8 @@ if ($u && empty($hide_nav)):
     });
     // Vincula a inscrição ao usuário logado, pra poder enviar avisos direcionados.
     try { await OneSignal.login(String(<?= (int)$u['id'] ?>)); } catch (e) {}
+    // Mostra o convite pra ativar notificações (OneSignal não repete se já respondido).
+    try { OneSignal.Slidedown.promptPush(); } catch (e) {}
   });
 </script>
 <?php endif; ?>
