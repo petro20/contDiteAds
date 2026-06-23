@@ -206,18 +206,18 @@ require __DIR__ . '/includes/header.php';
             <details>
               <summary class="btn btn-secondary block" style="cursor:pointer;"><?= $is_empresa ? '🏦 Registrar retenção da empresa' : '💵 Registrar pagamento' ?></summary>
               <?php foreach (['BRL','USD','EUR'] as $m): if ($pendente[$m] <= 0) continue; ?>
-                <form method="post" class="mt-3" onsubmit="return confirm('Confirmar pagamento de <?= e(money_fmt($pendente[$m], $m)) ?>?');">
+                <form method="post" class="mt-3" onsubmit="return confirmaPagar(this);">
                   <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
                   <input type="hidden" name="op" value="pagar_socio">
                   <input type="hidden" name="socio_id" value="<?= e((string)($is_empresa ? 'empresa' : (int)str_replace('socio_', '', $key))) ?>">
                   <input type="hidden" name="competencia" value="<?= e($competencia) ?>">
                   <input type="hidden" name="moeda" value="<?= e($m) ?>">
                   <div class="grid-2">
-                    <div class="field"><label>Valor (<?= e($m) ?>)</label><input type="number" step="0.01" min="0.01" name="valor" required value="<?= e(number_format($pendente[$m], 2, '.', '')) ?>"></div>
+                    <div class="field"><label>Valor (<?= e($m) ?>)</label><input type="number" step="0.01" min="0.01" name="valor" required value="<?= e(number_format($pendente[$m], 2, '.', '')) ?>" data-moeda="<?= e($m) ?>" oninput="atualizaBtnPagar(this)"></div>
                     <div class="field"><label>Data</label><input type="date" name="data_pagamento" required value="<?= e(date('Y-m-d')) ?>"></div>
                   </div>
                   <div class="field"><label>Observação</label><input name="observacao" placeholder="opcional"></div>
-                  <button class="btn block" type="submit"><?= e(money_fmt($pendente[$m], $m)) ?> · marcar como pago</button>
+                  <button class="btn block" type="submit" data-btn-pagar><?= e(money_fmt($pendente[$m], $m)) ?> · marcar como pago</button>
                 </form>
               <?php endforeach; ?>
             </details>
@@ -318,4 +318,35 @@ require __DIR__ . '/includes/header.php';
   <p class="muted center mt-5">Nenhuma cobrança paga ainda.</p>
 <?php endif; ?>
 
+<script>
+// Mantém o rótulo do botão e o confirm em sincronia com o valor digitado,
+// pra não lançar um valor diferente do que aparece no botão.
+function _moneyFmt(v, moeda) {
+  if (isNaN(v)) return '';
+  var neg = v < 0; v = Math.abs(v);
+  var p = v.toFixed(2).split('.'), intPart = p[0], dec = p[1];
+  var thou, decSep, prefix;
+  if (moeda === 'BRL')      { thou = '.'; decSep = ','; prefix = 'R$ '; }
+  else if (moeda === 'USD') { thou = ','; decSep = '.'; prefix = '$'; }
+  else if (moeda === 'EUR') { thou = '.'; decSep = ','; prefix = '€'; }
+  else                      { thou = ','; decSep = '.'; prefix = moeda + ' '; }
+  intPart = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, thou);
+  return (neg ? '-' : '') + prefix + intPart + decSep + dec;
+}
+function _valorDoForm(input) {
+  return parseFloat(String(input && input.value || '').replace(',', '.'));
+}
+function atualizaBtnPagar(input) {
+  var form = input.closest('form'); if (!form) return;
+  var btn = form.querySelector('[data-btn-pagar]'); if (!btn) return;
+  var v = _valorDoForm(input);
+  btn.textContent = (isNaN(v) ? '' : _moneyFmt(v, input.dataset.moeda || '') + ' · ') + 'marcar como pago';
+}
+function confirmaPagar(form) {
+  var input = form.querySelector('input[name="valor"]');
+  var v = _valorDoForm(input);
+  var txt = isNaN(v) ? 'este valor' : _moneyFmt(v, input.dataset.moeda || '');
+  return confirm('Confirmar pagamento de ' + txt + '?');
+}
+</script>
 <?php require __DIR__ . '/includes/footer.php'; ?>
