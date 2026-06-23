@@ -279,17 +279,25 @@ h2 {
     padding-bottom: env(safe-area-inset-bottom);
 }
 .bottom-nav a {
-    flex: 1;
+    flex: 1 1 0;
+    min-width: 0;            /* células iguais: impede que o rótulo mais longo desalinhe */
     display: flex; flex-direction: column;
     align-items: center; justify-content: center;
-    gap: 2px;
+    gap: 5px;                /* respiro entre ícone e rótulo */
     color: var(--txt-3);
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 500;
-    letter-spacing: 0.02em;
-    padding: var(--s-2) 0;
+    letter-spacing: 0.01em;
+    padding: var(--s-2) 4px; /* folga lateral pra rótulos não se encostarem */
     transition: color 0.2s var(--ease-out);
     position: relative;
+}
+.bottom-nav a > span:not(.icon):not(.badge) {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;     /* não quebra linha — mantém todas as alturas iguais */
+    line-height: 1.1;
 }
 .bottom-nav a .icon {
     transition: transform 0.3s var(--ease-spring);
