@@ -137,10 +137,10 @@ require __DIR__ . '/includes/header.php';
 </div>
 
 <?php
-  // === Resumo consolidado em US$ (BRL convertido pela cotação do dia; EUR fora) ===
+  // === Resumo consolidado em US$ (BRL e EUR convertidos pela cotação do dia) ===
   $cot = cotacao_atual($db);
   $rec_usd = 0.0; $desp_usd = 0.0;
-  foreach (['BRL','USD'] as $m) {
+  foreach (['BRL','USD','EUR'] as $m) {
       $rec_usd  += para_usd($db, $rec_mes[$m], $m);
       $desp_usd += para_usd($db, $desp_mes['totais'][$m] ?? 0, $m);
   }
@@ -169,7 +169,7 @@ require __DIR__ . '/includes/header.php';
     <strong><?= e(money_fmt($parte_usd, 'USD')) ?></strong>
   </div>
   <div class="muted" style="font-size:11px; margin-top:8px; border-top:1px dashed var(--border); padding-top:8px;">
-    💱 US$ 1 = <?= e(money_fmt($cot['BRL'] ?? 0, 'BRL')) ?><?= $cot_data_fmt ? ' · cotação de ' . e($cot_data_fmt) : '' ?> · <span title="EUR não entra neste resumo">EUR fora</span>
+    💱 US$ 1 = <?= e(money_fmt($cot['BRL'] ?? 0, 'BRL')) ?> · <?= e(money_fmt($cot['EUR'] ?? 0, 'EUR')) ?><?= $cot_data_fmt ? ' · cotação de ' . e($cot_data_fmt) : '' ?>
   </div>
 </div>
 
@@ -270,7 +270,60 @@ require __DIR__ . '/includes/header.php';
   $quota_brl = $liq_mes['BRL'] / $total_quotas;
   $quota_usd = $liq_mes['USD'] / $total_quotas;
   $quota_eur = $liq_mes['EUR'] / $total_quotas;
+
+  // Destinatários da divisão: sócios + empresa (cada um = 1 quota)
+  $div_destinatarios = [];
+  foreach ($socios as $s) $div_destinatarios[] = $s['nome'];
+  $div_destinatarios[] = '🏢 Empresa (reserva)';
 ?>
+
+<h2>🧮 Dividir lucro entre os sócios</h2>
+<div class="card">
+  <p class="muted" style="font-size:13px;">Marque as moedas que quer dividir. Mostra quanto cada um recebe (lucro ÷ <?= $total_quotas ?> quotas: <?= $n_socios ?> sócio<?= $n_socios===1?'':'s' ?> + empresa). <strong>Só simulação — não registra pagamento.</strong></p>
+  <div class="spaced" style="gap:18px; flex-wrap:wrap; margin:var(--s-3) 0;">
+    <?php foreach (['BRL','USD','EUR'] as $m): ?>
+      <label class="check" style="display:inline-flex; align-items:center; gap:6px; cursor:pointer;">
+        <input type="checkbox" class="moeda-div" value="<?= $m ?>" checked onchange="recalcDivisao()">
+        <strong><?= $m ?></strong> <span class="muted" style="font-size:12px;">(lucro <?= e(money_fmt($liq_mes[$m], $m)) ?>)</span>
+      </label>
+    <?php endforeach; ?>
+  </div>
+  <div id="divisao_resultado" class="mt-3"></div>
+</div>
+
+<script>
+(function () {
+  var QUOTAS = {
+    BRL: <?= json_encode($quota_brl) ?>,
+    USD: <?= json_encode($quota_usd) ?>,
+    EUR: <?= json_encode($quota_eur) ?>
+  };
+  var RECIPIENTS = <?= json_encode($div_destinatarios, JSON_UNESCAPED_UNICODE) ?>;
+  function fmt(v, moeda) {
+    var neg = v < 0 ? '-' : '';
+    var p = Math.abs(v).toFixed(2).split('.'), intp = p[0], dec = p[1], thou, decs, pre;
+    if (moeda === 'BRL')      { thou = '.'; decs = ','; pre = 'R$ '; }
+    else if (moeda === 'USD') { thou = ','; decs = '.'; pre = '$'; }
+    else                      { thou = '.'; decs = ','; pre = '€'; }
+    intp = intp.replace(/\B(?=(\d{3})+(?!\d))/g, thou);
+    return neg + pre + intp + decs + dec;
+  }
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]; }); }
+  window.recalcDivisao = function () {
+    var sel = Array.prototype.slice.call(document.querySelectorAll('.moeda-div:checked')).map(function (c) { return c.value; });
+    var box = document.getElementById('divisao_resultado');
+    if (!box) return;
+    if (!sel.length) { box.innerHTML = '<div class="muted" style="padding:8px 0;">Selecione ao menos uma moeda.</div>'; return; }
+    var html = '';
+    RECIPIENTS.forEach(function (nome) {
+      var valores = sel.map(function (m) { return fmt(QUOTAS[m], m); }).join(' · ');
+      html += '<div class="spaced" style="padding:8px 0; border-bottom:1px solid var(--border);"><span>💼 ' + esc(nome) + '</span><strong style="text-align:right;">' + valores + '</strong></div>';
+    });
+    box.innerHTML = html;
+  };
+  recalcDivisao();
+})();
+</script>
 
 <h2>Sócios ativos</h2>
 <?php foreach ($socios as $s):
