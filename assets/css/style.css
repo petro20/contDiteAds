@@ -340,6 +340,39 @@ h2 {
     box-shadow: 0 2px 6px rgba(239, 68, 68, 0.4);
 }
 
+/* === Banner "Instalar app" (PWA) === */
+#pwa_install, #pwa_ios_help {
+    position: fixed;
+    left: 50%; transform: translateX(-50%);
+    bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px) + var(--s-3));
+    z-index: 95;
+    width: calc(100% - var(--s-5)); max-width: 440px;
+    background: var(--bg-elevated);
+    background-image: var(--grad-elevation);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+#pwa_install[hidden], #pwa_ios_help[hidden] { display: none; }
+#pwa_install {
+    display: flex; align-items: center; gap: var(--s-3);
+    padding: var(--s-3) var(--s-3) var(--s-3) var(--s-4);
+    animation: pwaUp 0.35s var(--ease-out);
+}
+#pwa_install .pwa-ico { font-size: 22px; line-height: 1; }
+#pwa_install .pwa-txt { flex: 1; min-width: 0; }
+#pwa_install .pwa-txt b { display: block; font-size: 14px; }
+#pwa_install .pwa-txt small { color: var(--txt-3); font-size: 12px; }
+#pwa_install .pwa-x {
+    background: transparent; border: 0; color: var(--txt-3);
+    font-size: 16px; cursor: pointer; padding: 4px 6px; line-height: 1;
+}
+#pwa_ios_help { z-index: 96; padding: var(--s-4); font-size: 14px; }
+@keyframes pwaUp {
+    from { opacity: 0; transform: translate(-50%, 12px); }
+    to   { opacity: 1; transform: translate(-50%, 0); }
+}
+
 /* ============================================
  * Cards — premium com sombras de depth
  * ============================================ */

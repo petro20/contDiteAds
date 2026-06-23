@@ -41,5 +41,64 @@ if ($u && empty($hide_nav)):
   <?php endforeach; ?>
 </nav>
 <?php endif; ?>
+
+<?php if ($u): ?>
+<!-- Banner "Instalar app" (PWA). Aparece só quando dá pra instalar e ainda não foi dispensado. -->
+<div id="pwa_install" hidden>
+  <span class="pwa-ico">📲</span>
+  <span class="pwa-txt"><b>Instalar o app Dite Ads</b><small>Acesso rápido pela tela inicial</small></span>
+  <button type="button" class="btn btn-brand small" id="pwa_install_btn">Instalar</button>
+  <button type="button" class="pwa-x" id="pwa_install_close" aria-label="Dispensar">✕</button>
+</div>
+<div id="pwa_ios_help" hidden>
+  📲 No iPhone: toque em <strong>Compartilhar</strong> (quadradinho com a setinha ↑) na barra do Safari e depois em <strong>"Adicionar à Tela de Início"</strong>.
+  <div style="text-align:right; margin-top:10px;"><button type="button" class="btn btn-ghost small" id="pwa_ios_ok">Entendi</button></div>
+</div>
+<script>
+(function () {
+  var KEY = 'pwa_install_dismissed';
+  var banner = document.getElementById('pwa_install');
+  var iosHelp = document.getElementById('pwa_ios_help');
+  if (!banner) return;
+  var deferred = null;
+
+  function isStandalone() {
+    return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  }
+  function dismissed() { try { return localStorage.getItem(KEY) === '1'; } catch (e) { return false; } }
+  function esconde() { banner.hidden = true; }
+  function naoMostrarMais() { esconde(); try { localStorage.setItem(KEY, '1'); } catch (e) {} }
+
+  if (isStandalone() || dismissed()) return; // já instalado ou já dispensado
+
+  // Android/Chrome/Edge: evento nativo de instalação
+  window.addEventListener('beforeinstallprompt', function (e) {
+    e.preventDefault();
+    deferred = e;
+    banner.hidden = false;
+  });
+  window.addEventListener('appinstalled', naoMostrarMais);
+
+  // iPhone (Safari) não dispara beforeinstallprompt → mostra o banner que abre a dica manual
+  var ua = navigator.userAgent || '';
+  var isIOS = /iphone|ipad|ipod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  var isSafari = /safari/i.test(ua) && !/crios|fxios|edgios|chrome/i.test(ua);
+  if (isIOS && isSafari) banner.hidden = false;
+
+  document.getElementById('pwa_install_btn').addEventListener('click', function () {
+    if (deferred) {
+      deferred.prompt();
+      deferred.userChoice.then(function () { deferred = null; esconde(); });
+    } else if (isIOS && iosHelp) {
+      iosHelp.hidden = false;
+      esconde();
+    }
+  });
+  document.getElementById('pwa_install_close').addEventListener('click', naoMostrarMais);
+  var iosOk = document.getElementById('pwa_ios_ok');
+  if (iosOk) iosOk.addEventListener('click', function () { iosHelp.hidden = true; naoMostrarMais(); });
+})();
+</script>
+<?php endif; ?>
 </body>
 </html>
