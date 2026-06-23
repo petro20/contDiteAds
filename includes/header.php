@@ -15,6 +15,11 @@ $nav_active   = $nav_active   ?? '';
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0A0A0F">
+<!-- App feel: roda em tela cheia (standalone) quando instalado no celular -->
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="Dite Ads">
 <title><?= e($page) ?> · controle e gestão Dite Ads</title>
 <link rel="icon" type="image/png" sizes="32x32" href="<?= e(APP_BASE_URL) ?>/assets/img/logo-32.png">
 <link rel="apple-touch-icon" sizes="180x180" href="<?= e(APP_BASE_URL) ?>/assets/img/logo-180.png">

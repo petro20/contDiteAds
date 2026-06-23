@@ -109,6 +109,21 @@ body {
     font-feature-settings: 'cv11', 'ss01', 'ss03';
 }
 
+/* === App feel (PWA) === */
+/* Tira o "puxar pra atualizar" e o efeito elástico de rolagem do navegador. */
+html, body { overscroll-behavior-y: none; }
+/* Na "casca" do app (topo, menu, botões, rótulos) não há seleção de texto nem
+   menu de long-press — parece app nativo. Conteúdo e campos seguem copiáveis. */
+.topbar, .bottom-nav, .btn, button, .section-label, .field label, .status, .fab, .list-card .nome {
+    -webkit-user-select: none; user-select: none;
+    -webkit-touch-callout: none;
+}
+/* Toque instantâneo (sem o atraso de duplo-toque/zoom) nos elementos clicáveis. */
+a, button, .btn, .list-card, .bottom-nav a, summary, label.check,
+input[type="checkbox"], input[type="radio"], select {
+    touch-action: manipulation;
+}
+
 /* === Selection (texto selecionado) premium === */
 ::selection {
     background: rgba(168, 85, 247, 0.35);
@@ -140,14 +155,14 @@ a:active { opacity: 0.7; }
     position: sticky;
     top: 0;
     z-index: 100;
-    height: var(--header-h);
+    height: calc(var(--header-h) + env(safe-area-inset-top, 0px));
     background: rgba(20, 20, 28, 0.85);
     backdrop-filter: saturate(180%) blur(20px);
     -webkit-backdrop-filter: saturate(180%) blur(20px);
     border-bottom: 1px solid var(--border);
     display: flex;
     align-items: center;
-    padding: 0 var(--s-4);
+    padding: env(safe-area-inset-top, 0px) var(--s-4) 0;
     gap: var(--s-3);
 }
 .topbar .back-btn {
