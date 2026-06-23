@@ -110,10 +110,17 @@ if ($u && empty($hide_nav)):
     await OneSignal.init({
       appId: "<?= e(ONESIGNAL_APP_ID) ?>",
       serviceWorkerParam: { scope: "/push/onesignal/" },
-      serviceWorkerPath: "push/onesignal/OneSignalSDKWorker.js"
+      serviceWorkerPath: "push/onesignal/OneSignalSDKWorker.js",
+      autoResubscribe: true
     });
     // Vincula a inscrição ao usuário logado, pra poder enviar avisos direcionados.
     try { await OneSignal.login(String(<?= (int)$u['id'] ?>)); } catch (e) {}
+    // Se a permissão já está concedida, assina automaticamente (cria o token de push).
+    try {
+      if (OneSignal.Notifications.permission === true) {
+        await OneSignal.User.PushSubscription.optIn();
+      }
+    } catch (e) {}
     // Mostra o botão "Ativar notificações" no sino se este aparelho ainda não assinou.
     try {
       var jaInscrito = OneSignal.User.PushSubscription.optedIn === true;
