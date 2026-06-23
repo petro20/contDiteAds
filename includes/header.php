@@ -27,7 +27,7 @@ $nav_active   = $nav_active   ?? '';
 <link rel="stylesheet" href="<?= e(APP_BASE_URL) ?>/assets/css/style.css?v=<?= e(@filemtime(__DIR__ . '/../assets/css/style.css') ?: '1') ?>">
 <script>
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('<?= e(APP_BASE_URL) ?>/sw.js').then(reg => {
+  navigator.serviceWorker.register('<?= e(APP_BASE_URL) ?>/OneSignalSDKWorker.js').then(reg => {
     // Força check de atualização ao carregar página
     reg.update();
     // Quando uma nova versão é instalada, força refresh automático

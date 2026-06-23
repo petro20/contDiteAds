@@ -109,8 +109,6 @@ if ($u && empty($hide_nav)):
   OneSignalDeferred.push(async function (OneSignal) {
     await OneSignal.init({
       appId: "<?= e(ONESIGNAL_APP_ID) ?>",
-      serviceWorkerParam: { scope: "/push/onesignal/" },
-      serviceWorkerPath: "push/onesignal/OneSignalSDKWorker.js",
       autoResubscribe: true
     });
     // Vincula a inscrição ao usuário logado, pra poder enviar avisos direcionados.
