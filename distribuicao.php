@@ -137,10 +137,10 @@ require __DIR__ . '/includes/header.php';
 </div>
 
 <?php
-  // === Resumo consolidado em US$ (BRL e EUR convertidos pela cotação do dia) ===
+  // === Resumo consolidado em US$ (BRL convertido pela cotação do dia; EUR fora) ===
   $cot = cotacao_atual($db);
   $rec_usd = 0.0; $desp_usd = 0.0;
-  foreach (['BRL','USD','EUR'] as $m) {
+  foreach (['BRL','USD'] as $m) {
       $rec_usd  += para_usd($db, $rec_mes[$m], $m);
       $desp_usd += para_usd($db, $desp_mes['totais'][$m] ?? 0, $m);
   }
@@ -169,7 +169,7 @@ require __DIR__ . '/includes/header.php';
     <strong><?= e(money_fmt($parte_usd, 'USD')) ?></strong>
   </div>
   <div class="muted" style="font-size:11px; margin-top:8px; border-top:1px dashed var(--border); padding-top:8px;">
-    💱 US$ 1 = <?= e(money_fmt($cot['BRL'] ?? 0, 'BRL')) ?> · <?= e(money_fmt($cot['EUR'] ?? 0, 'EUR')) ?><?= $cot_data_fmt ? ' · cotação de ' . e($cot_data_fmt) : '' ?>
+    💱 US$ 1 = <?= e(money_fmt($cot['BRL'] ?? 0, 'BRL')) ?><?= $cot_data_fmt ? ' · cotação de ' . e($cot_data_fmt) : '' ?> · <span title="EUR não entra neste resumo">EUR fora</span>
   </div>
 </div>
 
