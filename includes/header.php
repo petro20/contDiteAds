@@ -252,6 +252,7 @@ document.addEventListener('click', function(e) {
   if (btn) return;
   d.style.display = 'none';
 });
+</script>
 
 <!-- Modal de busca global -->
 <div id="busca_overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:1000; padding:60px 16px 16px;" onclick="if(event.target===this) fecharBusca()">
