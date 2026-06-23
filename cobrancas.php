@@ -811,7 +811,16 @@ $cls = is_admin() ? $db->query('SELECT id, nome_empresa FROM clientes WHERE ativ
       <div class="field"><label>Competência (YYYY-MM)</label><input name="competencia" value="<?= e(date('Y-m')) ?>" pattern="\d{4}-\d{2}" required></div>
 
       <div class="section-label">Itens</div>
-      <div id="lista_itens"></div>
+      <div id="lista_itens">
+        <!-- Primeira linha renderizada no servidor: o form funciona mesmo sem JS -->
+        <div class="card" style="position:relative;">
+          <div class="field"><label>Descrição</label><input name="descricao[]" required placeholder="Ex: Criação extra de criativo"></div>
+          <div class="grid-2">
+            <div class="field"><label>Quantidade</label><input type="number" min="1" name="quantidade[]" value="1" required></div>
+            <div class="field"><label>Valor unitário</label><input type="number" step="0.01" min="0.01" name="valor[]" required></div>
+          </div>
+        </div>
+      </div>
       <button type="button" class="btn btn-ghost block" onclick="adicionarLinhaItem()">+ Adicionar item</button>
 
       <button class="btn block mt-3" type="submit">Criar cobrança</button>
@@ -831,7 +840,8 @@ $cls = is_admin() ? $db->query('SELECT id, nome_empresa FROM clientes WHERE ativ
         </div>`;
       lista.appendChild(linha);
     }
-    adicionarLinhaItem();
+    // Não chamamos adicionarLinhaItem() no load: a 1ª linha já vem do servidor.
+    // O botão "+ Adicionar item" usa essa função pra acrescentar mais linhas.
     </script>
   </details>
 
