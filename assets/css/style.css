@@ -1065,7 +1065,8 @@ select {
     h2 { font-size: 22px; }
 
     .bottom-nav {
-        max-width: var(--max-w);
+        width: 100%;
+        max-width: 480px;    /* barra compacta centralizada: cabe os 4 rótulos com folga, sem truncar */
         left: 50%;
         right: auto;
         transform: translateX(-50%);
