@@ -30,6 +30,12 @@ define('DB_PASS', getenv('DB_PASS') ?: '');
 define('APP_ENV', getenv('APP_ENV') ?: 'production');
 define('APP_BASE_URL', rtrim(getenv('APP_BASE_URL') ?: '', '/'));
 
+// OneSignal (push notifications). App ID é público (vai no JS do cliente).
+// REST API Key é SECRETA (só pra enviar do servidor) — manter no .env, nunca no repo.
+// Enquanto ONESIGNAL_APP_ID estiver vazio, o push fica desligado.
+define('ONESIGNAL_APP_ID',  getenv('ONESIGNAL_APP_ID')  ?: '');
+define('ONESIGNAL_REST_KEY', getenv('ONESIGNAL_REST_KEY') ?: '');
+
 define('SMTP_HOST',       getenv('SMTP_HOST')       ?: 'smtp.hostinger.com');
 define('SMTP_PORT',       (int)(getenv('SMTP_PORT') ?: 465));
 define('SMTP_SECURE',     getenv('SMTP_SECURE')     ?: 'ssl');

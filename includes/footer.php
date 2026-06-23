@@ -100,5 +100,22 @@ if ($u && empty($hide_nav)):
 })();
 </script>
 <?php endif; ?>
+
+<?php if ($u && defined('ONESIGNAL_APP_ID') && ONESIGNAL_APP_ID !== ''): ?>
+<!-- Push notifications via OneSignal. Worker isolado em /push/onesignal/ pra não conflitar com o sw.js do PWA. -->
+<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+<script>
+  window.OneSignalDeferred = window.OneSignalDeferred || [];
+  OneSignalDeferred.push(async function (OneSignal) {
+    await OneSignal.init({
+      appId: "<?= e(ONESIGNAL_APP_ID) ?>",
+      serviceWorkerParam: { scope: "/push/onesignal/" },
+      serviceWorkerPath: "push/onesignal/OneSignalSDKWorker.js"
+    });
+    // Vincula a inscrição ao usuário logado, pra poder enviar avisos direcionados.
+    try { await OneSignal.login(String(<?= (int)$u['id'] ?>)); } catch (e) {}
+  });
+</script>
+<?php endif; ?>
 </body>
 </html>
