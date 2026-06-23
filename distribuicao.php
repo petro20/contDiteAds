@@ -5,6 +5,7 @@ require_once __DIR__ . '/lib/money.php';
 require_once __DIR__ . '/lib/distribuicao.php';
 require_once __DIR__ . '/lib/despesas.php';
 require_once __DIR__ . '/lib/audit.php';
+require_once __DIR__ . '/lib/cotacao.php';
 $u = require_login();
 if (!is_admin()) { http_response_code(403); exit('Apenas sócios.'); }
 $db = db();
@@ -133,6 +134,43 @@ require __DIR__ . '/includes/header.php';
   <a class="btn btn-ghost small" href="?mes=<?= e($mes_ant) ?>">← <?= e($mes_ant) ?></a>
   <strong><?= e($nome_mes) ?></strong>
   <a class="btn btn-ghost small" href="?mes=<?= e($mes_prox) ?>"><?= e($mes_prox) ?> →</a>
+</div>
+
+<?php
+  // === Resumo consolidado em US$ (BRL e EUR convertidos pela cotação do dia) ===
+  $cot = cotacao_atual($db);
+  $rec_usd = 0.0; $desp_usd = 0.0;
+  foreach (['BRL','USD','EUR'] as $m) {
+      $rec_usd  += para_usd($db, $rec_mes[$m], $m);
+      $desp_usd += para_usd($db, $desp_mes['totais'][$m] ?? 0, $m);
+  }
+  $pf_usd  = $pag_func_mes;                 // pagamentos a funcionários já são em USD
+  $liq_usd = $rec_usd - $desp_usd - $pf_usd;
+  $parte_usd = $total_quotas > 0 ? $liq_usd / $total_quotas : 0;
+  $cot_data = (string)($cot['data'] ?? '');
+  $cot_data_fmt = preg_match('/^\d{4}-\d{2}-\d{2}$/', $cot_data) ? date('d/m/Y', strtotime($cot_data)) : $cot_data;
+?>
+<h2>Resumo consolidado (em US$)</h2>
+<div class="card brand">
+  <div class="title">🌎 Total convertido para dólar</div>
+  <div class="spaced" style="padding:6px 0;"><span>Receita</span><strong style="color:var(--c-success);"><?= e(money_fmt($rec_usd, 'USD')) ?></strong></div>
+  <?php if ($desp_usd > 0): ?>
+    <div class="spaced" style="padding:6px 0;"><span>Despesas</span><strong style="color:var(--c-danger);">− <?= e(money_fmt($desp_usd, 'USD')) ?></strong></div>
+  <?php endif; ?>
+  <?php if ($pf_usd > 0): ?>
+    <div class="spaced" style="padding:6px 0;"><span>Pagos a funcionários</span><strong style="color:var(--c-danger);">− <?= e(money_fmt($pf_usd, 'USD')) ?></strong></div>
+  <?php endif; ?>
+  <div class="spaced" style="padding:6px 0; border-top:1px solid var(--border);">
+    <strong>Lucro líquido</strong>
+    <strong style="font-size:18px; color:<?= $liq_usd >= 0 ? 'var(--c-success)' : 'var(--c-danger)' ?>;"><?= e(money_fmt($liq_usd, 'USD')) ?></strong>
+  </div>
+  <div class="spaced" style="padding:6px 0; color:var(--c-primary-2);">
+    <span>Por quota (÷ <?= $total_quotas ?>)</span>
+    <strong><?= e(money_fmt($parte_usd, 'USD')) ?></strong>
+  </div>
+  <div class="muted" style="font-size:11px; margin-top:8px; border-top:1px dashed var(--border); padding-top:8px;">
+    💱 US$ 1 = <?= e(money_fmt($cot['BRL'] ?? 0, 'BRL')) ?> · <?= e(money_fmt($cot['EUR'] ?? 0, 'EUR')) ?><?= $cot_data_fmt ? ' · cotação de ' . e($cot_data_fmt) : '' ?>
+  </div>
 </div>
 
 <h2>Receita × Despesas × Lucro líquido</h2>

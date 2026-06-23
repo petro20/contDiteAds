@@ -102,3 +102,15 @@ function usd_para(PDO $db, float $valor_usd, string $moeda): float {
     if (!isset($c[$moeda]) || $c[$moeda] <= 0) return $valor_usd; // fallback: não converte
     return round($valor_usd * $c[$moeda], 2);
 }
+
+/**
+ * Converte um valor em BRL/EUR para USD. Se já for USD, retorna o valor.
+ * (Inverso de usd_para — a cotação é quantas unidades da moeda valem 1 USD.)
+ */
+function para_usd(PDO $db, float $valor, string $moeda): float {
+    $moeda = strtoupper($moeda);
+    if ($moeda === 'USD') return $valor;
+    $c = cotacao_atual($db);
+    if (!isset($c[$moeda]) || $c[$moeda] <= 0) return $valor; // fallback: não converte
+    return round($valor / $c[$moeda], 2);
+}
