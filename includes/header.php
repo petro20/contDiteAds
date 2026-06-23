@@ -190,7 +190,7 @@ const _autofillInterval = setInterval(function() {
   ?>
   <div class="actions">
     <button type="button" onclick="abrirBusca()" aria-label="Buscar" title="Buscar (Ctrl+K)" style="font-size:18px;">🔍</button>
-    <button type="button" onclick="toggleNotif(event)" aria-label="Notificações" title="Notificações" style="font-size:18px; position:relative;">
+    <button type="button" onclick="toggleNotif(event)" onmouseenter="showNotif()" onmouseleave="scheduleHideNotif()" aria-label="Notificações" title="Notificações" style="font-size:18px; position:relative;">
       🔔
       <?php if ($notif_count > 0): ?>
         <span style="position:absolute; top:2px; right:2px; background:var(--c-danger); color:#fff; border-radius:10px; padding:1px 5px; font-size:10px; font-weight:700; min-width:16px; text-align:center; pointer-events:none;"><?= $notif_count > 99 ? '99+' : $notif_count ?></span>
@@ -201,7 +201,7 @@ const _autofillInterval = setInterval(function() {
 </header>
 
 <!-- Dropdown de notificações -->
-<div id="notif_drop" style="display:none; position:fixed; top:56px; right:8px; z-index:999; width:320px; max-width:calc(100vw - 16px); background:var(--bg-elevated); border:1px solid var(--border); border-radius:8px; box-shadow:0 8px 24px rgba(0,0,0,0.4); overflow:hidden;">
+<div id="notif_drop" onmouseenter="cancelHideNotif()" onmouseleave="scheduleHideNotif()" style="display:none; position:fixed; top:56px; right:8px; z-index:999; width:320px; max-width:calc(100vw - 16px); background:var(--bg-elevated); border:1px solid var(--border); border-radius:8px; box-shadow:0 8px 24px rgba(0,0,0,0.4); overflow:hidden;">
   <div style="padding:10px 14px; border-bottom:1px solid var(--border); background:var(--bg-input);">
     <strong>🔔 Notificações</strong>
   </div>
@@ -224,6 +224,24 @@ function toggleNotif(e) {
   const d = document.getElementById('notif_drop');
   if (!d) return;
   d.style.display = d.style.display === 'block' ? 'none' : 'block';
+}
+// Abertura por hover (passar o mouse). O atraso ao fechar deixa o mouse
+// viajar do sino até o dropdown sem ele sumir no caminho.
+let _notifHideTimer = null;
+function showNotif() {
+  clearTimeout(_notifHideTimer);
+  const d = document.getElementById('notif_drop');
+  if (d) d.style.display = 'block';
+}
+function cancelHideNotif() {
+  clearTimeout(_notifHideTimer);
+}
+function scheduleHideNotif() {
+  clearTimeout(_notifHideTimer);
+  _notifHideTimer = setTimeout(function () {
+    const d = document.getElementById('notif_drop');
+    if (d) d.style.display = 'none';
+  }, 250);
 }
 document.addEventListener('click', function(e) {
   const d = document.getElementById('notif_drop');
