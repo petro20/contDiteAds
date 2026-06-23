@@ -279,7 +279,7 @@ require __DIR__ . '/includes/header.php';
 
 <h2>🧮 Dividir lucro entre os sócios</h2>
 <div class="card">
-  <p class="muted" style="font-size:13px;">Marque as moedas que quer dividir. Mostra quanto cada um recebe (lucro ÷ <?= $total_quotas ?> quotas: <?= $n_socios ?> sócio<?= $n_socios===1?'':'s' ?> + empresa). <strong>Só simulação — não registra pagamento.</strong></p>
+  <p class="muted" style="font-size:13px;">Marque as moedas que quer dividir (lucro ÷ <?= $total_quotas ?> quotas: <?= $n_socios ?> sócio<?= $n_socios===1?'':'s' ?> + empresa). A coluna da direita mostra o <strong>total em US$</strong> (as moedas marcadas, convertidas pra dólar). <strong>Só simulação — não registra pagamento.</strong></p>
   <div class="spaced" style="gap:18px; flex-wrap:wrap; margin:var(--s-3) 0;">
     <?php foreach (['BRL','USD','EUR'] as $m): ?>
       <label class="check" style="display:inline-flex; align-items:center; gap:6px; cursor:pointer;">
@@ -298,7 +298,16 @@ require __DIR__ . '/includes/header.php';
     USD: <?= json_encode($quota_usd) ?>,
     EUR: <?= json_encode($quota_eur) ?>
   };
+  var RATES = { // quantas unidades da moeda valem US$ 1
+    BRL: <?= json_encode((float)($cot['BRL'] ?? 0)) ?>,
+    EUR: <?= json_encode((float)($cot['EUR'] ?? 0)) ?>
+  };
   var RECIPIENTS = <?= json_encode($div_destinatarios, JSON_UNESCAPED_UNICODE) ?>;
+  function paraUsd(m) {
+    if (m === 'USD') return QUOTAS.USD;
+    var r = RATES[m];
+    return (r > 0) ? QUOTAS[m] / r : 0;
+  }
   function fmt(v, moeda) {
     var neg = v < 0 ? '-' : '';
     var p = Math.abs(v).toFixed(2).split('.'), intp = p[0], dec = p[1], thou, decs, pre;
@@ -314,11 +323,18 @@ require __DIR__ . '/includes/header.php';
     var box = document.getElementById('divisao_resultado');
     if (!box) return;
     if (!sel.length) { box.innerHTML = '<div class="muted" style="padding:8px 0;">Selecione ao menos uma moeda.</div>'; return; }
-    var html = '';
+    var html = '', totalUsd = 0;
     RECIPIENTS.forEach(function (nome) {
-      var valores = sel.map(function (m) { return fmt(QUOTAS[m], m); }).join(' · ');
-      html += '<div class="spaced" style="padding:8px 0; border-bottom:1px solid var(--border);"><span>💼 ' + esc(nome) + '</span><strong style="text-align:right;">' + valores + '</strong></div>';
+      var breakdown = sel.map(function (m) { return fmt(QUOTAS[m], m); }).join(' · ');
+      var usd = sel.reduce(function (acc, m) { return acc + paraUsd(m); }, 0);
+      totalUsd += usd;
+      html += '<div class="spaced" style="padding:8px 0; border-bottom:1px solid var(--border); align-items:flex-start;">'
+            +   '<div><div>💼 ' + esc(nome) + '</div><div class="muted" style="font-size:12px;">' + breakdown + '</div></div>'
+            +   '<strong style="white-space:nowrap;">' + fmt(usd, 'USD') + '</strong>'
+            + '</div>';
     });
+    html += '<div class="spaced" style="padding:10px 0 2px; color:var(--c-primary-2);"><strong>Total dividido (US$)</strong><strong>' + fmt(totalUsd, 'USD') + '</strong></div>';
+    html += '<div class="muted" style="font-size:11px; margin-top:6px; border-top:1px dashed var(--border); padding-top:6px;">💱 US$ 1 = ' + fmt(RATES.BRL, 'BRL') + ' · ' + fmt(RATES.EUR, 'EUR') + ' — coluna da direita já convertida pra dólar</div>';
     box.innerHTML = html;
   };
   recalcDivisao();
