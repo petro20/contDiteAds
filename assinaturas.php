@@ -37,6 +37,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $valor     = (float)str_replace(',', '.', (string)($_POST['valor_cobrado'] ?? '0'));
         $iniciada  = $_POST['iniciada_em'] ?? date('Y-m-d');
         $status    = $_POST['status'] ?? 'ativa';
+        $fixo_mensal = isset($_POST['cobrar_fixo_mensal']) ? 1 : 0;
+        $tem_col_fixo = db_coluna_existe($db, 'assinaturas', 'cobrar_fixo_mensal');
         $forcar_atribuicao = isset($_POST['forcar_func_lotado']);
         if (!in_array($status, ['ativa','pausada','cancelada'], true)) $status = 'ativa';
 
@@ -62,14 +64,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             try {
                 if ($pid) {
-                    $stmt = $db->prepare('UPDATE assinaturas SET item_id=?, funcionario_id=?, variante=?, valor_cobrado=?, status=?, iniciada_em=? WHERE id=?');
-                    $stmt->execute([$item, $func, $variante, $valor, $status, $iniciada, $pid]);
+                    if ($tem_col_fixo) {
+                        $stmt = $db->prepare('UPDATE assinaturas SET item_id=?, funcionario_id=?, variante=?, valor_cobrado=?, status=?, iniciada_em=?, cobrar_fixo_mensal=? WHERE id=?');
+                        $stmt->execute([$item, $func, $variante, $valor, $status, $iniciada, $fixo_mensal, $pid]);
+                    } else {
+                        $stmt = $db->prepare('UPDATE assinaturas SET item_id=?, funcionario_id=?, variante=?, valor_cobrado=?, status=?, iniciada_em=? WHERE id=?');
+                        $stmt->execute([$item, $func, $variante, $valor, $status, $iniciada, $pid]);
+                    }
                     audit_log('assinatura.editada', 'assinaturas', $pid);
                     header('Location: ' . APP_BASE_URL . '/assinaturas.php?id=' . $pid . '&ok=upd'); exit;
                 } else {
                     $db->beginTransaction();
-                    $stmt = $db->prepare('INSERT INTO assinaturas (cliente_id, item_id, funcionario_id, variante, valor_cobrado, status, iniciada_em) VALUES (?,?,?,?,?,?,?)');
-                    $stmt->execute([$cliente, $item, $func, $variante, $valor, $status, $iniciada]);
+                    if ($tem_col_fixo) {
+                        $stmt = $db->prepare('INSERT INTO assinaturas (cliente_id, item_id, funcionario_id, variante, valor_cobrado, status, iniciada_em, cobrar_fixo_mensal) VALUES (?,?,?,?,?,?,?,?)');
+                        $stmt->execute([$cliente, $item, $func, $variante, $valor, $status, $iniciada, $fixo_mensal]);
+                    } else {
+                        $stmt = $db->prepare('INSERT INTO assinaturas (cliente_id, item_id, funcionario_id, variante, valor_cobrado, status, iniciada_em) VALUES (?,?,?,?,?,?,?)');
+                        $stmt->execute([$cliente, $item, $func, $variante, $valor, $status, $iniciada]);
+                    }
                     $newId = (int)$db->lastInsertId();
                     ensure_dia_cobranca($db, $cliente, $iniciada);
                     $db->commit();
@@ -115,7 +127,7 @@ if ($acao === 'novo' || $acao === 'editar') {
     $show_back = true;
     $back_to = APP_BASE_URL . '/assinaturas.php' . ($cliente_filter ? '?cliente_id=' . $cliente_filter : '');
 
-    $a = ['id'=>0,'cliente_id'=>$cliente_filter,'item_id'=>0,'funcionario_id'=>0,'variante'=>'normal','valor_cobrado'=>'','status'=>'ativa','iniciada_em'=>date('Y-m-d')];
+    $a = ['id'=>0,'cliente_id'=>$cliente_filter,'item_id'=>0,'funcionario_id'=>0,'variante'=>'normal','valor_cobrado'=>'','status'=>'ativa','iniciada_em'=>date('Y-m-d'),'cobrar_fixo_mensal'=>0];
     if ($acao === 'editar' && $id) {
         $stmt = $db->prepare('SELECT * FROM assinaturas WHERE id = ?');
         $stmt->execute([$id]);
@@ -206,6 +218,14 @@ if ($acao === 'novo' || $acao === 'editar') {
           <label>Valor cobrado *</label>
           <input type="number" step="0.01" min="0.01" name="valor_cobrado" id="valor_cobrado" required value="<?= $a['valor_cobrado']!==''?e(number_format((float)$a['valor_cobrado'],2,'.','')):'' ?>">
           <div class="hint">Preenchido com preço da tabela; pode sobrescrever (override por cliente).</div>
+        </div>
+
+        <div class="field">
+          <label class="check">
+            <input type="checkbox" name="cobrar_fixo_mensal" value="1" <?= (int)($a['cobrar_fixo_mensal'] ?? 0) === 1 ? 'checked' : '' ?>>
+            Cobrar valor fixo todo mês (ignora entregas)
+          </label>
+          <div class="hint">Para itens <strong>por unidade</strong>: quando marcado, entra na cobrança mensal com o valor cheio acima, sem depender das entregas do mês anterior. Itens mensais já são fixos — não precisa marcar.</div>
         </div>
 
         <div class="field">

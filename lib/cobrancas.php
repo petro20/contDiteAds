@@ -42,6 +42,25 @@ function notificar_cliente_email(PDO $db, int $cobranca_id, string $codigo_templ
  *  - Vencimento padrão = data de geração + 5 dias.
  */
 
+/**
+ * Checa (com cache) se uma coluna existe numa tabela. Usado pra blindar
+ * código novo que depende de migration ainda não aplicada — assim o deploy
+ * de código antes do migration não quebra a geração de cobranças.
+ */
+function db_coluna_existe(PDO $db, string $tabela, string $coluna): bool {
+    static $cache = [];
+    $key = $tabela . '.' . $coluna;
+    if (array_key_exists($key, $cache)) return $cache[$key];
+    try {
+        $stmt = $db->prepare('SELECT COUNT(*) FROM information_schema.COLUMNS
+                              WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?');
+        $stmt->execute([$tabela, $coluna]);
+        return $cache[$key] = ((int)$stmt->fetchColumn() > 0);
+    } catch (Throwable $e) {
+        return $cache[$key] = false;
+    }
+}
+
 function competencia_de_data(string $iso_date): string {
     return substr($iso_date, 0, 7); // "YYYY-MM"
 }
@@ -153,7 +172,12 @@ function gerar_cobranca_mensal(PDO $db, int $cliente_id, string $competencia, ?s
     // Assinaturas ativas no mês da competência (respeita data_inicio e data_fim)
     $primeiro_dia = $competencia . '-01';
     $ultimo_dia = date('Y-m-t', strtotime($primeiro_dia));
-    $sql = 'SELECT a.id, a.item_id, a.valor_cobrado, i.nome AS item_nome, i.tipo
+    // Override por assinatura: cobrar_fixo_mensal=1 faz item por_unidade entrar
+    // como valor fixo. Blindado: se a coluna não existe (migration 018 ainda não
+    // aplicada), usa 0 e o comportamento antigo continua valendo.
+    $sel_fixo = db_coluna_existe($db, 'assinaturas', 'cobrar_fixo_mensal')
+        ? 'a.cobrar_fixo_mensal' : '0 AS cobrar_fixo_mensal';
+    $sql = 'SELECT a.id, a.item_id, a.valor_cobrado, ' . $sel_fixo . ', i.nome AS item_nome, i.tipo
             FROM assinaturas a
             JOIN itens_catalogo i ON i.id = a.item_id
             WHERE a.cliente_id = ?
@@ -172,7 +196,10 @@ function gerar_cobranca_mensal(PDO $db, int $cliente_id, string $competencia, ?s
     $linhas = [];
     foreach ($assinaturas as $a) {
         $valor = (float)$a['valor_cobrado'];
-        if ($a['tipo'] === 'mensal') {
+        $fixo_mensal = (int)($a['cobrar_fixo_mensal'] ?? 0) === 1;
+        if ($a['tipo'] === 'mensal' || $fixo_mensal) {
+            // Mensal normal OU por_unidade marcado como "cobrar fixo mensal":
+            // entra com valor cheio, sem depender de entregas.
             $linhas[] = [
                 'assinatura_id' => (int)$a['id'],
                 'descricao'     => $a['item_nome'],
