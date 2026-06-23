@@ -114,9 +114,37 @@ if ($u && empty($hide_nav)):
     });
     // Vincula a inscrição ao usuário logado, pra poder enviar avisos direcionados.
     try { await OneSignal.login(String(<?= (int)$u['id'] ?>)); } catch (e) {}
-    // Mostra o convite pra ativar notificações (OneSignal não repete se já respondido).
-    try { OneSignal.Slidedown.promptPush(); } catch (e) {}
+    // Mostra o botão "Ativar notificações" no sino se este aparelho ainda não assinou.
+    try {
+      var jaInscrito = OneSignal.User.PushSubscription.optedIn === true;
+      var wrap = document.getElementById('push_ativar_wrap');
+      if (wrap && !jaInscrito) wrap.style.display = 'block';
+    } catch (e) {
+      var w = document.getElementById('push_ativar_wrap'); if (w) w.style.display = 'block';
+    }
   });
+
+  // Clique no botão = pede permissão e assina. Gesto do usuário é o jeito mais
+  // confiável de criar o token de push (mais que o convite automático).
+  (function () {
+    var btn = document.getElementById('btn_ativar_push');
+    if (!btn) return;
+    btn.addEventListener('click', function () {
+      btn.disabled = true; btn.textContent = '⏳ Ativando...';
+      window.OneSignalDeferred = window.OneSignalDeferred || [];
+      window.OneSignalDeferred.push(async function (OneSignal) {
+        try {
+          await OneSignal.Notifications.requestPermission();
+          await OneSignal.User.PushSubscription.optIn();
+          var ok = OneSignal.User.PushSubscription.optedIn === true;
+          btn.textContent = ok ? '✅ Notificações ativadas' : '⚠️ Permissão não concedida';
+        } catch (e) {
+          btn.textContent = '⚠️ Não deu — veja o cadeado do site';
+        }
+        btn.disabled = false;
+      });
+    });
+  })();
 </script>
 <?php endif; ?>
 </body>

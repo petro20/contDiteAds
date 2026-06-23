@@ -210,6 +210,10 @@ const _autofillInterval = setInterval(function() {
   <div style="padding:10px 14px; border-bottom:1px solid var(--border); background:var(--bg-input);">
     <strong>🔔 Notificações</strong>
   </div>
+  <div id="push_ativar_wrap" style="padding:10px 14px; border-bottom:1px solid var(--border); display:none;">
+    <button type="button" id="btn_ativar_push" class="btn btn-brand small block">🔔 Ativar notificações neste aparelho</button>
+    <div class="hint" style="margin-top:6px;">Receba avisos mesmo com o site fechado.</div>
+  </div>
   <div style="max-height:60vh; overflow-y:auto;">
     <?php if (!$notif_items): ?>
       <div style="padding:24px; text-align:center; color:var(--txt-2); font-size:13px;">Nenhuma notificação pendente ✨</div>
