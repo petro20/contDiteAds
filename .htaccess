@@ -6,6 +6,9 @@ RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 # Webhook do Dite Gateway: URL limpa /webhooks/dite -> webhooks/dite.php
 RewriteRule ^webhooks/dite/?$ webhooks/dite.php [L]
 
+# Lista de planos pro Dite Gateway: /api/plans -> api/plans.php
+RewriteRule ^api/plans/?$ api/plans.php [L]
+
 # Bloqueia listagem de diretório
 Options -Indexes
 
