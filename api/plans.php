@@ -32,7 +32,7 @@ try {
             'interval' => 'month',
         ];
     }
-    echo json_encode(['data' => $plans], JSON_UNESCAPED_UNICODE);
+    echo json_encode(['plans' => $plans], JSON_UNESCAPED_UNICODE);
 } catch (Throwable $e) {
     http_response_code(500);
     echo json_encode(['error' => 'erro interno']);
