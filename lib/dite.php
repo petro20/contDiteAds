@@ -84,9 +84,11 @@ function dite_criar_pagamento(
         'cancel_url'         => $cancelUrl,
     ];
     $r = dite_api_post('/api/v1/payments', $body, $idempotencyKey);
+    // A API embrulha a resposta em "data" (ex: { "data": { "pay_url": ... } }).
+    $d = is_array($r['data'] ?? null) ? $r['data'] : $r;
     return [
-        'payment_id' => $r['payment_id'] ?? ($r['id'] ?? null),
-        'pay_url'    => $r['pay_url'] ?? ($r['url'] ?? ($r['checkout_url'] ?? null)),
+        'payment_id' => $d['payment_id'] ?? ($d['id'] ?? null),
+        'pay_url'    => $d['pay_url'] ?? ($d['url'] ?? ($d['checkout_url'] ?? null)),
         'raw'        => $r,
     ];
 }
