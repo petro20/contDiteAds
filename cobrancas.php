@@ -5,6 +5,7 @@ require_once __DIR__ . '/lib/money.php';
 require_once __DIR__ . '/lib/cobrancas.php';
 require_once __DIR__ . '/lib/pagamentos.php';
 require_once __DIR__ . '/lib/whatsapp.php';
+require_once __DIR__ . '/lib/dite.php';
 $me = require_login();
 $db = db();
 
@@ -61,6 +62,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $map = ['empty'=>'Cliente não tem assinaturas elegíveis no mês.','exists'=>'Já existe cobrança nesse mês.','cliente_nao_encontrado'=>'Cliente não encontrado.'];
         $flash = ['err', $map[$r['status']] ?? 'Falhou.'];
+    }
+
+    if ($op === 'pagar_dite') {
+        // Cliente ou admin inicia pagamento por cartão/transferência via Dite Gateway.
+        $cid = (int)($_POST['id'] ?? 0);
+        $base_back = APP_BASE_URL . '/cobrancas.php?id=' . $cid;
+        $stmt = $db->prepare('SELECT * FROM cobrancas WHERE id = ?');
+        $stmt->execute([$cid]);
+        $cob = $stmt->fetch();
+        if (!$cob || !pode_ver_cobranca($cob, $me)) { http_response_code(403); exit('Acesso negado.'); }
+        if (!dite_habilitado()) { header('Location: ' . $base_back . '&err=dite_off'); exit; }
+        $stmt = $db->prepare('SELECT COALESCE(SUM(valor_pago),0) FROM pagamentos_cliente WHERE cobranca_id = ?');
+        $stmt->execute([$cid]);
+        $saldo = max((float)$cob['valor_total'] - (float)$stmt->fetchColumn(), 0);
+        if ($saldo <= 0) { header('Location: ' . $base_back . '&err=dite_paga'); exit; }
+        $stmt = $db->prepare('SELECT nome_empresa, email FROM clientes WHERE id = ?');
+        $stmt->execute([(int)$cob['cliente_id']]);
+        $cli = $stmt->fetch() ?: ['nome_empresa' => 'Cliente', 'email' => ''];
+        try {
+            $r = dite_criar_pagamento(
+                $saldo, (string)$cob['moeda'],
+                'Cobrança #' . $cid . ' · ' . (string)$cli['nome_empresa'],
+                ['name' => (string)$cli['nome_empresa'], 'email' => (string)($cli['email'] ?? '')],
+                'cob_' . $cid,
+                $base_back . '&ok=dite',
+                $base_back . '&err=dite_cancel',
+                'cob_' . $cid . '_' . number_format($saldo, 2, '', '')
+            );
+            if (!empty($r['pay_url'])) {
+                audit_log('cobranca.dite_checkout', 'cobrancas', $cid);
+                header('Location: ' . $r['pay_url']); exit;
+            }
+            header('Location: ' . $base_back . '&err=dite_erro'); exit;
+        } catch (Throwable $e) {
+            error_log('Dite criar pagamento: ' . $e->getMessage());
+            header('Location: ' . $base_back . '&err=dite_erro'); exit;
+        }
     }
 
     if ($op === 'rodar_cron_geracao' && is_admin()) {
@@ -351,11 +389,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 if (isset($_GET['ok'])) {
     $msgs = ['comp' => 'Comprovante enviado. Admin vai conferir e confirmar.',
              'pag'  => 'Pagamento registrado.',
-             'del'  => 'Cobrança removida.'];
+             'del'  => 'Cobrança removida.',
+             'dite' => 'Pagamento por cartão iniciado. Assim que o gateway confirmar, a cobrança é baixada automaticamente — não precisa enviar comprovante.'];
     $flash = ['ok', $msgs[$_GET['ok']] ?? 'OK.'];
 }
 if (isset($_GET['err'])) {
-    $errs = ['cancelar_paga' => 'Não dá pra cancelar esta cobrança: ela já tem pagamentos confirmados. Estorne os pagamentos primeiro (em "Pagamento detalhado") e tente de novo.'];
+    $errs = ['cancelar_paga' => 'Não dá pra cancelar esta cobrança: ela já tem pagamentos confirmados. Estorne os pagamentos primeiro (em "Pagamento detalhado") e tente de novo.',
+             'dite_off'    => 'Pagamento por cartão ainda não está configurado neste site.',
+             'dite_paga'   => 'Esta cobrança já está paga.',
+             'dite_cancel' => 'Pagamento por cartão cancelado. Você pode tentar de novo quando quiser.',
+             'dite_erro'   => 'Não foi possível iniciar o pagamento por cartão agora. Tente novamente em instantes.'];
     $flash = ['err', $errs[$_GET['err']] ?? 'Erro.'];
 }
 
@@ -570,9 +613,22 @@ if ($id) {
         require_once __DIR__ . '/lib/configuracoes.php';
         $cfg_pag = config_pagamento($db);
         $tem_metodo = $cfg_pag['zelle_email'] || $cfg_pag['wise_link'];
-        if ($tem_metodo):
     ?>
-      <h2 class="mt-5">💳 Formas de pagamento</h2>
+      <?php if (dite_habilitado()): ?>
+      <h2 class="mt-5">💳 Pagar online (cartão / transferência)</h2>
+      <div class="card brand">
+        <div class="title">Pagamento com confirmação automática</div>
+        <div class="desc" style="margin-bottom:var(--s-3);">Pague com cartão ou transferência pelo Dite Gateway, com segurança. A baixa é <strong>automática</strong> — não precisa enviar comprovante.</div>
+        <form method="post">
+          <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
+          <input type="hidden" name="op" value="pagar_dite">
+          <input type="hidden" name="id" value="<?= (int)$cob['id'] ?>">
+          <button class="btn btn-brand block" type="submit">💳 Pagar <?= e(money_fmt((float)$saldo, $cob['moeda'])) ?> agora</button>
+        </form>
+      </div>
+      <?php endif; ?>
+      <?php if ($tem_metodo): ?>
+      <h2 class="mt-5">💳 Outras formas de pagamento</h2>
       <p class="muted" style="font-size:13px;">Escolha uma das opções abaixo. Após pagar, envie o comprovante pelo botão no fim da página.</p>
 
       <?php if ($cfg_pag['zelle_email'] || $cfg_pag['zelle_qr']): ?>

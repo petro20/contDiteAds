@@ -36,6 +36,13 @@ define('APP_BASE_URL', rtrim(getenv('APP_BASE_URL') ?: '', '/'));
 define('ONESIGNAL_APP_ID',  getenv('ONESIGNAL_APP_ID')  ?: '73f3f9f0-4e28-4aad-b85f-b8b675af448c');
 define('ONESIGNAL_REST_KEY', getenv('ONESIGNAL_REST_KEY') ?: '');
 
+// Dite Gateway (pay.diteads.com) — processa cartão/transferência e confirma por webhook.
+// API_KEY e WEBHOOK_SECRET são SECRETAS: só no .env do servidor, nunca no repo.
+// Enquanto DITE_API_KEY/DITE_WEBHOOK_SECRET estiverem vazias, a integração fica desligada.
+define('DITE_BASE_URL',       rtrim(getenv('DITE_BASE_URL') ?: 'https://pay.diteads.com', '/'));
+define('DITE_API_KEY',        getenv('DITE_API_KEY')        ?: '');
+define('DITE_WEBHOOK_SECRET', getenv('DITE_WEBHOOK_SECRET') ?: '');
+
 define('SMTP_HOST',       getenv('SMTP_HOST')       ?: 'smtp.hostinger.com');
 define('SMTP_PORT',       (int)(getenv('SMTP_PORT') ?: 465));
 define('SMTP_SECURE',     getenv('SMTP_SECURE')     ?: 'ssl');
