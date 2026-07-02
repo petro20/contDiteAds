@@ -21,7 +21,7 @@ function notificar_cliente_email(PDO $db, int $cobranca_id, string $codigo_templ
         if (!$tpl) return;
 
         $vars = wa_vars_cobranca($db, $cobranca_id);
-        $assunto = wa_render($tpl['assunto'] ?: 'Notificação Dite Ads', $vars);
+        $assunto = wa_render($tpl['assunto'] ?: t('Notificação Dite Ads'), $vars);
         $corpo_txt = wa_render($tpl['corpo'], $vars);
         $html = '<pre style="font-family:inherit;white-space:pre-wrap;">' . htmlspecialchars($corpo_txt) . '</pre>';
         email_enviar($email, $assunto, $html, $corpo_txt);
@@ -218,7 +218,7 @@ function gerar_cobranca_mensal(PDO $db, int $cliente_id, string $competencia, ?s
             if ($aplica_desc) {
                 $valor = round($valor * (1 - $dpct / 100), 2);
                 $pct_txt = rtrim(rtrim(number_format($dpct, 2, '.', ''), '0'), '.');
-                $desc_suffix = ' (−' . $pct_txt . '% promo)';
+                $desc_suffix = ' (−' . $pct_txt . '% ' . t('promo') . ')';
             }
         }
 
@@ -240,7 +240,7 @@ function gerar_cobranca_mensal(PDO $db, int $cliente_id, string $competencia, ?s
             if ($qtd > 0) {
                 $linhas[] = [
                     'assinatura_id' => (int)$a['id'],
-                    'descricao'     => $a['item_nome'] . ' (' . $qtd . ' un. de ' . $mes_anterior . ')' . $desc_suffix,
+                    'descricao'     => $a['item_nome'] . ' (' . $qtd . ' ' . t('un. de') . ' ' . $mes_anterior . ')' . $desc_suffix,
                     'quantidade'    => $qtd,
                     'valor_unitario'=> $valor,
                     'subtotal'      => $qtd * $valor,

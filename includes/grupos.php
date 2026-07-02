@@ -15,27 +15,27 @@ function grupos_definidos(): array {
     $base = APP_BASE_URL;
     return [
         'equipe' => [
-            'titulo' => 'Equipe',
+            'titulo' => t('Equipe'),
             'abas'   => [
-                ['key'=>'funcionarios',  'label'=>'👥 Lista',       'href'=>"$base/funcionarios.php"],
-                ['key'=>'capacidade',    'label'=>'📊 Capacidade',  'href'=>"$base/capacidade.php"],
-                ['key'=>'pagamentos',    'label'=>'💵 Pagamentos',  'href'=>"$base/pagamentos_funcionarios.php"],
+                ['key'=>'funcionarios',  'label'=>'👥 '.t('Lista'),       'href'=>"$base/funcionarios.php"],
+                ['key'=>'capacidade',    'label'=>'📊 '.t('Capacidade'),  'href'=>"$base/capacidade.php"],
+                ['key'=>'pagamentos',    'label'=>'💵 '.t('Pagamentos'),  'href'=>"$base/pagamentos_funcionarios.php"],
             ],
         ],
         'financas' => [
-            'titulo' => 'Finanças',
+            'titulo' => t('Finanças'),
             'abas'   => [
-                ['key'=>'despesas',      'label'=>'💸 Despesas',     'href'=>"$base/despesas.php"],
-                ['key'=>'distribuicao',  'label'=>'💎 Distribuição', 'href'=>"$base/distribuicao.php"],
-                ['key'=>'pagamento_cfg', 'label'=>'💳 Pagamentos',   'href'=>"$base/config_pagamento.php"],
+                ['key'=>'despesas',      'label'=>'💸 '.t('Despesas'),     'href'=>"$base/despesas.php"],
+                ['key'=>'distribuicao',  'label'=>'💎 '.t('Distribuição'), 'href'=>"$base/distribuicao.php"],
+                ['key'=>'pagamento_cfg', 'label'=>'💳 '.t('Pagamentos'),   'href'=>"$base/config_pagamento.php"],
             ],
         ],
         'conta' => [
-            'titulo' => 'Minha conta',
+            'titulo' => t('Minha conta'),
             'abas'   => [
-                ['key'=>'perfil',    'label'=>'👤 Perfil',     'href'=>"$base/perfil.php"],
-                ['key'=>'seguranca', 'label'=>'🔐 Segurança',  'href'=>"$base/seguranca.php"],
-                ['key'=>'ajuda',     'label'=>'❓ Ajuda',      'href'=>"$base/ajuda.php"],
+                ['key'=>'perfil',    'label'=>'👤 '.t('Perfil'),     'href'=>"$base/perfil.php"],
+                ['key'=>'seguranca', 'label'=>'🔐 '.t('Segurança'),  'href'=>"$base/seguranca.php"],
+                ['key'=>'ajuda',     'label'=>'❓ '.t('Ajuda'),      'href'=>"$base/ajuda.php"],
             ],
         ],
     ];

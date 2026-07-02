@@ -5,7 +5,7 @@ $u = require_sadmin();
 <html lang="pt-br">
 <head>
 <meta charset="utf-8">
-<title>Matriz de Acesso — Dite Ads</title>
+<title><?= e(t('Matriz de Acesso — Dite Ads')) ?></title>
 <style>
   @media print {
     @page { size: A4 landscape; margin: 1cm; }
@@ -94,292 +94,289 @@ $u = require_sadmin();
 <body>
 
 <div class="actions no-print">
-  <button onclick="window.print()">🖨 Imprimir / Salvar como PDF</button>
-  <button class="secondary" onclick="history.back()">← Voltar</button>
-  <p style="font-size:12px; color:#666; margin-top:8px;">Clique em "Imprimir" → no diálogo do navegador, escolha <strong>"Salvar como PDF"</strong> como destino.</p>
+  <button onclick="window.print()">🖨 <?= e(t('Imprimir / Salvar como PDF')) ?></button>
+  <button class="secondary" onclick="history.back()">← <?= e(t('Voltar')) ?></button>
+  <p style="font-size:12px; color:#666; margin-top:8px;"><?= e(t('Clique em "Imprimir" → no diálogo do navegador, escolha')) ?> <strong>"<?= e(t('Salvar como PDF')) ?>"</strong> <?= e(t('como destino.')) ?></p>
 </div>
 
 <div class="header">
-  <h1>🔐 Matriz de Acesso — Sistema Dite Ads</h1>
-  <div class="sub">Controle e Gestão · gerado em <?= e(date('d/m/Y H:i')) ?> · cont.diteads.com</div>
+  <h1>🔐 <?= e(t('Matriz de Acesso — Sistema Dite Ads')) ?></h1>
+  <div class="sub"><?= e(t('Controle e Gestão')) ?> · <?= e(t('gerado em')) ?> <?= e(date('d/m/Y H:i')) ?> · cont.diteads.com</div>
 </div>
 
-<h2>🏠 Navegação base</h2>
+<h2>🏠 <?= e(t('Navegação base')) ?></h2>
 <table class="matriz">
   <thead>
-    <tr><th style="width:30%;">Item</th><th>👑 Sadmin</th><th>⚙ Admin</th><th>💼 Funcionário</th><th>🤝 Cliente</th></tr>
+    <tr><th style="width:30%;"><?= e(t('Item')) ?></th><th>👑 <?= e(t('Sadmin')) ?></th><th>⚙ <?= e(t('Admin')) ?></th><th>💼 <?= e(t('Funcionário')) ?></th><th>🤝 <?= e(t('Cliente')) ?></th></tr>
   </thead>
   <tbody>
-    <tr><td>Dashboard (KPIs + Alertas + Previsão)</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
-    <tr><td>Menu inferior (atalhos rápidos)</td><td>Início · Clientes · Catálogo · Perfil</td><td>Início · Clientes · Painel · Perfil</td><td>Início · Agenda · Pagto · Perfil</td><td>Início · Cobranças · Entregas · Perfil</td></tr>
-    <tr><td>Página de Ajuda contextual</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
-    <tr><td>Busca global (Ctrl+K)</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
-    <tr><td>Notificações in-app (🔔 sino)</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
-    <tr><td>PWA instalável (mobile/desktop)</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+    <tr><td><?= e(t('Dashboard (KPIs + Alertas + Previsão)')) ?></td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+    <tr><td><?= e(t('Menu inferior (atalhos rápidos)')) ?></td><td><?= e(t('Início · Clientes · Catálogo · Perfil')) ?></td><td><?= e(t('Início · Clientes · Painel · Perfil')) ?></td><td><?= e(t('Início · Agenda · Pagto · Perfil')) ?></td><td><?= e(t('Início · Cobranças · Entregas · Perfil')) ?></td></tr>
+    <tr><td><?= e(t('Página de Ajuda contextual')) ?></td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+    <tr><td><?= e(t('Busca global (Ctrl+K)')) ?></td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+    <tr><td><?= e(t('Notificações in-app (🔔 sino)')) ?></td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+    <tr><td><?= e(t('PWA instalável (mobile/desktop)')) ?></td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
   </tbody>
 </table>
 
-<h2>👤 Perfil próprio (Minha conta)</h2>
+<h2>👤 <?= e(t('Perfil próprio (Minha conta)')) ?></h2>
 <table class="matriz">
   <thead>
-    <tr><th style="width:30%;">Item</th><th>👑 Sadmin</th><th>⚙ Admin</th><th>💼 Funcionário</th><th>🤝 Cliente</th></tr>
+    <tr><th style="width:30%;"><?= e(t('Item')) ?></th><th>👑 <?= e(t('Sadmin')) ?></th><th>⚙ <?= e(t('Admin')) ?></th><th>💼 <?= e(t('Funcionário')) ?></th><th>🤝 <?= e(t('Cliente')) ?></th></tr>
   </thead>
   <tbody>
-    <tr><td>Editar nome + senha</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
-    <tr><td>Editar WiseTag/CPF/País</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="no">—</td></tr>
-    <tr><td>Editar capacidade mensal declarada</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="no">—</td></tr>
-    <tr><td>Toggle 🟢/🔴 "Aceitando novos clientes"</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="no">—</td></tr>
-    <tr><td>Ativar/desativar 2FA (recuperação)</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
-    <tr><td>Regerar 8 backup codes 2FA</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+    <tr><td><?= e(t('Editar nome + senha')) ?></td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+    <tr><td><?= e(t('Editar WiseTag/CPF/País')) ?></td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Editar capacidade mensal declarada')) ?></td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Toggle 🟢/🔴 "Aceitando novos clientes"')) ?></td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Ativar/desativar 2FA (recuperação)')) ?></td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+    <tr><td><?= e(t('Regerar 8 backup codes 2FA')) ?></td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
   </tbody>
 </table>
 
-<h2>👥 Pessoas (Clientes & Equipe)</h2>
+<h2>👥 <?= e(t('Pessoas (Clientes & Equipe)')) ?></h2>
 <table class="matriz">
   <thead>
-    <tr><th style="width:30%;">Item</th><th>👑 Sadmin</th><th>⚙ Admin</th><th>💼 Funcionário</th><th>🤝 Cliente</th></tr>
+    <tr><th style="width:30%;"><?= e(t('Item')) ?></th><th>👑 <?= e(t('Sadmin')) ?></th><th>⚙ <?= e(t('Admin')) ?></th><th>💼 <?= e(t('Funcionário')) ?></th><th>🤝 <?= e(t('Cliente')) ?></th></tr>
   </thead>
   <tbody>
-    <tr><td>Listar/criar/editar clientes</td><td class="yes">✓</td><td class="yes">✓</td><td class="obs">só os dele (leitura)</td><td class="no">—</td></tr>
-    <tr><td>Apagar cliente em cascata <span class="obs">(bloqueado se há pagamento confirmado)</span></td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
-    <tr><td>Funcionários (Equipe → Lista)</td><td class="yes">✓ CRUD completo</td><td class="obs">só funcionário comum</td><td class="no">—</td><td class="no">—</td></tr>
-    <tr><td>Promover usuário a admin/sadmin</td><td class="yes">✓ exclusivo</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
-    <tr><td>Apagar usuário em cascata</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
-    <tr><td>Configurar duplas (trabalha_com)</td><td class="yes">✓</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td></tr>
-    <tr><td>Convites (cadastro por link)</td><td class="yes">✓</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td></tr>
-    <tr><td>Capacidade da equipe (overview)</td><td class="yes">✓</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td></tr>
-    <tr><td>Editar capacidade de outros funcionários</td><td class="yes">✓</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Listar/criar/editar clientes')) ?></td><td class="yes">✓</td><td class="yes">✓</td><td class="obs"><?= e(t('só os dele (leitura)')) ?></td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Apagar cliente em cascata')) ?> <span class="obs"><?= e(t('(bloqueado se há pagamento confirmado)')) ?></span></td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Funcionários (Equipe → Lista)')) ?></td><td class="yes">✓ <?= e(t('CRUD completo')) ?></td><td class="obs"><?= e(t('só funcionário comum')) ?></td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Promover usuário a admin/sadmin')) ?></td><td class="yes">✓ <?= e(t('exclusivo')) ?></td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Apagar usuário em cascata')) ?></td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Configurar duplas (trabalha_com)')) ?></td><td class="yes">✓</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Convites (cadastro por link)')) ?></td><td class="yes">✓</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Capacidade da equipe (overview)')) ?></td><td class="yes">✓</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Editar capacidade de outros funcionários')) ?></td><td class="yes">✓</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td></tr>
   </tbody>
 </table>
 
-<h2>📦 Catálogo & Simulador</h2>
+<h2>📦 <?= e(t('Catálogo & Simulador')) ?></h2>
 <table class="matriz">
   <thead>
-    <tr><th style="width:30%;">Item</th><th>👑 Sadmin</th><th>⚙ Admin</th><th>💼 Funcionário</th><th>🤝 Cliente</th></tr>
+    <tr><th style="width:30%;"><?= e(t('Item')) ?></th><th>👑 <?= e(t('Sadmin')) ?></th><th>⚙ <?= e(t('Admin')) ?></th><th>💼 <?= e(t('Funcionário')) ?></th><th>🤝 <?= e(t('Cliente')) ?></th></tr>
   </thead>
   <tbody>
-    <tr><td>Catálogo (ver/criar/editar itens)</td><td class="yes">✓ exclusivo</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
-    <tr><td>Apagar item (se sem assinaturas vinculadas)</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
-    <tr><td>Recalcular preços (cotação)</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
-    <tr><td>Variante IA exige preço IA (validação)</td><td class="obs">bloqueia save</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
-    <tr><td>Simulador de preço</td><td class="yes">✓ exclusivo</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
-    <tr><td>Usar IA (Anthropic Claude) p/ sugestão</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
-    <tr><td>Configurar API key Anthropic</td><td class="yes">✓ exclusivo</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Catálogo (ver/criar/editar itens)')) ?></td><td class="yes">✓ <?= e(t('exclusivo')) ?></td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Apagar item (se sem assinaturas vinculadas)')) ?></td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Recalcular preços (cotação)')) ?></td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Variante IA exige preço IA (validação)')) ?></td><td class="obs"><?= e(t('bloqueia save')) ?></td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Simulador de preço')) ?></td><td class="yes">✓ <?= e(t('exclusivo')) ?></td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Usar IA (Anthropic Claude) p/ sugestão')) ?></td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Configurar API key Anthropic')) ?></td><td class="yes">✓ <?= e(t('exclusivo')) ?></td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
   </tbody>
 </table>
 
-<h2>📝 Assinaturas</h2>
+<h2>📝 <?= e(t('Assinaturas')) ?></h2>
 <table class="matriz">
   <thead>
-    <tr><th style="width:30%;">Item</th><th>👑 Sadmin</th><th>⚙ Admin</th><th>💼 Funcionário</th><th>🤝 Cliente</th></tr>
+    <tr><th style="width:30%;"><?= e(t('Item')) ?></th><th>👑 <?= e(t('Sadmin')) ?></th><th>⚙ <?= e(t('Admin')) ?></th><th>💼 <?= e(t('Funcionário')) ?></th><th>🤝 <?= e(t('Cliente')) ?></th></tr>
   </thead>
   <tbody>
-    <tr><td>Atribuir itens aos clientes</td><td class="yes">✓</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td></tr>
-    <tr><td>Editar/pausar/cancelar assinatura</td><td class="yes">✓</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td></tr>
-    <tr><td>Atribuir a funcionário marcado 🔴</td><td class="obs">aviso + checkbox forçar</td><td class="obs">aviso + checkbox forçar</td><td class="no">—</td><td class="no">—</td></tr>
-    <tr><td>Apagar assinatura definitivamente</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
-    <tr><td>Aviso de período mínimo de contrato</td><td class="yes">✓ vê</td><td class="yes">✓ vê</td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Atribuir itens aos clientes')) ?></td><td class="yes">✓</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Editar/pausar/cancelar assinatura')) ?></td><td class="yes">✓</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Atribuir a funcionário marcado 🔴')) ?></td><td class="obs"><?= e(t('aviso + checkbox forçar')) ?></td><td class="obs"><?= e(t('aviso + checkbox forçar')) ?></td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Apagar assinatura definitivamente')) ?></td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Aviso de período mínimo de contrato')) ?></td><td class="yes">✓ <?= e(t('vê')) ?></td><td class="yes">✓ <?= e(t('vê')) ?></td><td class="no">—</td><td class="no">—</td></tr>
   </tbody>
 </table>
 
-<h2>💳 Cobranças</h2>
+<h2>💳 <?= e(t('Cobranças')) ?></h2>
 <table class="matriz">
   <thead>
-    <tr><th style="width:30%;">Item</th><th>👑 Sadmin</th><th>⚙ Admin</th><th>💼 Funcionário</th><th>🤝 Cliente</th></tr>
+    <tr><th style="width:30%;"><?= e(t('Item')) ?></th><th>👑 <?= e(t('Sadmin')) ?></th><th>⚙ <?= e(t('Admin')) ?></th><th>💼 <?= e(t('Funcionário')) ?></th><th>🤝 <?= e(t('Cliente')) ?></th></tr>
   </thead>
   <tbody>
-    <tr><td>Ver lista de cobranças</td><td>todas</td><td>todas</td><td class="no">—</td><td>só dele</td></tr>
-    <tr><td>Gerar cobrança (cron diário 5h)</td><td class="obs">automático</td><td class="obs">automático</td><td class="no">—</td><td class="no">—</td></tr>
-    <tr><td>Gerar manual / avulsa</td><td class="yes">✓</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td></tr>
-    <tr><td>Cobrança avulsa com vencimento passado</td><td class="obs">bloqueado</td><td class="obs">bloqueado</td><td class="no">—</td><td class="no">—</td></tr>
-    <tr><td>Marcar como paga</td><td class="yes">✓</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td></tr>
-    <tr><td>Cancelar cobrança paga</td><td class="obs">bloqueado (estornar antes)</td><td class="obs">bloqueado</td><td class="no">—</td><td class="no">—</td></tr>
-    <tr><td>Cobrança zerada → cancela automático</td><td class="obs">automático</td><td class="obs">automático</td><td class="no">—</td><td class="no">—</td></tr>
-    <tr><td>Aceitar/rejeitar comprovante</td><td class="yes">✓</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td></tr>
-    <tr><td>Enviar comprovante (foto/PDF)</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="yes">✓</td></tr>
-    <tr><td>Baixar recibo PDF (só pagamentos confirmados)</td><td class="yes">✓</td><td class="yes">✓</td><td class="no">—</td><td>se for dele</td></tr>
-    <tr><td>Régua respeita saldo restante</td><td class="obs">automático</td><td class="obs">automático</td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Ver lista de cobranças')) ?></td><td><?= e(t('todas')) ?></td><td><?= e(t('todas')) ?></td><td class="no">—</td><td><?= e(t('só dele')) ?></td></tr>
+    <tr><td><?= e(t('Gerar cobrança (cron diário 5h)')) ?></td><td class="obs"><?= e(t('automático')) ?></td><td class="obs"><?= e(t('automático')) ?></td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Gerar manual / avulsa')) ?></td><td class="yes">✓</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Cobrança avulsa com vencimento passado')) ?></td><td class="obs"><?= e(t('bloqueado')) ?></td><td class="obs"><?= e(t('bloqueado')) ?></td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Marcar como paga')) ?></td><td class="yes">✓</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Cancelar cobrança paga')) ?></td><td class="obs"><?= e(t('bloqueado (estornar antes)')) ?></td><td class="obs"><?= e(t('bloqueado')) ?></td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Cobrança zerada → cancela automático')) ?></td><td class="obs"><?= e(t('automático')) ?></td><td class="obs"><?= e(t('automático')) ?></td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Aceitar/rejeitar comprovante')) ?></td><td class="yes">✓</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Enviar comprovante (foto/PDF)')) ?></td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="yes">✓</td></tr>
+    <tr><td><?= e(t('Baixar recibo PDF (só pagamentos confirmados)')) ?></td><td class="yes">✓</td><td class="yes">✓</td><td class="no">—</td><td><?= e(t('se for dele')) ?></td></tr>
+    <tr><td><?= e(t('Régua respeita saldo restante')) ?></td><td class="obs"><?= e(t('automático')) ?></td><td class="obs"><?= e(t('automático')) ?></td><td class="no">—</td><td class="no">—</td></tr>
   </tbody>
 </table>
 
-<h2>🪝 Wise — Webhook & Reconciliação</h2>
+<h2>🪝 <?= e(t('Wise — Webhook & Reconciliação')) ?></h2>
 <table class="matriz">
   <thead>
-    <tr><th style="width:30%;">Item</th><th>👑 Sadmin</th><th>⚙ Admin</th><th>💼 Funcionário</th><th>🤝 Cliente</th></tr>
+    <tr><th style="width:30%;"><?= e(t('Item')) ?></th><th>👑 <?= e(t('Sadmin')) ?></th><th>⚙ <?= e(t('Admin')) ?></th><th>💼 <?= e(t('Funcionário')) ?></th><th>🤝 <?= e(t('Cliente')) ?></th></tr>
   </thead>
   <tbody>
-    <tr><td>Endpoint webhook (wise_webhook.php)</td><td class="obs">público (validação RSA)</td><td class="obs">público</td><td class="obs">público</td><td class="obs">público</td></tr>
-    <tr><td>Painel de eventos + reconciliação (wise_eventos.php)</td><td class="yes">✓ exclusivo</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
-    <tr><td>Confirmar/Rejeitar pagamento Wise pendente</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
-    <tr><td>Configurar chave pública RSA da Wise</td><td class="yes">✓ exclusivo</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
-    <tr><td>Toggle validação assinatura (não funciona em produção)</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
-    <tr><td>Upload CSV manual da Wise (wise_sync.php)</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
-    <tr><td>Card laranja no dashboard com pendências</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Endpoint webhook (wise_webhook.php)')) ?></td><td class="obs"><?= e(t('público (validação RSA)')) ?></td><td class="obs"><?= e(t('público')) ?></td><td class="obs"><?= e(t('público')) ?></td><td class="obs"><?= e(t('público')) ?></td></tr>
+    <tr><td><?= e(t('Painel de eventos + reconciliação (wise_eventos.php)')) ?></td><td class="yes">✓ <?= e(t('exclusivo')) ?></td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Confirmar/Rejeitar pagamento Wise pendente')) ?></td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Configurar chave pública RSA da Wise')) ?></td><td class="yes">✓ <?= e(t('exclusivo')) ?></td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Toggle validação assinatura (não funciona em produção)')) ?></td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Upload CSV manual da Wise (wise_sync.php)')) ?></td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Card laranja no dashboard com pendências')) ?></td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
   </tbody>
 </table>
 
-<h2>📅 Agenda & Entregas</h2>
+<h2>📅 <?= e(t('Agenda & Entregas')) ?></h2>
 <table class="matriz">
   <thead>
-    <tr><th style="width:30%;">Item</th><th>👑 Sadmin</th><th>⚙ Admin</th><th>💼 Funcionário</th><th>🤝 Cliente</th></tr>
+    <tr><th style="width:30%;"><?= e(t('Item')) ?></th><th>👑 <?= e(t('Sadmin')) ?></th><th>⚙ <?= e(t('Admin')) ?></th><th>💼 <?= e(t('Funcionário')) ?></th><th>🤝 <?= e(t('Cliente')) ?></th></tr>
   </thead>
   <tbody>
-    <tr><td>Minha agenda (executar entregas)</td><td>se é executor</td><td>se é executor</td><td class="yes">✓</td><td class="no">—</td></tr>
-    <tr><td>Toggle "Minha / Agenda do parceiro" (em dupla)</td><td class="no">—</td><td class="no">—</td><td class="yes">✓</td><td class="no">—</td></tr>
-    <tr><td>Ver agenda de outro funcionário</td><td class="yes">✓</td><td class="yes">✓</td><td class="obs">só da dupla</td><td class="no">—</td></tr>
-    <tr><td>Acompanhamento geral (todos)</td><td class="yes">✓</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td></tr>
-    <tr><td>Vista calendário consolidada</td><td class="yes">✓</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td></tr>
-    <tr><td>Ver entregas próprias contratadas</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="yes">✓</td></tr>
+    <tr><td><?= e(t('Minha agenda (executar entregas)')) ?></td><td><?= e(t('se é executor')) ?></td><td><?= e(t('se é executor')) ?></td><td class="yes">✓</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Toggle "Minha / Agenda do parceiro" (em dupla)')) ?></td><td class="no">—</td><td class="no">—</td><td class="yes">✓</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Ver agenda de outro funcionário')) ?></td><td class="yes">✓</td><td class="yes">✓</td><td class="obs"><?= e(t('só da dupla')) ?></td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Acompanhamento geral (todos)')) ?></td><td class="yes">✓</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Vista calendário consolidada')) ?></td><td class="yes">✓</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Ver entregas próprias contratadas')) ?></td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="yes">✓</td></tr>
   </tbody>
 </table>
 
-<h2>💵 Pagamentos a Funcionários</h2>
+<h2>💵 <?= e(t('Pagamentos a Funcionários')) ?></h2>
 <table class="matriz">
   <thead>
-    <tr><th style="width:30%;">Item</th><th>👑 Sadmin</th><th>⚙ Admin</th><th>💼 Funcionário</th><th>🤝 Cliente</th></tr>
+    <tr><th style="width:30%;"><?= e(t('Item')) ?></th><th>👑 <?= e(t('Sadmin')) ?></th><th>⚙ <?= e(t('Admin')) ?></th><th>💼 <?= e(t('Funcionário')) ?></th><th>🤝 <?= e(t('Cliente')) ?></th></tr>
   </thead>
   <tbody>
-    <tr><td>Fila de pagamentos (USD)</td><td class="yes">✓</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td></tr>
-    <tr><td>Aprovar/efetuar pagamento</td><td class="yes">✓</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td></tr>
-    <tr><td>Apagar pagamento lançado</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
-    <tr><td>Comprovante PDF (comprovante_funcionario.php)</td><td class="yes">✓</td><td class="yes">✓</td><td>próprios</td><td class="no">—</td></tr>
-    <tr><td>Meus pagamentos (histórico)</td><td>se é executor</td><td>se é executor</td><td class="yes">✓</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Fila de pagamentos (USD)')) ?></td><td class="yes">✓</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Aprovar/efetuar pagamento')) ?></td><td class="yes">✓</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Apagar pagamento lançado')) ?></td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Comprovante PDF (comprovante_funcionario.php)')) ?></td><td class="yes">✓</td><td class="yes">✓</td><td><?= e(t('próprios')) ?></td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Meus pagamentos (histórico)')) ?></td><td><?= e(t('se é executor')) ?></td><td><?= e(t('se é executor')) ?></td><td class="yes">✓</td><td class="no">—</td></tr>
   </tbody>
 </table>
 
-<h2>💰 Finanças (Painel + Despesas + Distribuição + Pagto)</h2>
+<h2>💰 <?= e(t('Finanças (Painel + Despesas + Distribuição + Pagto)')) ?></h2>
 <table class="matriz">
   <thead>
-    <tr><th style="width:30%;">Item</th><th>👑 Sadmin</th><th>⚙ Admin</th><th>💼 Funcionário</th><th>🤝 Cliente</th></tr>
+    <tr><th style="width:30%;"><?= e(t('Item')) ?></th><th>👑 <?= e(t('Sadmin')) ?></th><th>⚙ <?= e(t('Admin')) ?></th><th>💼 <?= e(t('Funcionário')) ?></th><th>🤝 <?= e(t('Cliente')) ?></th></tr>
   </thead>
   <tbody>
-    <tr><td>Painel financeiro (3 abas)</td><td class="yes">✓</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td></tr>
-    <tr><td>Gráfico saúde (1m/3m/6m/1a/Tudo)</td><td class="yes">✓</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td></tr>
-    <tr><td>Despesas (CRUD)</td><td class="yes">✓ exclusivo</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
-    <tr><td>Distribuição de lucro — ver</td><td class="yes">✓</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td></tr>
-    <tr><td>Distribuição — pagar sócios</td><td class="yes">✓</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td></tr>
-    <tr><td>Distribuição — trava de quota disponível</td><td class="obs">bloqueia exceder</td><td class="obs">bloqueia exceder</td><td class="no">—</td><td class="no">—</td></tr>
-    <tr><td>Distribuição — apagar lançamento</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
-    <tr><td>Formas de pagto (Zelle/Wise/QR)</td><td class="yes">✓ exclusivo</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
-    <tr><td>Cotação USD (atualizar)</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
-    <tr><td>Exportar CSV (export.php)</td><td class="yes">✓</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Painel financeiro (3 abas)')) ?></td><td class="yes">✓</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Gráfico saúde (1m/3m/6m/1a/Tudo)')) ?></td><td class="yes">✓</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Despesas (CRUD)')) ?></td><td class="yes">✓ <?= e(t('exclusivo')) ?></td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Distribuição de lucro — ver')) ?></td><td class="yes">✓</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Distribuição — pagar sócios')) ?></td><td class="yes">✓</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Distribuição — trava de quota disponível')) ?></td><td class="obs"><?= e(t('bloqueia exceder')) ?></td><td class="obs"><?= e(t('bloqueia exceder')) ?></td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Distribuição — apagar lançamento')) ?></td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Formas de pagto (Zelle/Wise/QR)')) ?></td><td class="yes">✓ <?= e(t('exclusivo')) ?></td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Cotação USD (atualizar)')) ?></td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Exportar CSV (export.php)')) ?></td><td class="yes">✓</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td></tr>
   </tbody>
 </table>
 
-<h2>💬 Comunicação (Régua + Templates)</h2>
+<h2>💬 <?= e(t('Comunicação (Régua + Templates)')) ?></h2>
 <table class="matriz">
   <thead>
-    <tr><th style="width:30%;">Item</th><th>👑 Sadmin</th><th>⚙ Admin</th><th>💼 Funcionário</th><th>🤝 Cliente</th></tr>
+    <tr><th style="width:30%;"><?= e(t('Item')) ?></th><th>👑 <?= e(t('Sadmin')) ?></th><th>⚙ <?= e(t('Admin')) ?></th><th>💼 <?= e(t('Funcionário')) ?></th><th>🤝 <?= e(t('Cliente')) ?></th></tr>
   </thead>
   <tbody>
-    <tr><td>Régua de cobrança — etapas (CRUD)</td><td class="yes">✓ exclusivo</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
-    <tr><td>Reordenar etapas com ↑↓</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
-    <tr><td>Régua cron diário 6h (com janela 14 dias)</td><td class="obs">automático</td><td class="obs">automático</td><td class="no">—</td><td class="no">—</td></tr>
-    <tr><td>Tarefas WhatsApp pendentes</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
-    <tr><td>Templates de mensagem (CRUD)</td><td class="yes">✓ exclusivo</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
-    <tr><td>Validação de variáveis ao salvar template</td><td class="obs">avisa typos</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
-    <tr><td>Instalar templates padrão (✨)</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
-    <tr><td>Apagar template</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
-    <tr><td>Disparar WhatsApp (wa.me)</td><td class="yes">✓</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Régua de cobrança — etapas (CRUD)')) ?></td><td class="yes">✓ <?= e(t('exclusivo')) ?></td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Reordenar etapas com ↑↓')) ?></td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Régua cron diário 6h (com janela 14 dias)')) ?></td><td class="obs"><?= e(t('automático')) ?></td><td class="obs"><?= e(t('automático')) ?></td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Tarefas WhatsApp pendentes')) ?></td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Templates de mensagem (CRUD)')) ?></td><td class="yes">✓ <?= e(t('exclusivo')) ?></td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Validação de variáveis ao salvar template')) ?></td><td class="obs"><?= e(t('avisa typos')) ?></td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Instalar templates padrão (✨)')) ?></td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Apagar template')) ?></td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Disparar WhatsApp (wa.me)')) ?></td><td class="yes">✓</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td></tr>
   </tbody>
 </table>
 
-<h2>🔔 Alertas Operacionais</h2>
+<h2>🔔 <?= e(t('Alertas Operacionais')) ?></h2>
 <table class="matriz">
   <thead>
-    <tr><th style="width:30%;">Item</th><th>👑 Sadmin</th><th>⚙ Admin</th><th>💼 Funcionário</th><th>🤝 Cliente</th></tr>
+    <tr><th style="width:30%;"><?= e(t('Item')) ?></th><th>👑 <?= e(t('Sadmin')) ?></th><th>⚙ <?= e(t('Admin')) ?></th><th>💼 <?= e(t('Funcionário')) ?></th><th>🤝 <?= e(t('Cliente')) ?></th></tr>
   </thead>
   <tbody>
-    <tr><td>Alerta POSTAGEM sem marcação (cron qua/sex 9h)</td><td class="obs">automático</td><td class="no">—</td><td>recebe email se pendente</td><td class="no">—</td></tr>
-    <tr><td>Tela de gestão de alertas (alertas.php)</td><td class="yes">✓ exclusivo</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
-    <tr><td>Dry-run sem envio</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
-    <tr><td>Disparar manual fora do cron</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Alerta POSTAGEM sem marcação (cron qua/sex 9h)')) ?></td><td class="obs"><?= e(t('automático')) ?></td><td class="no">—</td><td><?= e(t('recebe email se pendente')) ?></td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Tela de gestão de alertas (alertas.php)')) ?></td><td class="yes">✓ <?= e(t('exclusivo')) ?></td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Dry-run sem envio')) ?></td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Disparar manual fora do cron')) ?></td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
   </tbody>
 </table>
 
-<h2>💾 Manutenção do Sistema</h2>
+<h2>💾 <?= e(t('Manutenção do Sistema')) ?></h2>
 <table class="matriz">
   <thead>
-    <tr><th style="width:30%;">Item</th><th>👑 Sadmin</th><th>⚙ Admin</th><th>💼 Funcionário</th><th>🤝 Cliente</th></tr>
+    <tr><th style="width:30%;"><?= e(t('Item')) ?></th><th>👑 <?= e(t('Sadmin')) ?></th><th>⚙ <?= e(t('Admin')) ?></th><th>💼 <?= e(t('Funcionário')) ?></th><th>🤝 <?= e(t('Cliente')) ?></th></tr>
   </thead>
   <tbody>
-    <tr><td>Backup do banco (backups.php)</td><td class="yes">✓ exclusivo</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
-    <tr><td>Backup automático diário 4h (gzip, 14 dias)</td><td class="obs">automático</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
-    <tr><td>Baixar backup (.sql.gz)</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
-    <tr><td>Limpeza mensal (limpeza.php)</td><td class="yes">✓ exclusivo</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
-    <tr><td>Limpeza automática dia 1 às 3h</td><td class="obs">automático</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
-    <tr><td>Ver tamanho atual do banco (linhas + KB)</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
-    <tr><td>Matriz de Acesso PDF (esta página)</td><td class="yes">✓ exclusivo</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Backup do banco (backups.php)')) ?></td><td class="yes">✓ <?= e(t('exclusivo')) ?></td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Backup automático diário 4h (gzip, 14 dias)')) ?></td><td class="obs"><?= e(t('automático')) ?></td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Baixar backup (.sql.gz)')) ?></td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Limpeza mensal (limpeza.php)')) ?></td><td class="yes">✓ <?= e(t('exclusivo')) ?></td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Limpeza automática dia 1 às 3h')) ?></td><td class="obs"><?= e(t('automático')) ?></td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Ver tamanho atual do banco (linhas + KB)')) ?></td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Matriz de Acesso PDF (esta página)')) ?></td><td class="yes">✓ <?= e(t('exclusivo')) ?></td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
   </tbody>
 </table>
 
-<h2>🔐 Segurança & Auditoria</h2>
+<h2>🔐 <?= e(t('Segurança & Auditoria')) ?></h2>
 <table class="matriz">
   <thead>
-    <tr><th style="width:30%;">Item</th><th>👑 Sadmin</th><th>⚙ Admin</th><th>💼 Funcionário</th><th>🤝 Cliente</th></tr>
+    <tr><th style="width:30%;"><?= e(t('Item')) ?></th><th>👑 <?= e(t('Sadmin')) ?></th><th>⚙ <?= e(t('Admin')) ?></th><th>💼 <?= e(t('Funcionário')) ?></th><th>🤝 <?= e(t('Cliente')) ?></th></tr>
   </thead>
   <tbody>
-    <tr><td>Login (apenas email + senha)</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
-    <tr><td>2FA não é exigido no login normal</td><td class="obs">somente recuperação</td><td class="obs">somente recuperação</td><td class="obs">somente recuperação</td><td class="obs">somente recuperação</td></tr>
-    <tr><td>Esqueci senha — via email</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
-    <tr><td>Esqueci senha — via 2FA (atalho)</td><td>se tem 2FA</td><td>se tem 2FA</td><td>se tem 2FA</td><td>se tem 2FA</td></tr>
-    <tr><td>Reset de senha invalida sessões antigas</td><td class="obs">automático</td><td class="obs">automático</td><td class="obs">automático</td><td class="obs">automático</td></tr>
-    <tr><td>Auditoria (log de tudo) — auditoria.php</td><td class="yes">✓ exclusivo</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
-    <tr><td>Configurar próprio 2FA + 8 backup codes</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+    <tr><td><?= e(t('Login (apenas email + senha)')) ?></td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+    <tr><td><?= e(t('2FA não é exigido no login normal')) ?></td><td class="obs"><?= e(t('somente recuperação')) ?></td><td class="obs"><?= e(t('somente recuperação')) ?></td><td class="obs"><?= e(t('somente recuperação')) ?></td><td class="obs"><?= e(t('somente recuperação')) ?></td></tr>
+    <tr><td><?= e(t('Esqueci senha — via email')) ?></td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+    <tr><td><?= e(t('Esqueci senha — via 2FA (atalho)')) ?></td><td><?= e(t('se tem 2FA')) ?></td><td><?= e(t('se tem 2FA')) ?></td><td><?= e(t('se tem 2FA')) ?></td><td><?= e(t('se tem 2FA')) ?></td></tr>
+    <tr><td><?= e(t('Reset de senha invalida sessões antigas')) ?></td><td class="obs"><?= e(t('automático')) ?></td><td class="obs"><?= e(t('automático')) ?></td><td class="obs"><?= e(t('automático')) ?></td><td class="obs"><?= e(t('automático')) ?></td></tr>
+    <tr><td><?= e(t('Auditoria (log de tudo) — auditoria.php')) ?></td><td class="yes">✓ <?= e(t('exclusivo')) ?></td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
+    <tr><td><?= e(t('Configurar próprio 2FA + 8 backup codes')) ?></td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
   </tbody>
 </table>
 
-<h2>⏰ Crons em Produção</h2>
+<h2>⏰ <?= e(t('Crons em Produção')) ?></h2>
 <table class="matriz">
   <thead>
-    <tr><th>Cron</th><th>Horário</th><th>O que faz</th></tr>
+    <tr><th><?= e(t('Cron')) ?></th><th><?= e(t('Horário')) ?></th><th><?= e(t('O que faz')) ?></th></tr>
   </thead>
   <tbody>
-    <tr><td><code>cron/limpeza_mensal.php</code></td><td>03:00 — dia 1 do mês</td><td>Apaga logs antigos + OPTIMIZE TABLE</td></tr>
-    <tr><td><code>cron/backup_db.php</code></td><td>04:00 — todo dia</td><td>Dump gzip do banco (retém 14 dias)</td></tr>
-    <tr><td><code>cron/gerar_cobrancas.php</code></td><td>05:00 — todo dia</td><td>Gera cobranças mensais conforme dia_cobranca</td></tr>
-    <tr><td><code>cron/regua_executar.php</code></td><td>06:00 — todo dia</td><td>Dispara régua de cobrança (lembretes)</td></tr>
-    <tr><td><code>cron/alerta_postagens.php</code></td><td>09:00 — qua e sex</td><td>Email pra funcionário sem POSTAGEM marcada</td></tr>
+    <tr><td><code>cron/limpeza_mensal.php</code></td><td>03:00 — <?= e(t('dia 1 do mês')) ?></td><td><?= e(t('Apaga logs antigos + OPTIMIZE TABLE')) ?></td></tr>
+    <tr><td><code>cron/backup_db.php</code></td><td>04:00 — <?= e(t('todo dia')) ?></td><td><?= e(t('Dump gzip do banco (retém 14 dias)')) ?></td></tr>
+    <tr><td><code>cron/gerar_cobrancas.php</code></td><td>05:00 — <?= e(t('todo dia')) ?></td><td><?= e(t('Gera cobranças mensais conforme dia_cobranca')) ?></td></tr>
+    <tr><td><code>cron/regua_executar.php</code></td><td>06:00 — <?= e(t('todo dia')) ?></td><td><?= e(t('Dispara régua de cobrança (lembretes)')) ?></td></tr>
+    <tr><td><code>cron/alerta_postagens.php</code></td><td>09:00 — <?= e(t('qua e sex')) ?></td><td><?= e(t('Email pra funcionário sem POSTAGEM marcada')) ?></td></tr>
   </tbody>
 </table>
 
-<h2>⚠ Travas Globais (válidas para qualquer perfil)</h2>
+<h2>⚠ <?= e(t('Travas Globais (válidas para qualquer perfil)')) ?></h2>
 <table class="matriz">
   <tbody>
-    <tr><td>Apagar a si mesmo</td><td colspan="4" style="text-align:center;"><span class="no">— BLOQUEADO</span></td></tr>
-    <tr><td>Apagar o único Super Admin ativo</td><td colspan="4" style="text-align:center;"><span class="no">— BLOQUEADO</span></td></tr>
-    <tr><td>Apagar item do catálogo com assinaturas vinculadas</td><td colspan="4" style="text-align:center;"><span class="no">— BLOQUEADO</span> (desative em vez disso)</td></tr>
-    <tr><td>Apagar cliente com pagamentos confirmados</td><td colspan="4" style="text-align:center;"><span class="no">— BLOQUEADO</span> (estorne ou desative)</td></tr>
-    <tr><td>Cancelar cobrança com pagamento confirmado</td><td colspan="4" style="text-align:center;"><span class="no">— BLOQUEADO</span> (estorne primeiro)</td></tr>
-    <tr><td>Cobrança avulsa com vencimento no passado</td><td colspan="4" style="text-align:center;"><span class="no">— BLOQUEADO</span></td></tr>
-    <tr><td>Item catálogo com variante IA sem preço IA</td><td colspan="4" style="text-align:center;"><span class="no">— BLOQUEADO</span></td></tr>
-    <tr><td>Distribuição > quota disponível</td><td colspan="4" style="text-align:center;"><span class="no">— BLOQUEADO</span></td></tr>
-    <tr><td>Webhook Wise: assinatura RSA obrigatória em produção</td><td colspan="4" style="text-align:center;"><span class="no">— OBRIGATÓRIO</span></td></tr>
-    <tr><td>Cron concorrente (mesmo script rodando 2x)</td><td colspan="4" style="text-align:center;"><span class="no">— BLOQUEADO via flock</span></td></tr>
+    <tr><td><?= e(t('Apagar a si mesmo')) ?></td><td colspan="4" style="text-align:center;"><span class="no">— <?= e(t('BLOQUEADO')) ?></span></td></tr>
+    <tr><td><?= e(t('Apagar o único Super Admin ativo')) ?></td><td colspan="4" style="text-align:center;"><span class="no">— <?= e(t('BLOQUEADO')) ?></span></td></tr>
+    <tr><td><?= e(t('Apagar item do catálogo com assinaturas vinculadas')) ?></td><td colspan="4" style="text-align:center;"><span class="no">— <?= e(t('BLOQUEADO')) ?></span> <?= e(t('(desative em vez disso)')) ?></td></tr>
+    <tr><td><?= e(t('Apagar cliente com pagamentos confirmados')) ?></td><td colspan="4" style="text-align:center;"><span class="no">— <?= e(t('BLOQUEADO')) ?></span> <?= e(t('(estorne ou desative)')) ?></td></tr>
+    <tr><td><?= e(t('Cancelar cobrança com pagamento confirmado')) ?></td><td colspan="4" style="text-align:center;"><span class="no">— <?= e(t('BLOQUEADO')) ?></span> <?= e(t('(estorne primeiro)')) ?></td></tr>
+    <tr><td><?= e(t('Cobrança avulsa com vencimento no passado')) ?></td><td colspan="4" style="text-align:center;"><span class="no">— <?= e(t('BLOQUEADO')) ?></span></td></tr>
+    <tr><td><?= e(t('Item catálogo com variante IA sem preço IA')) ?></td><td colspan="4" style="text-align:center;"><span class="no">— <?= e(t('BLOQUEADO')) ?></span></td></tr>
+    <tr><td><?= e(t('Distribuição > quota disponível')) ?></td><td colspan="4" style="text-align:center;"><span class="no">— <?= e(t('BLOQUEADO')) ?></span></td></tr>
+    <tr><td><?= e(t('Webhook Wise: assinatura RSA obrigatória em produção')) ?></td><td colspan="4" style="text-align:center;"><span class="no">— <?= e(t('OBRIGATÓRIO')) ?></span></td></tr>
+    <tr><td><?= e(t('Cron concorrente (mesmo script rodando 2x)')) ?></td><td colspan="4" style="text-align:center;"><span class="no">— <?= e(t('BLOQUEADO via flock')) ?></span></td></tr>
   </tbody>
 </table>
 
-<h2>🤖 Comportamentos Automáticos</h2>
+<h2>🤖 <?= e(t('Comportamentos Automáticos')) ?></h2>
 <table class="matriz">
   <tbody>
-    <tr><td>Cobrança zerada (todos itens removidos) vira "cancelada"</td><td colspan="4" style="text-align:center;">automático ao remover item</td></tr>
-    <tr><td>Régua não dispara se cobrança tem saldo ≤ 0</td><td colspan="4" style="text-align:center;">filtro na execução da régua</td></tr>
-    <tr><td>Recibo PDF só lista pagamentos com pendente=0</td><td colspan="4" style="text-align:center;">automático</td></tr>
-    <tr><td>Webhook Wise marca pagamento como pendente=1 (admin confirma)</td><td colspan="4" style="text-align:center;">automático</td></tr>
-    <tr><td>Pagamento confirmado em cobrança paga → status preservado</td><td colspan="4" style="text-align:center;">automático</td></tr>
-    <tr><td>Timezone PHP↔MySQL alinhados no conectar (SET time_zone)</td><td colspan="4" style="text-align:center;">automático</td></tr>
+    <tr><td><?= e(t('Cobrança zerada (todos itens removidos) vira "cancelada"')) ?></td><td colspan="4" style="text-align:center;"><?= e(t('automático ao remover item')) ?></td></tr>
+    <tr><td><?= e(t('Régua não dispara se cobrança tem saldo ≤ 0')) ?></td><td colspan="4" style="text-align:center;"><?= e(t('filtro na execução da régua')) ?></td></tr>
+    <tr><td><?= e(t('Recibo PDF só lista pagamentos com pendente=0')) ?></td><td colspan="4" style="text-align:center;"><?= e(t('automático')) ?></td></tr>
+    <tr><td><?= e(t('Webhook Wise marca pagamento como pendente=1 (admin confirma)')) ?></td><td colspan="4" style="text-align:center;"><?= e(t('automático')) ?></td></tr>
+    <tr><td><?= e(t('Pagamento confirmado em cobrança paga → status preservado')) ?></td><td colspan="4" style="text-align:center;"><?= e(t('automático')) ?></td></tr>
+    <tr><td><?= e(t('Timezone PHP↔MySQL alinhados no conectar (SET time_zone)')) ?></td><td colspan="4" style="text-align:center;"><?= e(t('automático')) ?></td></tr>
   </tbody>
 </table>
 
 <div class="legenda">
-  <strong>Legenda:</strong> ✓ = acesso total · — = sem acesso · "exclusivo" = só este perfil tem ·
-  "automático" = via cron ou trigger · "se é executor" = quando admin/sadmin também trabalha como funcionário ·
-  "se tem 2FA" = somente se o usuário tem 2FA ativo no perfil ·
-  "público" = endpoint sem autenticação (mas com outra proteção: assinatura RSA, lock, etc).
+  <strong><?= e(t('Legenda:')) ?></strong> <?= e(t('✓ = acesso total · — = sem acesso · "exclusivo" = só este perfil tem · "automático" = via cron ou trigger · "se é executor" = quando admin/sadmin também trabalha como funcionário · "se tem 2FA" = somente se o usuário tem 2FA ativo no perfil · "público" = endpoint sem autenticação (mas com outra proteção: assinatura RSA, lock, etc).')) ?>
 </div>
 
 <div class="footer">
-  Dite Ads — Controle e Gestão · gerado por <?= e($u['nome']) ?> em <?= e(date('d/m/Y H:i')) ?>
+  Dite Ads — <?= e(t('Controle e Gestão')) ?> · <?= e(t('gerado por')) ?> <?= e($u['nome']) ?> <?= e(t('em')) ?> <?= e(date('d/m/Y H:i')) ?>
 </div>
 
 <script>

@@ -8,11 +8,11 @@ $pid = (int)($_GET['id'] ?? 0);
 $stmt = $db->prepare('SELECT p.*, u.nome AS func_nome, u.email, u.wisetag, u.cpf, u.pais FROM pagamentos_funcionario p JOIN usuarios u ON u.id = p.funcionario_id WHERE p.id = ?');
 $stmt->execute([$pid]);
 $pag = $stmt->fetch();
-if (!$pag) { http_response_code(404); exit('Pagamento não encontrado.'); }
+if (!$pag) { http_response_code(404); exit(t('Pagamento não encontrado.')); }
 
 // Auth: admin/sadmin ou o próprio funcionário
 if (!is_admin() && (int)$u['id'] !== (int)$pag['funcionario_id']) {
-    http_response_code(403); exit('Acesso negado.');
+    http_response_code(403); exit(t('Acesso negado.'));
 }
 
 $detalhes = detalhes_pagamento_funcionario($db, $pid);
@@ -22,7 +22,7 @@ $detalhes = detalhes_pagamento_funcionario($db, $pid);
 <html lang="pt-br">
 <head>
 <meta charset="utf-8">
-<title>Comprovante de pagamento #<?= (int)$pid ?> — Dite Ads</title>
+<title><?= e(t('Comprovante de pagamento')) ?> #<?= (int)$pid ?> — Dite Ads</title>
 <style>
   @media print { @page { margin: 1.5cm; } .no-print { display: none !important; } }
   body { font-family: -apple-system, "Inter", "Segoe UI", Roboto, Arial, sans-serif; max-width: 720px; margin: 32px auto; padding: 0 16px; color: #1a1a1a; }
@@ -44,28 +44,28 @@ $detalhes = detalhes_pagamento_funcionario($db, $pid);
 </head>
 <body>
   <div class="no-print" style="text-align:right; margin-bottom:16px;">
-    <a href="javascript:window.print()" class="print-btn">🖨️ Imprimir / Salvar PDF</a>
+    <a href="javascript:window.print()" class="print-btn">🖨️ <?= e(t('Imprimir / Salvar PDF')) ?></a>
   </div>
 
   <div class="header">
     <img src="<?= e(APP_BASE_URL) ?>/assets/img/logo.png" alt="Dite Ads" onerror="this.style.display='none'">
-    <h1>Comprovante de pagamento</h1>
+    <h1><?= e(t('Comprovante de pagamento')) ?></h1>
     <div class="sub">Dite Ads · #<?= (int)$pid ?> · <?= e(date('d/m/Y', strtotime($pag['data_pagamento']))) ?></div>
   </div>
 
   <div class="box">
     <div class="grid">
-      <div><div class="l">Funcionário</div><div class="v"><?= e($pag['func_nome']) ?></div></div>
-      <div><div class="l">Email</div><div class="v"><?= e($pag['email']) ?></div></div>
+      <div><div class="l"><?= e(t('Funcionário')) ?></div><div class="v"><?= e($pag['func_nome']) ?></div></div>
+      <div><div class="l"><?= e(t('Email')) ?></div><div class="v"><?= e($pag['email']) ?></div></div>
       <?php if ($pag['wisetag']): ?><div><div class="l">WiseTag</div><div class="v"><?= e($pag['wisetag']) ?></div></div><?php endif; ?>
-      <?php if ($pag['pais']): ?><div><div class="l">País</div><div class="v"><?= e($pag['pais']) ?></div></div><?php endif; ?>
+      <?php if ($pag['pais']): ?><div><div class="l"><?= e(t('País')) ?></div><div class="v"><?= e($pag['pais']) ?></div></div><?php endif; ?>
       <?php if ($pag['cpf']): ?><div><div class="l">CPF</div><div class="v"><?= e($pag['cpf']) ?></div></div><?php endif; ?>
-      <div><div class="l">Data do pagamento</div><div class="v"><?= e(date('d/m/Y', strtotime($pag['data_pagamento']))) ?></div></div>
+      <div><div class="l"><?= e(t('Data do pagamento')) ?></div><div class="v"><?= e(date('d/m/Y', strtotime($pag['data_pagamento']))) ?></div></div>
     </div>
   </div>
 
   <table>
-    <thead><tr><th>Cliente</th><th>Serviço</th><th>Comp.</th><th style="text-align:right;">Qtd</th><th style="text-align:right;">Valor un.</th><th style="text-align:right;">Subtotal</th></tr></thead>
+    <thead><tr><th><?= e(t('Cliente')) ?></th><th><?= e(t('Serviço')) ?></th><th><?= e(t('Comp.')) ?></th><th style="text-align:right;"><?= e(t('Qtd')) ?></th><th style="text-align:right;"><?= e(t('Valor un.')) ?></th><th style="text-align:right;"><?= e(t('Subtotal')) ?></th></tr></thead>
     <tbody>
     <?php foreach ($detalhes as $d): ?>
       <tr>
@@ -80,11 +80,11 @@ $detalhes = detalhes_pagamento_funcionario($db, $pid);
     </tbody>
   </table>
 
-  <div class="total">Total: $<?= number_format((float)$pag['valor_usd'], 2, '.', ',') ?> USD</div>
+  <div class="total"><?= e(t('Total')) ?>: $<?= number_format((float)$pag['valor_usd'], 2, '.', ',') ?> USD</div>
 
   <div class="footer">
-    Comprovante gerado automaticamente pelo sistema Dite Ads em <?= e(date('d/m/Y H:i')) ?>.<br>
-    Pagamento via Wise para o WiseTag/conta do funcionário.
+    <?= e(t('Comprovante gerado automaticamente pelo sistema Dite Ads em')) ?> <?= e(date('d/m/Y H:i')) ?>.<br>
+    <?= e(t('Pagamento via Wise para o WiseTag/conta do funcionário.')) ?>
   </div>
 </body>
 </html>

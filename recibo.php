@@ -8,11 +8,11 @@ $cid = (int)($_GET['cobranca'] ?? 0);
 $stmt = $db->prepare('SELECT c.*, cl.nome_empresa, cl.nome_contato, cl.documento, cl.email AS cli_email, cl.endereco, cl.telefone FROM cobrancas c JOIN clientes cl ON cl.id = c.cliente_id WHERE c.id = ?');
 $stmt->execute([$cid]);
 $cob = $stmt->fetch();
-if (!$cob) { http_response_code(404); exit('Cobrança não encontrada.'); }
+if (!$cob) { http_response_code(404); exit(t('Cobrança não encontrada.')); }
 
 // Auth: admin OU cliente da própria cobrança
 $autorizado = is_admin() || ($u['role'] === 'cliente' && (int)$u['cliente_id'] === (int)$cob['cliente_id']);
-if (!$autorizado) { http_response_code(403); exit('Acesso negado.'); }
+if (!$autorizado) { http_response_code(403); exit(t('Acesso negado.')); }
 
 $stmt = $db->prepare('SELECT * FROM cobranca_itens WHERE cobranca_id = ? ORDER BY id');
 $stmt->execute([$cid]);
@@ -46,7 +46,7 @@ try {
 <html lang="pt-br">
 <head>
 <meta charset="utf-8">
-<title>Recibo #<?= (int)$cid ?> — Dite Ads</title>
+<title><?= e(t('Recibo')) ?> #<?= (int)$cid ?> — Dite Ads</title>
 <style>
   @media print { @page { margin: 1.5cm; } .no-print { display: none !important; } }
   body { font-family: -apple-system, "Inter", "Segoe UI", Roboto, Arial, sans-serif; max-width: 720px; margin: 32px auto; padding: 0 16px; color: #1a1a1a; }
@@ -72,31 +72,31 @@ try {
 </head>
 <body>
   <div class="no-print" style="text-align:right; margin-bottom:16px;">
-    <a href="javascript:window.print()" class="print-btn">🖨️ Imprimir / Salvar PDF</a>
+    <a href="javascript:window.print()" class="print-btn">🖨️ <?= e(t('Imprimir / Salvar PDF')) ?></a>
   </div>
 
   <div class="header">
     <img src="<?= e(APP_BASE_URL) ?>/assets/img/logo.png" alt="Dite Ads" onerror="this.style.display='none'">
-    <h1>Recibo de cobrança</h1>
-    <div class="sub">Dite Ads · Cobrança #<?= (int)$cob['id'] ?> · Competência <?= e($cob['competencia_mes']) ?></div>
+    <h1><?= e(t('Recibo de cobrança')) ?></h1>
+    <div class="sub">Dite Ads · <?= e(t('Cobrança')) ?> #<?= (int)$cob['id'] ?> · <?= e(t('Competência')) ?> <?= e($cob['competencia_mes']) ?></div>
     <div class="sub" style="margin-top:8px;"><span class="status-pill status-<?= e($cob['status']) ?>"><?= e($cob['status']) ?></span></div>
   </div>
 
   <div class="box">
     <div class="grid">
-      <div><div class="l">Cliente</div><div class="v"><?= e($cob['nome_empresa']) ?></div></div>
-      <?php if ($cob['nome_contato']): ?><div><div class="l">Contato</div><div class="v"><?= e($cob['nome_contato']) ?></div></div><?php endif; ?>
-      <?php if ($cob['documento']): ?><div><div class="l">Documento</div><div class="v"><?= e($cob['documento']) ?></div></div><?php endif; ?>
-      <?php if ($cob['cli_email']): ?><div><div class="l">Email</div><div class="v"><?= e($cob['cli_email']) ?></div></div><?php endif; ?>
-      <?php if ($cob['telefone']): ?><div><div class="l">Telefone</div><div class="v"><?= e($cob['telefone']) ?></div></div><?php endif; ?>
-      <?php if ($cob['endereco']): ?><div><div class="l">Endereço</div><div class="v"><?= e($cob['endereco']) ?></div></div><?php endif; ?>
-      <div><div class="l">Vencimento</div><div class="v"><?= e(date('d/m/Y', strtotime($cob['vencimento']))) ?></div></div>
-      <div><div class="l">Moeda</div><div class="v"><?= e($cob['moeda']) ?></div></div>
+      <div><div class="l"><?= e(t('Cliente')) ?></div><div class="v"><?= e($cob['nome_empresa']) ?></div></div>
+      <?php if ($cob['nome_contato']): ?><div><div class="l"><?= e(t('Contato')) ?></div><div class="v"><?= e($cob['nome_contato']) ?></div></div><?php endif; ?>
+      <?php if ($cob['documento']): ?><div><div class="l"><?= e(t('Documento')) ?></div><div class="v"><?= e($cob['documento']) ?></div></div><?php endif; ?>
+      <?php if ($cob['cli_email']): ?><div><div class="l"><?= e(t('Email')) ?></div><div class="v"><?= e($cob['cli_email']) ?></div></div><?php endif; ?>
+      <?php if ($cob['telefone']): ?><div><div class="l"><?= e(t('Telefone')) ?></div><div class="v"><?= e($cob['telefone']) ?></div></div><?php endif; ?>
+      <?php if ($cob['endereco']): ?><div><div class="l"><?= e(t('Endereço')) ?></div><div class="v"><?= e($cob['endereco']) ?></div></div><?php endif; ?>
+      <div><div class="l"><?= e(t('Vencimento')) ?></div><div class="v"><?= e(date('d/m/Y', strtotime($cob['vencimento']))) ?></div></div>
+      <div><div class="l"><?= e(t('Moeda')) ?></div><div class="v"><?= e($cob['moeda']) ?></div></div>
     </div>
   </div>
 
   <table>
-    <thead><tr><th>Descrição</th><th style="text-align:right;">Qtd</th><th style="text-align:right;">Valor un.</th><th style="text-align:right;">Subtotal</th></tr></thead>
+    <thead><tr><th><?= e(t('Descrição')) ?></th><th style="text-align:right;"><?= e(t('Qtd')) ?></th><th style="text-align:right;"><?= e(t('Valor un.')) ?></th><th style="text-align:right;"><?= e(t('Subtotal')) ?></th></tr></thead>
     <tbody>
     <?php foreach ($itens as $it): ?>
       <tr>
@@ -109,12 +109,12 @@ try {
     </tbody>
   </table>
 
-  <div class="total">Total: <?= e(money_fmt((float)$cob['valor_total'], $cob['moeda'])) ?></div>
+  <div class="total"><?= e(t('Total')) ?>: <?= e(money_fmt((float)$cob['valor_total'], $cob['moeda'])) ?></div>
 
   <?php if ($pagamentos): ?>
-  <h3 style="margin-top:32px; font-size:14px; text-transform:uppercase; color:#666;">Pagamentos recebidos</h3>
+  <h3 style="margin-top:32px; font-size:14px; text-transform:uppercase; color:#666;"><?= e(t('Pagamentos recebidos')) ?></h3>
   <table>
-    <thead><tr><th>Data</th><th>Método</th><th>Observação</th><th style="text-align:right;">Valor</th></tr></thead>
+    <thead><tr><th><?= e(t('Data')) ?></th><th><?= e(t('Método')) ?></th><th><?= e(t('Observação')) ?></th><th style="text-align:right;"><?= e(t('Valor')) ?></th></tr></thead>
     <tbody>
     <?php foreach ($pagamentos as $p): ?>
       <tr>
@@ -127,18 +127,18 @@ try {
     </tbody>
   </table>
   <div style="text-align:right; padding:12px; margin-top:8px; font-size:13px;">
-    Total pago: <strong><?= e(money_fmt($total_pago, $cob['moeda'])) ?></strong>
-    <?php if ($saldo > 0): ?><br>Saldo: <strong style="color:#dc2626;"><?= e(money_fmt($saldo, $cob['moeda'])) ?></strong><?php endif; ?>
+    <?= e(t('Total pago')) ?>: <strong><?= e(money_fmt($total_pago, $cob['moeda'])) ?></strong>
+    <?php if ($saldo > 0): ?><br><?= e(t('Saldo')) ?>: <strong style="color:#dc2626;"><?= e(money_fmt($saldo, $cob['moeda'])) ?></strong><?php endif; ?>
     <?php if ($tem_pendentes > 0): ?>
       <br><span style="color:#d97706; font-style:italic; font-size:12px;">
-        ⏳ <?= $tem_pendentes ?> pagamento(s) aguardando confirmação do admin não aparecem aqui.
+        ⏳ <?= $tem_pendentes ?> <?= e(t('pagamento(s) aguardando confirmação do admin não aparecem aqui.')) ?>
       </span>
     <?php endif; ?>
   </div>
   <?php endif; ?>
 
   <div class="footer">
-    Recibo gerado pelo sistema Dite Ads em <?= e(date('d/m/Y H:i')) ?>.
+    <?= e(t('Recibo gerado pelo sistema Dite Ads em')) ?> <?= e(date('d/m/Y H:i')) ?>.
   </div>
 </body>
 </html>

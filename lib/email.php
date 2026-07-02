@@ -14,7 +14,7 @@ require_once __DIR__ . '/../includes/config.php';
  */
 function email_enviar(string $para, string $assunto, string $corpoHtml, ?string $corpoTexto = null): bool|string {
     if (SMTP_USER === '' || SMTP_PASS === '') {
-        return 'SMTP não configurado (.env)';
+        return t('SMTP não configurado (.env)');
     }
 
     $host = SMTP_HOST;
@@ -25,7 +25,7 @@ function email_enviar(string $para, string $assunto, string $corpoHtml, ?string 
     $errno = 0; $errstr = '';
     $sock = @stream_socket_client($address, $errno, $errstr, 15, STREAM_CLIENT_CONNECT);
     if (!$sock) {
-        return "Conexão SMTP falhou: $errstr ($errno)";
+        return t('Conexão SMTP falhou') . ": $errstr ($errno)";
     }
     stream_set_timeout($sock, 15);
 

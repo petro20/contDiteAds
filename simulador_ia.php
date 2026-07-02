@@ -26,7 +26,7 @@ $descricao = trim((string)($_POST['descricao'] ?? ''));
 $nome      = trim((string)($_POST['nome'] ?? ''));
 if ($descricao === '' && $nome === '') {
     http_response_code(400);
-    echo json_encode(['error' => 'Preencha a descrição ou o nome do serviço.']); exit;
+    echo json_encode(['error' => t('Preencha a descrição ou o nome do serviço.')]); exit;
 }
 
 $api_key = config_get($db, 'anthropic_api_key');
@@ -36,7 +36,7 @@ if (!$api_key) {
 }
 if (!$api_key) {
     http_response_code(503);
-    echo json_encode(['error' => 'API da IA não configurada. Vá em Finanças → Formas de pagamento e cadastre a chave da Anthropic.']); exit;
+    echo json_encode(['error' => t('API da IA não configurada. Vá em Finanças → Formas de pagamento e cadastre a chave da Anthropic.')]); exit;
 }
 
 $prompt = <<<TXT
@@ -117,7 +117,7 @@ curl_close($ch);
 
 if ($resp === false || $code !== 200) {
     http_response_code(502);
-    echo json_encode(['error' => 'Falha ao consultar IA (HTTP ' . $code . ') ' . ($err ?: ''), 'resp' => $resp]); exit;
+    echo json_encode(['error' => t('Falha ao consultar IA (HTTP ') . $code . ') ' . ($err ?: ''), 'resp' => $resp]); exit;
 }
 
 $data = json_decode($resp, true);
@@ -128,7 +128,7 @@ if (preg_match('/\{[\s\S]*\}/', $texto, $m)) {
 }
 if (!isset($sugestao) || !is_array($sugestao)) {
     http_response_code(502);
-    echo json_encode(['error' => 'Resposta da IA não pôde ser interpretada.', 'raw' => $texto]); exit;
+    echo json_encode(['error' => t('Resposta da IA não pôde ser interpretada.'), 'raw' => $texto]); exit;
 }
 
 echo json_encode(['ok' => true, 'sugestao' => $sugestao]);

@@ -244,7 +244,7 @@ function criar_pagamento_funcionario(
     int $criado_por
 ): int {
     if (!$cobranca_item_ids) {
-        throw new RuntimeException('Nenhum item selecionado.');
+        throw new RuntimeException(t('Nenhum item selecionado.'));
     }
     // Carrega cada item + valor USD do funcionário
     $place = implode(',', array_fill(0, count($cobranca_item_ids), '?'));
@@ -263,7 +263,7 @@ function criar_pagamento_funcionario(
     $params = $cobranca_item_ids; $params[] = $funcionario_id;
     $stmt->execute($params);
     $items = $stmt->fetchAll();
-    if (!$items) throw new RuntimeException('Nenhum item válido pra incluir.');
+    if (!$items) throw new RuntimeException(t('Nenhum item válido pra incluir.'));
 
     $total = (float)array_sum(array_column($items, 'subtotal_usd'));
 

@@ -98,7 +98,7 @@ function regua_executar(PDO $db, DateTimeImmutable $hoje): array {
                     $stmt2->execute([(int)$etapa['template_email_id']]);
                     $tpl = $stmt2->fetch();
                     if ($tpl) {
-                        $assunto = wa_render($tpl['assunto'] ?: 'Lembrete de cobrança', $vars);
+                        $assunto = wa_render($tpl['assunto'] ?: t('Lembrete de cobrança'), $vars);
                         $corpo_txt = wa_render($tpl['corpo'], $vars);
                         $html = '<pre style="font-family:inherit;white-space:pre-wrap;">' . htmlspecialchars($corpo_txt) . '</pre>';
                         $r = email_enviar($cob['email'], $assunto, $html, $corpo_txt);

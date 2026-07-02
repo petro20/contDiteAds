@@ -91,7 +91,7 @@ function alertas_postagens_pendentes(PDO $db, DateTimeImmutable $hoje): array {
  */
 function alertas_email_corpo(array $pendente, DateTimeImmutable $hoje): string {
     $hoje_str = $hoje->format('d/m/Y');
-    $dia_semana = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'][(int)$hoje->format('w')];
+    $dia_semana = [t('Domingo'),t('Segunda'),t('Terça'),t('Quarta'),t('Quinta'),t('Sexta'),t('Sábado')][(int)$hoje->format('w')];
 
     $lista_html = '';
     foreach ($pendente['assinaturas'] as $a) {
@@ -100,11 +100,11 @@ function alertas_email_corpo(array $pendente, DateTimeImmutable $hoje): string {
 
     $link_agenda = APP_BASE_URL . '/agenda.php';
 
-    return '<p>Olá, <strong>' . htmlspecialchars($pendente['nome']) . '</strong>!</p>'
-         . '<p>É <strong>' . htmlspecialchars($dia_semana) . ' (' . $hoje_str . ')</strong> e você ainda não marcou nenhuma entrega de POSTAGEM esta semana nas assinaturas abaixo:</p>'
+    return '<p>' . t('Olá') . ', <strong>' . htmlspecialchars($pendente['nome']) . '</strong>!</p>'
+         . '<p>' . t('É') . ' <strong>' . htmlspecialchars($dia_semana) . ' (' . $hoje_str . ')</strong> ' . t('e você ainda não marcou nenhuma entrega de POSTAGEM esta semana nas assinaturas abaixo:') . '</p>'
          . '<ul>' . $lista_html . '</ul>'
-         . '<p>Entra no sistema e marca o que já entregou:</p>'
-         . '<p><a href="' . $link_agenda . '" style="display:inline-block; padding:10px 18px; background:#9333EA; color:#fff; text-decoration:none; border-radius:6px;">📅 Abrir minha agenda</a></p>'
-         . '<p style="color:#666; font-size:13px;">Se a entrega ainda não aconteceu, beleza — só não esquece de marcar quando rolar. Esse aviso é automático às quartas e sextas pra manter o ritmo das postagens em dia.</p>'
-         . '<p>— Sistema Dite Ads</p>';
+         . '<p>' . t('Entra no sistema e marca o que já entregou:') . '</p>'
+         . '<p><a href="' . $link_agenda . '" style="display:inline-block; padding:10px 18px; background:#9333EA; color:#fff; text-decoration:none; border-radius:6px;">📅 ' . t('Abrir minha agenda') . '</a></p>'
+         . '<p style="color:#666; font-size:13px;">' . t('Se a entrega ainda não aconteceu, beleza — só não esquece de marcar quando rolar. Esse aviso é automático às quartas e sextas pra manter o ritmo das postagens em dia.') . '</p>'
+         . '<p>— ' . t('Sistema Dite Ads') . '</p>';
 }

@@ -69,7 +69,7 @@ if (is_admin()) {
             $resultados[] = [
                 'tipo'   => 'cobranca',
                 'icone'  => '💳',
-                'titulo' => 'Cobrança ' . $r['competencia_mes'],
+                'titulo' => t('Cobrança') . ' ' . $r['competencia_mes'],
                 'sub'    => $r['moeda'] . ' ' . number_format((float)$r['valor_total'], 2, ',', '.') . ' · ' . $r['status'],
                 'href'   => $base . '/cobrancas.php?id=' . (int)$r['id'],
             ];
