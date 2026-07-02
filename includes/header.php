@@ -199,7 +199,7 @@ const _autofillInterval = setInterval(function() {
   ?>
   <div class="actions">
     <select aria-label="<?= e(t('Idioma')) ?>" title="<?= e(t('Idioma')) ?>"
-            onchange="var u=new URL(location.href); u.searchParams.set('lang', this.value); location.href=u.toString();"
+            onchange="location.href = location.pathname + '?lang=' + this.value;"
             style="background:var(--bg-input); border:1px solid var(--border); color:var(--txt-2); font-size:12px; font-weight:600; border-radius:var(--r-md); padding:4px 6px; cursor:pointer;">
       <option value="pt" <?= idioma_atual()==='pt'?'selected':'' ?>>PT</option>
       <option value="en" <?= idioma_atual()==='en'?'selected':'' ?>>EN</option>
