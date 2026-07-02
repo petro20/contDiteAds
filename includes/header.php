@@ -149,7 +149,7 @@ const _autofillInterval = setInterval(function() {
       <h1><?= e($page) ?></h1>
       <?php if ($page_sub): ?><div class="sub"><?= e($page_sub) ?></div><?php endif; ?>
     <?php else: ?>
-      <span class="topbar-title">Controle Gerencial</span>
+      <span class="topbar-title"><?= e(t('Controle Gerencial')) ?></span>
     <?php endif; ?>
   </div>
   <?php
@@ -194,7 +194,14 @@ const _autofillInterval = setInterval(function() {
   } catch (Throwable $e) {}
   ?>
   <div class="actions">
-    <button type="button" onclick="abrirBusca()" aria-label="Buscar" title="Buscar (Ctrl+K)" style="font-size:18px;">🔍</button>
+    <select aria-label="<?= e(t('Idioma')) ?>" title="<?= e(t('Idioma')) ?>"
+            onchange="var u=new URL(location.href); u.searchParams.set('lang', this.value); location.href=u.toString();"
+            style="background:var(--bg-input); border:1px solid var(--border); color:var(--txt-2); font-size:12px; font-weight:600; border-radius:var(--r-md); padding:4px 6px; cursor:pointer;">
+      <option value="pt" <?= idioma_atual()==='pt'?'selected':'' ?>>PT</option>
+      <option value="en" <?= idioma_atual()==='en'?'selected':'' ?>>EN</option>
+      <option value="es" <?= idioma_atual()==='es'?'selected':'' ?>>ES</option>
+    </select>
+    <button type="button" onclick="abrirBusca()" aria-label="<?= e(t('Buscar')) ?>" title="<?= e(t('Buscar')) ?> (Ctrl+K)" style="font-size:18px;">🔍</button>
     <button type="button" onclick="toggleNotif(event)" onmouseenter="showNotif()" onmouseleave="scheduleHideNotif()" aria-label="Notificações" title="Notificações" style="font-size:18px; position:relative;">
       🔔
       <?php if ($notif_count > 0): ?>
@@ -208,15 +215,15 @@ const _autofillInterval = setInterval(function() {
 <!-- Dropdown de notificações -->
 <div id="notif_drop" onmouseenter="cancelHideNotif()" onmouseleave="scheduleHideNotif()" style="display:none; position:fixed; top:56px; right:8px; z-index:999; width:320px; max-width:calc(100vw - 16px); background:var(--bg-elevated); border:1px solid var(--border); border-radius:8px; box-shadow:0 8px 24px rgba(0,0,0,0.4); overflow:hidden;">
   <div style="padding:10px 14px; border-bottom:1px solid var(--border); background:var(--bg-input);">
-    <strong>🔔 Notificações</strong>
+    <strong><?= e(t('🔔 Notificações')) ?></strong>
   </div>
   <div id="push_ativar_wrap" style="padding:10px 14px; border-bottom:1px solid var(--border); display:none;">
-    <button type="button" id="btn_ativar_push" class="btn btn-brand small block">🔔 Ativar notificações neste aparelho</button>
-    <div class="hint" style="margin-top:6px;">Receba avisos mesmo com o site fechado.</div>
+    <button type="button" id="btn_ativar_push" class="btn btn-brand small block"><?= e(t('🔔 Ativar notificações neste aparelho')) ?></button>
+    <div class="hint" style="margin-top:6px;"><?= e(t('Receba avisos mesmo com o site fechado.')) ?></div>
   </div>
   <div style="max-height:60vh; overflow-y:auto;">
     <?php if (!$notif_items): ?>
-      <div style="padding:24px; text-align:center; color:var(--txt-2); font-size:13px;">Nenhuma notificação pendente ✨</div>
+      <div style="padding:24px; text-align:center; color:var(--txt-2); font-size:13px;"><?= e(t('Nenhuma notificação pendente ✨')) ?></div>
     <?php else: foreach ($notif_items as $n): ?>
       <a href="<?= e($n['href']) ?>" style="display:flex; gap:10px; padding:12px 14px; text-decoration:none; color:var(--txt-1); border-bottom:1px solid var(--border); align-items:center;">
         <span style="font-size:20px;"><?= $n['icone'] ?></span>

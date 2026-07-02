@@ -75,3 +75,15 @@ if (session_status() === PHP_SESSION_NONE) {
     session_name('CONTDITEADS');
     session_start();
 }
+
+// i18n (PT/EN/ES). Troca de idioma via ?lang=xx — seta o cookie e redireciona
+// limpando o parâmetro (feito antes de qualquer saída HTML).
+require_once __DIR__ . '/../lib/i18n.php';
+if (PHP_SAPI !== 'cli' && isset($_GET['lang'])) {
+    set_idioma((string)$_GET['lang']);
+    $url = strtok($_SERVER['REQUEST_URI'] ?? '/', '?');
+    $qs = $_GET; unset($qs['lang']);
+    if ($qs) $url .= '?' . http_build_query($qs);
+    header('Location: ' . $url);
+    exit;
+}

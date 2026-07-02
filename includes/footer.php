@@ -36,7 +36,7 @@ if ($u && empty($hide_nav)):
   <?php foreach ($items as $it): ?>
     <a href="<?= e($it['href']) ?>" class="<?= $nav_active === $it['key'] ? 'active' : '' ?>">
       <span class="icon"><?= $it['icon'] ?></span>
-      <span><?= e($it['label']) ?></span>
+      <span><?= e(t($it['label'])) ?></span>
     </a>
   <?php endforeach; ?>
 </nav>
