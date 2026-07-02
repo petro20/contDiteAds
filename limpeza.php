@@ -15,10 +15,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             include __DIR__ . '/cron/limpeza_mensal.php';
         } catch (Throwable $e) {
-            echo "Erro fatal: " . $e->getMessage();
+            echo t("Erro fatal: ") . $e->getMessage();
         }
         $saida = ob_get_clean();
-        $flash = ['ok', 'Limpeza concluída.'];
+        $flash = ['ok', t('Limpeza concluída.')];
     }
 }
 
@@ -54,13 +54,13 @@ try {
     $ultima = $stmt->fetch() ?: null;
 } catch (Throwable $e) {}
 
-$page = 'Limpeza do banco';
+$page = t('Limpeza do banco');
 $show_back = true;
 $back_to = APP_BASE_URL . '/perfil.php';
 require __DIR__ . '/includes/header.php';
 ?>
-<h1 class="page-title">🧹 Limpeza automática do banco</h1>
-<p class="muted">Apaga registros antigos pra manter o banco ágil e o disco livre. Roda automaticamente todo dia 1 do mês às 03:00.</p>
+<h1 class="page-title">🧹 <?= e(t('Limpeza automática do banco')) ?></h1>
+<p class="muted"><?= e(t('Apaga registros antigos pra manter o banco ágil e o disco livre. Roda automaticamente todo dia 1 do mês às 03:00.')) ?></p>
 
 <?php if ($flash): ?><div class="flash <?= e($flash[0]) ?>"><?= e($flash[1]) ?></div><?php endif; ?>
 
@@ -69,39 +69,39 @@ require __DIR__ . '/includes/header.php';
 <?php endif; ?>
 
 <div class="card brand">
-  <div class="title">⚙ Configuração do cron</div>
-  <p class="muted" style="font-size:13px;">Configure no hPanel (Avançado → Cron Jobs):</p>
+  <div class="title">⚙ <?= e(t('Configuração do cron')) ?></div>
+  <p class="muted" style="font-size:13px;"><?= e(t('Configure no hPanel (Avançado → Cron Jobs):')) ?></p>
   <code style="display:block; padding:10px; background:var(--bg-input); border-radius:6px; font-size:12px; word-break:break-all;">0 3 1 * * php /home/u788472657/domains/cont.diteads.com/public_html/cron/limpeza_mensal.php</code>
-  <p class="hint">Dia 1 de cada mês às 03:00 — antes do backup das 04:00.</p>
+  <p class="hint"><?= e(t('Dia 1 de cada mês às 03:00 — antes do backup das 04:00.')) ?></p>
 </div>
 
 <?php if ($ultima): ?>
   <div class="card">
-    <div class="title">📅 Última execução</div>
-    <p><?= e(date('d/m/Y H:i', strtotime($ultima['criado_em']))) ?> — <strong><?= (int)$ultima['apagadas'] ?> linha(s) apagada(s)</strong></p>
+    <div class="title">📅 <?= e(t('Última execução')) ?></div>
+    <p><?= e(date('d/m/Y H:i', strtotime($ultima['criado_em']))) ?> — <strong><?= (int)$ultima['apagadas'] ?> <?= e(t('linha(s) apagada(s)')) ?></strong></p>
   </div>
 <?php endif; ?>
 
 <div class="card">
-  <form method="post" onsubmit="this.querySelector('button').disabled=true; this.querySelector('button').innerHTML='Limpando…';">
+  <form method="post" onsubmit="this.querySelector('button').disabled=true; this.querySelector('button').innerHTML='<?= e(t('Limpando…')) ?>';">
     <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
     <input type="hidden" name="op" value="rodar_agora">
-    <button class="btn block" type="submit">🧹 Rodar limpeza agora</button>
-    <div class="hint">Pode demorar alguns segundos (DELETE + OPTIMIZE TABLE).</div>
+    <button class="btn block" type="submit">🧹 <?= e(t('Rodar limpeza agora')) ?></button>
+    <div class="hint"><?= e(t('Pode demorar alguns segundos (DELETE + OPTIMIZE TABLE).')) ?></div>
   </form>
 </div>
 
-<h2 class="mt-5">📊 Tamanho atual do banco</h2>
-<p class="muted">Total: <strong><?= number_format($total_kb / 1024, 2, ',', '.') ?> MB</strong> · <?= number_format($total_linhas, 0, ',', '.') ?> linhas</p>
+<h2 class="mt-5">📊 <?= e(t('Tamanho atual do banco')) ?></h2>
+<p class="muted"><?= e(t('Total:')) ?> <strong><?= number_format($total_kb / 1024, 2, ',', '.') ?> MB</strong> · <?= number_format($total_linhas, 0, ',', '.') ?> <?= e(t('linhas')) ?></p>
 
 <div class="card">
   <table style="width:100%; font-size:13px; border-collapse:collapse;">
     <thead>
       <tr style="border-bottom:1px solid var(--border);">
-        <th style="text-align:left; padding:8px;">Tabela</th>
-        <th style="text-align:right; padding:8px;">Linhas</th>
-        <th style="text-align:right; padding:8px;">Dados (KB)</th>
-        <th style="text-align:right; padding:8px;">Índice (KB)</th>
+        <th style="text-align:left; padding:8px;"><?= e(t('Tabela')) ?></th>
+        <th style="text-align:right; padding:8px;"><?= e(t('Linhas')) ?></th>
+        <th style="text-align:right; padding:8px;"><?= e(t('Dados (KB)')) ?></th>
+        <th style="text-align:right; padding:8px;"><?= e(t('Índice (KB)')) ?></th>
       </tr>
     </thead>
     <tbody>
@@ -120,18 +120,18 @@ require __DIR__ . '/includes/header.php';
   </table>
 </div>
 
-<h2 class="mt-5">📋 O que é apagado</h2>
+<h2 class="mt-5">📋 <?= e(t('O que é apagado')) ?></h2>
 <div class="card">
   <ul style="padding-left:20px; color:var(--txt-2); font-size:13px;">
-    <li><strong>audit_log</strong> — registros > 18 meses (compliance)</li>
-    <li><strong>wise_eventos</strong> — eventos casados/sem-cobrança > 6 meses</li>
-    <li><strong>regua_eventos</strong> — disparos de régua > 1 ano</li>
-    <li><strong>senha_resets</strong> — tokens já usados > 30 dias</li>
-    <li><strong>totp_backup_codes</strong> — códigos já consumidos > 90 dias</li>
-    <li><strong>convites</strong> — convites aceitos > 30 dias</li>
+    <li><strong>audit_log</strong> — <?= e(t('registros > 18 meses (compliance)')) ?></li>
+    <li><strong>wise_eventos</strong> — <?= e(t('eventos casados/sem-cobrança > 6 meses')) ?></li>
+    <li><strong>regua_eventos</strong> — <?= e(t('disparos de régua > 1 ano')) ?></li>
+    <li><strong>senha_resets</strong> — <?= e(t('tokens já usados > 30 dias')) ?></li>
+    <li><strong>totp_backup_codes</strong> — <?= e(t('códigos já consumidos > 90 dias')) ?></li>
+    <li><strong>convites</strong> — <?= e(t('convites aceitos > 30 dias')) ?></li>
   </ul>
-  <p class="hint">Depois roda <code>OPTIMIZE TABLE</code> pra recuperar espaço em disco do MySQL (InnoDB não libera automaticamente após DELETE).</p>
-  <p class="hint" style="color:var(--c-success);">✓ Dados financeiros (cobranças, pagamentos, distribuição) NUNCA são apagados — só logs e tokens vencidos.</p>
+  <p class="hint"><?= e(t('Depois roda')) ?> <code>OPTIMIZE TABLE</code> <?= e(t('pra recuperar espaço em disco do MySQL (InnoDB não libera automaticamente após DELETE).')) ?></p>
+  <p class="hint" style="color:var(--c-success);">✓ <?= e(t('Dados financeiros (cobranças, pagamentos, distribuição) NUNCA são apagados — só logs e tokens vencidos.')) ?></p>
 </div>
 
 <?php require __DIR__ . '/includes/footer.php'; ?>

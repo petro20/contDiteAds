@@ -28,7 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $ativo     = isset($_POST['ativo']) ? 1 : 0;
 
         if ($nome === '' || $valor <= 0) {
-            $flash = ['err', 'Nome e valor (>0) são obrigatórios.'];
+            $flash = ['err', t('Nome e valor (>0) são obrigatórios.')];
             $acao = $pid ? 'editar' : 'novo'; $id = $pid;
         } elseif ($pid) {
             $stmt = $db->prepare('UPDATE despesas SET nome=?, descricao=?, categoria=?, valor=?, moeda=?, recorrencia=?, data_inicio=?, data_fim=?, ativo=? WHERE id=?');
@@ -52,11 +52,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 if (isset($_GET['ok'])) {
-    $m = ['add'=>'Despesa criada.','upd'=>'Despesa atualizada.','del'=>'Despesa apagada.'];
-    $flash = ['ok', $m[$_GET['ok']] ?? 'OK.'];
+    $m = ['add'=>t('Despesa criada.'),'upd'=>t('Despesa atualizada.'),'del'=>t('Despesa apagada.')];
+    $flash = ['ok', $m[$_GET['ok']] ?? t('OK.')];
 }
 
-$page = 'Despesas';
+$page = t('Despesas');
 $show_back = true;
 $back_to = APP_BASE_URL . '/dashboard.php';
 
@@ -68,7 +68,7 @@ if ($acao === 'novo' || $acao === 'editar') {
         $row = $stmt->fetch();
         if ($row) $d = array_merge($d, $row);
     }
-    $page = $d['id'] ? 'Editar despesa' : 'Nova despesa';
+    $page = $d['id'] ? t('Editar despesa') : t('Nova despesa');
     require __DIR__ . '/includes/header.php';
     ?>
     <?php if ($flash): ?><div class="flash <?= e($flash[0]) ?>"><?= e($flash[1]) ?></div><?php endif; ?>
@@ -78,32 +78,32 @@ if ($acao === 'novo' || $acao === 'editar') {
       <input type="hidden" name="id" value="<?= (int)$d['id'] ?>">
       <div class="card">
         <div class="field">
-          <label>Nome *</label>
+          <label><?= e(t('Nome *')) ?></label>
           <div style="display:flex; gap:6px;">
-            <input name="nome" id="despesa_nome" required value="<?= e($d['nome']) ?>" placeholder="Ex: Adobe Creative Cloud" style="flex:1;">
-            <button type="button" class="btn btn-ghost small" onclick="pesquisarPrecoSoftware()" title="Pesquisar preço no Google" style="padding:6px 12px;">🔍</button>
+            <input name="nome" id="despesa_nome" required value="<?= e($d['nome']) ?>" placeholder="<?= e(t('Ex: Adobe Creative Cloud')) ?>" style="flex:1;">
+            <button type="button" class="btn btn-ghost small" onclick="pesquisarPrecoSoftware()" title="<?= e(t('Pesquisar preço no Google')) ?>" style="padding:6px 12px;">🔍</button>
           </div>
-          <div class="hint">Digite o nome e clique 🔍 pra abrir o Google buscando o preço atual.</div>
+          <div class="hint"><?= e(t('Digite o nome e clique 🔍 pra abrir o Google buscando o preço atual.')) ?></div>
         </div>
         <script>
         function pesquisarPrecoSoftware() {
           const nome = document.getElementById('despesa_nome').value.trim();
-          if (!nome) { alert('Preencha o nome primeiro pra pesquisar o preço.'); return; }
+          if (!nome) { alert('<?= e(t('Preencha o nome primeiro pra pesquisar o preço.')) ?>'); return; }
           const q = encodeURIComponent(nome + ' price monthly subscription 2026');
           window.open('https://www.google.com/search?q=' + q, '_blank', 'noopener');
         }
         </script>
-        <div class="field"><label>Categoria</label>
+        <div class="field"><label><?= e(t('Categoria')) ?></label>
           <select name="categoria">
-            <option value="">— sem categoria —</option>
+            <option value="">— <?= e(t('sem categoria')) ?> —</option>
             <?php foreach ($categorias as $c): ?>
-              <option value="<?= e($c) ?>" <?= $d['categoria']===$c?'selected':'' ?>><?= e($c) ?></option>
+              <option value="<?= e($c) ?>" <?= $d['categoria']===$c?'selected':'' ?>><?= e(t($c)) ?></option>
             <?php endforeach; ?>
           </select>
         </div>
         <div class="grid-2">
-          <div class="field"><label>Valor *</label><input type="number" step="0.01" min="0.01" name="valor" required value="<?= $d['valor']!==''?e(number_format((float)$d['valor'],2,'.','')):'' ?>"></div>
-          <div class="field"><label>Moeda</label>
+          <div class="field"><label><?= e(t('Valor *')) ?></label><input type="number" step="0.01" min="0.01" name="valor" required value="<?= $d['valor']!==''?e(number_format((float)$d['valor'],2,'.','')):'' ?>"></div>
+          <div class="field"><label><?= e(t('Moeda')) ?></label>
             <select name="moeda">
               <option value="BRL" <?= $d['moeda']==='BRL'?'selected':'' ?>>R$ BRL</option>
               <option value="USD" <?= $d['moeda']==='USD'?'selected':'' ?>>$ USD</option>
@@ -111,29 +111,29 @@ if ($acao === 'novo' || $acao === 'editar') {
             </select>
           </div>
         </div>
-        <div class="field"><label>Recorrência</label>
+        <div class="field"><label><?= e(t('Recorrência')) ?></label>
           <select name="recorrencia">
-            <option value="mensal" <?= $d['recorrencia']==='mensal'?'selected':'' ?>>Mensal (todo mês)</option>
-            <option value="anual"  <?= $d['recorrencia']==='anual'?'selected':'' ?>>Anual (1× por ano)</option>
-            <option value="unica"  <?= $d['recorrencia']==='unica'?'selected':'' ?>>Única (gasto pontual)</option>
+            <option value="mensal" <?= $d['recorrencia']==='mensal'?'selected':'' ?>><?= e(t('Mensal (todo mês)')) ?></option>
+            <option value="anual"  <?= $d['recorrencia']==='anual'?'selected':'' ?>><?= e(t('Anual (1× por ano)')) ?></option>
+            <option value="unica"  <?= $d['recorrencia']==='unica'?'selected':'' ?>><?= e(t('Única (gasto pontual)')) ?></option>
           </select>
         </div>
         <div class="grid-2">
-          <div class="field"><label>Data de início *</label><input type="date" name="data_inicio" required value="<?= e($d['data_inicio']) ?>"></div>
-          <div class="field"><label>Data de fim (opcional)</label><input type="date" name="data_fim" value="<?= e($d['data_fim'] ?? '') ?>"></div>
+          <div class="field"><label><?= e(t('Data de início *')) ?></label><input type="date" name="data_inicio" required value="<?= e($d['data_inicio']) ?>"></div>
+          <div class="field"><label><?= e(t('Data de fim (opcional)')) ?></label><input type="date" name="data_fim" value="<?= e($d['data_fim'] ?? '') ?>"></div>
         </div>
-        <div class="field"><label>Descrição</label><textarea name="descricao"><?= e($d['descricao'] ?? '') ?></textarea></div>
-        <label class="check"><input type="checkbox" name="ativo" <?= $d['ativo']?'checked':'' ?>> Despesa ativa (entra no cálculo)</label>
+        <div class="field"><label><?= e(t('Descrição')) ?></label><textarea name="descricao"><?= e($d['descricao'] ?? '') ?></textarea></div>
+        <label class="check"><input type="checkbox" name="ativo" <?= $d['ativo']?'checked':'' ?>> <?= e(t('Despesa ativa (entra no cálculo)')) ?></label>
       </div>
-      <button class="btn block" type="submit">Salvar</button>
+      <button class="btn block" type="submit"><?= e(t('Salvar')) ?></button>
     </form>
 
     <?php if ($d['id']): ?>
-      <form method="post" class="mt-5" onsubmit="return confirm('Apagar definitivamente esta despesa?');">
+      <form method="post" class="mt-5" onsubmit="return confirm('<?= e(t('Apagar definitivamente esta despesa?')) ?>');">
         <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
         <input type="hidden" name="op" value="apagar">
         <input type="hidden" name="id" value="<?= (int)$d['id'] ?>">
-        <button class="btn btn-danger block" type="submit">🗑 Apagar</button>
+        <button class="btn btn-danger block" type="submit">🗑 <?= e(t('Apagar')) ?></button>
       </form>
     <?php endif; ?>
     <?php
@@ -150,36 +150,36 @@ $todas = $db->query('SELECT * FROM despesas ORDER BY ativo DESC, categoria, nome
 $dt = DateTime::createFromFormat('Y-m', $competencia);
 $nome_mes = ['','janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'][(int)$dt->format('n')] . ' de ' . $dt->format('Y');
 ?>
-<h1 class="page-title">Finanças</h1>
+<h1 class="page-title"><?= e(t('Finanças')) ?></h1>
 <?php render_group_tabs('financas', 'despesas'); ?>
-<h2>Despesas da empresa</h2>
+<h2><?= e(t('Despesas da empresa')) ?></h2>
 <?php if ($flash): ?><div class="flash <?= e($flash[0]) ?>"><?= e($flash[1]) ?></div><?php endif; ?>
 
-<a class="btn btn-brand block" href="?acao=novo">+ Nova despesa</a>
+<a class="btn btn-brand block" href="?acao=novo">+ <?= e(t('Nova despesa')) ?></a>
 
-<h2>Impacto em <?= e($nome_mes) ?></h2>
+<h2><?= e(t('Impacto em')) ?> <?= e($nome_mes) ?></h2>
 <div class="grid-2">
   <?php foreach (['BRL','USD','EUR'] as $m): ?>
-    <div class="kpi"><div class="v"><?= e(money_fmt($impacto['totais'][$m], $m)) ?></div><div class="l">Total <?= $m ?> / mês</div></div>
+    <div class="kpi"><div class="v"><?= e(money_fmt($impacto['totais'][$m], $m)) ?></div><div class="l"><?= e(t('Total')) ?> <?= $m ?> / <?= e(t('mês')) ?></div></div>
   <?php endforeach; ?>
 </div>
 
-<h2>Cadastradas (<?= count($todas) ?>)</h2>
+<h2><?= e(t('Cadastradas')) ?> (<?= count($todas) ?>)</h2>
 <?php foreach ($todas as $d): ?>
   <a class="list-card" href="?acao=editar&id=<?= (int)$d['id'] ?>">
     <div class="info">
       <div class="nome">
         <?= e($d['nome']) ?>
-        <?php if (!$d['ativo']): ?><span class="status status-info">inativa</span><?php endif; ?>
+        <?php if (!$d['ativo']): ?><span class="status status-info"><?= e(t('inativa')) ?></span><?php endif; ?>
         <?php if ($d['categoria']): ?><span class="status status-ia"><?= e($d['categoria']) ?></span><?php endif; ?>
       </div>
-      <div class="sub muted"><?= e($d['recorrencia']) ?> desde <?= e(date('d/m/Y', strtotime($d['data_inicio']))) ?><?= $d['data_fim']?' até ' . e(date('d/m/Y', strtotime($d['data_fim']))):'' ?></div>
+      <div class="sub muted"><?= e($d['recorrencia']) ?> <?= e(t('desde')) ?> <?= e(date('d/m/Y', strtotime($d['data_inicio']))) ?><?= $d['data_fim']?' ' . e(t('até')) . ' ' . e(date('d/m/Y', strtotime($d['data_fim']))):'' ?></div>
     </div>
     <div class="right">
       <div class="money md"><?= e(money_fmt((float)$d['valor'], $d['moeda'])) ?></div>
     </div>
   </a>
 <?php endforeach; ?>
-<?php if (!$todas): ?><p class="muted center mt-5">Nenhuma despesa cadastrada.</p><?php endif; ?>
+<?php if (!$todas): ?><p class="muted center mt-5"><?= e(t('Nenhuma despesa cadastrada.')) ?></p><?php endif; ?>
 
 <?php require __DIR__ . '/includes/footer.php'; ?>

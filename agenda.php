@@ -49,7 +49,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $fres = (int)$stmt->fetchColumn();
         $autorizado = is_admin() || $fres === (int)$u['id'] || ($trabalha_com_id && $fres === $trabalha_com_id);
         if (!$autorizado) {
-            http_response_code(403); exit('Acesso negado.');
+            http_response_code(403); exit(t('Acesso negado.'));
         }
     }
 
@@ -94,28 +94,28 @@ $assinaturas = agenda_assinaturas($db, $funcionario_id, $competencia);
 $dt = DateTime::createFromFormat('Y-m', $competencia);
 $mes_anterior_str = (clone $dt)->modify('-1 month')->format('Y-m');
 $mes_proximo_str = (clone $dt)->modify('+1 month')->format('Y-m');
-$nome_mes = ['','janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'][(int)$dt->format('n')] . ' de ' . $dt->format('Y');
+$nome_mes = t(['','janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'][(int)$dt->format('n')]) . ' ' . t('de') . ' ' . $dt->format('Y');
 
-$page = 'Agenda';
+$page = t('Agenda');
 $nav_active = 'agenda';
 require __DIR__ . '/includes/header.php';
 ?>
-<h1 class="page-title">Agenda</h1>
+<h1 class="page-title"><?= e(t('Agenda')) ?></h1>
 <?php if ($trabalha_com_id && !is_admin()):
   $vendo_parceiro = ($funcionario_id === $trabalha_com_id);
 ?>
   <div class="card brand">
-    <div class="title">👥 Você trabalha em dupla com <?= e($trabalha_com_nome) ?></div>
+    <div class="title">👥 <?= e(t('Você trabalha em dupla com')) ?> <?= e($trabalha_com_nome) ?></div>
     <div class="desc">
       <?php if ($vendo_parceiro): ?>
-        Esta é a agenda de <strong><?= e($trabalha_com_nome) ?></strong> — você pode ver e marcar entregas, mas o <strong>pagamento vai todo pra ele</strong>.
+        <?= e(t('Esta é a agenda de')) ?> <strong><?= e($trabalha_com_nome) ?></strong> — <?= e(t('você pode ver e marcar entregas, mas o')) ?> <strong><?= e(t('pagamento vai todo pra ele')) ?></strong>.
       <?php else: ?>
-        Esta é a <strong>sua agenda pessoal</strong> (clientes atribuídos diretamente a você).
+        <?= e(t('Esta é a')) ?> <strong><?= e(t('sua agenda pessoal')) ?></strong> (<?= e(t('clientes atribuídos diretamente a você')) ?>).
       <?php endif; ?>
     </div>
     <div class="spaced mt-2" style="gap:8px;">
-      <a class="btn small <?= !$vendo_parceiro?'':'btn-ghost' ?>" href="?mes=<?= e($competencia) ?>&ver=eu">Minha agenda</a>
-      <a class="btn small <?= $vendo_parceiro?'':'btn-ghost' ?>" href="?mes=<?= e($competencia) ?>&ver=parceiro">Agenda do <?= e($trabalha_com_nome) ?></a>
+      <a class="btn small <?= !$vendo_parceiro?'':'btn-ghost' ?>" href="?mes=<?= e($competencia) ?>&ver=eu"><?= e(t('Minha agenda')) ?></a>
+      <a class="btn small <?= $vendo_parceiro?'':'btn-ghost' ?>" href="?mes=<?= e($competencia) ?>&ver=parceiro"><?= e(t('Agenda do')) ?> <?= e($trabalha_com_nome) ?></a>
     </div>
   </div>
 <?php endif; ?>
@@ -136,7 +136,7 @@ require __DIR__ . '/includes/header.php';
 </div>
 
 <?php if (!$assinaturas): ?>
-  <div class="card"><div class="title">Sem assinaturas atribuídas</div><div class="desc">Não há clientes atribuídos a você neste mês. Quando o admin atribuir, aparecem aqui.</div></div>
+  <div class="card"><div class="title"><?= e(t('Sem assinaturas atribuídas')) ?></div><div class="desc"><?= e(t('Não há clientes atribuídos a você neste mês. Quando o admin atribuir, aparecem aqui.')) ?></div></div>
 <?php endif; ?>
 
 <?php foreach ($assinaturas as $a):
@@ -149,12 +149,12 @@ require __DIR__ . '/includes/header.php';
     <div>
       <div class="title">
         <?= e($a['nome_empresa']) ?>
-        <?php if ($a['e_pacote']): ?><span class="status status-ia">pacote</span><?php endif; ?>
+        <?php if ($a['e_pacote']): ?><span class="status status-ia"><?= e(t('pacote')) ?></span><?php endif; ?>
       </div>
       <div class="sub muted"><?= e($a['item_nome']) ?> · <?= e($a['tipo']) ?></div>
     </div>
     <?php if ($modo !== 'info'): ?>
-      <div class="muted" style="font-size:13px;"><strong class="marc-count" data-assin="<?= (int)$a['assinatura_id'] ?>"><?= $count ?></strong> marcadas</div>
+      <div class="muted" style="font-size:13px;"><strong class="marc-count" data-assin="<?= (int)$a['assinatura_id'] ?>"><?= $count ?></strong> <?= e(t('marcadas')) ?></div>
     <?php endif; ?>
   </div>
 
@@ -165,7 +165,7 @@ require __DIR__ . '/includes/header.php';
   ?>
   <table style="width:100%; border-collapse:collapse; text-align:center; font-size:13px;">
     <thead><tr>
-      <?php foreach (['D','S','T','Q','Q','S','S'] as $w): ?><th style="padding:6px; color:var(--txt-3);"><?= $w ?></th><?php endforeach; ?>
+      <?php foreach (['D','S','T','Q','Q','S','S'] as $w): ?><th style="padding:6px; color:var(--txt-3);"><?= e($w) ?></th><?php endforeach; ?>
     </tr></thead>
     <tbody>
     <?php foreach ($cal as $row): ?>
@@ -188,7 +188,7 @@ require __DIR__ . '/includes/header.php';
                 color: <?= $marcado ? '#fff' : 'var(--txt-2)' ?>;
                 font-weight:<?= $marcado ? '700' : '400' ?>;
                 cursor: pointer;
-              " title="<?= $marcado ? 'Desmarcar' : 'Marcar entrega' ?>"><?= $dia ?></button>
+              " title="<?= e($marcado ? t('Desmarcar') : t('Marcar entrega')) ?>"><?= $dia ?></button>
             </form>
             <?php endif; ?>
           </td>
@@ -200,21 +200,21 @@ require __DIR__ . '/includes/header.php';
 
   <?php elseif ($modo === 'tally'): ?>
   <div class="spaced">
-    <div class="muted">Marque cada entrega realizada:</div>
+    <div class="muted"><?= e(t('Marque cada entrega realizada:')) ?></div>
     <form method="post" style="margin:0;">
       <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
       <input type="hidden" name="op" value="add_unidade">
       <input type="hidden" name="assinatura_id" value="<?= (int)$a['assinatura_id'] ?>">
       <input type="hidden" name="competencia" value="<?= e($competencia) ?>">
-      <button class="btn small" type="submit">+ Entreguei mais um</button>
+      <button class="btn small" type="submit"><?= e(t('+ Entreguei mais um')) ?></button>
     </form>
   </div>
   <?php if ($entregas): ?>
     <div class="mt-3">
       <?php foreach ($entregas as $idx => $en): ?>
         <div class="spaced" style="padding:6px 0; border-bottom:1px solid var(--border);">
-          <span>✅ Unidade #<?= (int)$en['indice'] ?> · <?= e(date('d/m H:i', strtotime($en['criado_em']))) ?></span>
-          <form method="post" style="margin:0;" onsubmit="return confirm('Remover esta marcação?');">
+          <span>✅ <?= e(t('Unidade')) ?> #<?= (int)$en['indice'] ?> · <?= e(date('d/m H:i', strtotime($en['criado_em']))) ?></span>
+          <form method="post" style="margin:0;" onsubmit="return confirm('<?= e(t('Remover esta marcação?')) ?>');">
             <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
             <input type="hidden" name="op" value="remover">
             <input type="hidden" name="assinatura_id" value="<?= (int)$a['assinatura_id'] ?>">
@@ -236,12 +236,12 @@ require __DIR__ . '/includes/header.php';
       <input type="hidden" name="assinatura_id" value="<?= (int)$a['assinatura_id'] ?>">
       <input type="hidden" name="competencia" value="<?= e($competencia) ?>">
       <button class="btn block <?= $marcado ? 'btn-success' : '' ?>" type="submit">
-        <?= $marcado ? '✅ Entregue (clique pra desmarcar)' : '⬜ Marcar como entregue' ?>
+        <?= e($marcado ? t('✅ Entregue (clique pra desmarcar)') : t('⬜ Marcar como entregue')) ?>
       </button>
     </form>
 
   <?php else: /* info */ ?>
-    <div class="muted">Trabalho contínuo, sem unidades discretas. Está ativo neste mês.</div>
+    <div class="muted"><?= e(t('Trabalho contínuo, sem unidades discretas. Está ativo neste mês.')) ?></div>
   <?php endif; ?>
 </div>
 <?php endforeach; ?>
@@ -253,13 +253,13 @@ require __DIR__ . '/includes/header.php';
     btn.style.background = marked ? 'var(--c-success)' : 'var(--bg-input)';
     btn.style.color = marked ? '#fff' : 'var(--txt-2)';
     btn.style.fontWeight = marked ? '700' : '400';
-    btn.title = marked ? 'Desmarcar' : 'Marcar entrega';
+    btn.title = marked ? <?= json_encode(t('Desmarcar')) ?> : <?= json_encode(t('Marcar entrega')) ?>;
   }
   function applySingle(btn, marked) {
     btn.classList.toggle('btn-success', marked);
     btn.textContent = marked
-      ? '✅ Entregue (clique pra desmarcar)'
-      : '⬜ Marcar como entregue';
+      ? <?= json_encode(t('✅ Entregue (clique pra desmarcar)')) ?>
+      : <?= json_encode(t('⬜ Marcar como entregue')) ?>;
   }
 
   document.addEventListener('submit', function (ev) {

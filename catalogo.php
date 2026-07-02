@@ -50,12 +50,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $ativo  = isset($_POST['ativo']) ? 1 : 0;
 
         if ($nome === '') {
-            $flash = ['err', 'Nome é obrigatório.'];
+            $flash = ['err', t('Nome é obrigatório.')];
             $acao = $pid ? 'editar' : 'novo'; $id = $pid;
         } elseif ($variante && !$a_negociar && ($preco_ia_usd === null || $preco_ia_usd <= 0)) {
             // Marcou "tem variante IA" mas não preencheu preço IA — bug protege contra
             // assinaturas sendo criadas com valor zero/null.
-            $flash = ['err', 'Você marcou "tem variante IA" mas não preencheu o preço IA em USD. Preencha o valor ou desmarque a opção.'];
+            $flash = ['err', t('Você marcou "tem variante IA" mas não preencheu o preço IA em USD. Preencha o valor ou desmarque a opção.')];
             $acao = $pid ? 'editar' : 'novo'; $id = $pid;
         } elseif ($pid) {
             $stmt = $db->prepare('UPDATE itens_catalogo SET nome=?, descricao=?, tipo=?, periodo_minimo_meses=?, preco_usd=?, preco_brl=?, preco_eur=?, a_negociar=?, e_pacote=?, tem_variante_ia=?, preco_ia_usd=?, preco_ia_brl=?, preco_ia_eur=?, resp_agencia=?, resp_funcionario=?, resp_cliente=?, ativo=? WHERE id=?');
@@ -99,17 +99,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $n_comp  = 0;
                 try { $n_comp = (int)$db->query('SELECT COUNT(*) FROM itens_pacote_composicao WHERE componente_id = ' . $pid)->fetchColumn(); } catch (Throwable $e) {}
                 if ($n_assin > 0) {
-                    $flash = ['err', "Não dá pra apagar: tem $n_assin assinatura(s) ativa(s) usando esse item. Desative o item (desmarque 'Item ativo') ou cancele as assinaturas antes."];
+                    $flash = ['err', sprintf(t("Não dá pra apagar: tem %d assinatura(s) ativa(s) usando esse item. Desative o item (desmarque 'Item ativo') ou cancele as assinaturas antes."), $n_assin)];
                     $acao = 'editar'; $id = $pid;
                 } else {
                     // Composição de pacote e func_servico_pagamento já têm CASCADE/SET NULL
                     $db->prepare('DELETE FROM itens_catalogo WHERE id = ?')->execute([$pid]);
                     audit_log('catalogo.apagado', 'itens_catalogo', $pid);
-                    $extra = $n_comp > 0 ? " (estava em $n_comp pacote(s))" : '';
+                    $extra = $n_comp > 0 ? sprintf(t(" (estava em %d pacote(s))"), $n_comp) : '';
                     header('Location: ' . APP_BASE_URL . '/catalogo.php?ok=apagado&extra=' . urlencode($extra)); exit;
                 }
             } catch (PDOException $e) {
-                $flash = ['err', 'Erro ao apagar: ' . $e->getMessage()];
+                $flash = ['err', t('Erro ao apagar: ') . $e->getMessage()];
                 $acao = 'editar'; $id = $pid;
             }
         }
@@ -152,23 +152,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 if (isset($_GET['ok'])) {
     switch ($_GET['ok']) {
         case 'add':
-            $flash = ['ok', 'Item criado.']; break;
+            $flash = ['ok', t('Item criado.')]; break;
         case 'recalc':
             $n = (int)($_GET['n'] ?? 0);
             $brl = (float)($_GET['brl'] ?? 0);
             $eur = (float)($_GET['eur'] ?? 0);
-            $flash = ['ok', sprintf('%d item(s) recalculados. Cotação usada: USD→BRL %.4f · USD→EUR %.4f', $n, $brl, $eur)];
+            $flash = ['ok', sprintf(t('%d item(s) recalculados. Cotação usada: USD→BRL %.4f · USD→EUR %.4f'), $n, $brl, $eur)];
             break;
         case 'recalc_erro':
-            $flash = ['err', 'Não foi possível buscar a cotação. Tente novamente em alguns minutos.']; break;
+            $flash = ['err', t('Não foi possível buscar a cotação. Tente novamente em alguns minutos.')]; break;
         case 'apagado':
-            $flash = ['ok', 'Item apagado.' . ($_GET['extra'] ?? '')]; break;
+            $flash = ['ok', t('Item apagado.') . ($_GET['extra'] ?? '')]; break;
         default:
-            $flash = ['ok', 'Item atualizado.'];
+            $flash = ['ok', t('Item atualizado.')];
     }
 }
 
-$page = 'Catálogo';
+$page = t('Catálogo');
 $nav_active = 'catalogo';
 
 if ($acao === 'novo' || $acao === 'editar') {
@@ -205,15 +205,15 @@ if ($acao === 'novo' || $acao === 'editar') {
         $row = $stmt->fetch();
         if ($row) $item = array_merge($item, $row);
     }
-    $page = $item['id'] ? 'Editar item' : 'Novo item';
+    $page = $item['id'] ? t('Editar item') : t('Novo item');
     require __DIR__ . '/includes/header.php';
     ?>
     <?php if ($flash): ?><div class="flash <?= e($flash[0]) ?>"><?= e($flash[1]) ?></div><?php endif; ?>
 
     <?php if (!$item['id']): ?>
     <div class="card brand">
-      <div class="title">💡 Dica: use o Simulador primeiro</div>
-      <div class="desc">Antes de cadastrar manualmente, abra o <a href="<?= e(APP_BASE_URL) ?>/simulador_preco.php" style="color:var(--c-primary-2);"><strong>📊 Simulador de preço</strong></a> — você descreve o serviço e a IA preenche tudo (preço, descrição, responsabilidades). Depois é só clicar "Criar item no catálogo".</div>
+      <div class="title">💡 <?= e(t('Dica: use o Simulador primeiro')) ?></div>
+      <div class="desc"><?= e(t('Antes de cadastrar manualmente, abra o')) ?> <a href="<?= e(APP_BASE_URL) ?>/simulador_preco.php" style="color:var(--c-primary-2);"><strong>📊 <?= e(t('Simulador de preço')) ?></strong></a> — <?= e(t('você descreve o serviço e a IA preenche tudo (preço, descrição, responsabilidades). Depois é só clicar "Criar item no catálogo".')) ?></div>
     </div>
     <?php endif; ?>
 
@@ -223,39 +223,39 @@ if ($acao === 'novo' || $acao === 'editar') {
       <input type="hidden" name="id" value="<?= (int)$item['id'] ?>">
 
       <!-- PASSO 1 — Identificação -->
-      <h2 class="mt-3">1️⃣ Identificação</h2>
+      <h2 class="mt-3">1️⃣ <?= e(t('Identificação')) ?></h2>
       <div class="card">
         <div class="field">
-          <label>Nome do item *</label>
-          <input name="nome" id="cat_nome" required value="<?= e($item['nome']) ?>" placeholder="Ex: Meta ADS Pro, Edição de Vídeos">
-          <div class="hint">Aparece nas cobranças e telas dos clientes.</div>
+          <label><?= e(t('Nome do item *')) ?></label>
+          <input name="nome" id="cat_nome" required value="<?= e($item['nome']) ?>" placeholder="<?= e(t('Ex: Meta ADS Pro, Edição de Vídeos')) ?>">
+          <div class="hint"><?= e(t('Aparece nas cobranças e telas dos clientes.')) ?></div>
         </div>
         <div class="field">
-          <label>Descrição</label>
-          <textarea name="descricao" id="cat_descricao" rows="4" placeholder="O que está incluso, frequência, ferramentas, exclusões..."><?= e($item['descricao'] ?? '') ?></textarea>
-          <div class="hint">Quanto mais detalhe, melhor o cliente entende o que está contratando.</div>
+          <label><?= e(t('Descrição')) ?></label>
+          <textarea name="descricao" id="cat_descricao" rows="4" placeholder="<?= e(t('O que está incluso, frequência, ferramentas, exclusões...')) ?>"><?= e($item['descricao'] ?? '') ?></textarea>
+          <div class="hint"><?= e(t('Quanto mais detalhe, melhor o cliente entende o que está contratando.')) ?></div>
         </div>
 
-        <button type="button" class="btn btn-brand block mt-2" id="cat_btn_ia" onclick="iaCatalogo()">✨ Preencher/Refinar com IA</button>
+        <button type="button" class="btn btn-brand block mt-2" id="cat_btn_ia" onclick="iaCatalogo()">✨ <?= e(t('Preencher/Refinar com IA')) ?></button>
         <div id="cat_ia_msg" class="hint mt-2" style="text-align:center;"></div>
-        <div class="hint" style="font-size:12px; text-align:center;">Usa o nome + descrição acima pra gerar/refinar descrição detalhada, responsabilidades, tipo e período mínimo.</div>
+        <div class="hint" style="font-size:12px; text-align:center;"><?= e(t('Usa o nome + descrição acima pra gerar/refinar descrição detalhada, responsabilidades, tipo e período mínimo.')) ?></div>
       </div>
 
       <!-- PASSO 2 — Tipo de cobrança -->
-      <h2 class="mt-5">2️⃣ Tipo de cobrança</h2>
+      <h2 class="mt-5">2️⃣ <?= e(t('Tipo de cobrança')) ?></h2>
       <div class="card">
         <div class="field">
-          <label>Como esse serviço é cobrado? *</label>
+          <label><?= e(t('Como esse serviço é cobrado? *')) ?></label>
           <select name="tipo" id="tipo_sel" required onchange="togglePeriodoMin()">
-            <option value="unico"       <?= $item['tipo']==='unico'?'selected':'' ?>>📌 Único (one-shot) — pagamento em 1 vez só</option>
-            <option value="mensal"      <?= $item['tipo']==='mensal'?'selected':'' ?>>🔁 Mensal (recorrente) — cobra todo mês</option>
-            <option value="por_unidade" <?= $item['tipo']==='por_unidade'?'selected':'' ?>>📦 Por unidade — cobra conforme entregas</option>
+            <option value="unico"       <?= $item['tipo']==='unico'?'selected':'' ?>>📌 <?= e(t('Único (one-shot) — pagamento em 1 vez só')) ?></option>
+            <option value="mensal"      <?= $item['tipo']==='mensal'?'selected':'' ?>>🔁 <?= e(t('Mensal (recorrente) — cobra todo mês')) ?></option>
+            <option value="por_unidade" <?= $item['tipo']==='por_unidade'?'selected':'' ?>>📦 <?= e(t('Por unidade — cobra conforme entregas')) ?></option>
           </select>
         </div>
         <div class="field" id="periodo_min_field" style="display:<?= $item['tipo']==='mensal'?'block':'none' ?>;">
-          <label>Período mínimo de contrato (meses)</label>
-          <input type="number" name="periodo_minimo_meses" id="cat_periodo" min="0" max="60" value="<?= (int)$item['periodo_minimo_meses'] ?>" placeholder="0 = sem mínimo">
-          <div class="hint">Quanto tempo o cliente é obrigado a ficar. 0 = pode cancelar quando quiser.</div>
+          <label><?= e(t('Período mínimo de contrato (meses)')) ?></label>
+          <input type="number" name="periodo_minimo_meses" id="cat_periodo" min="0" max="60" value="<?= (int)$item['periodo_minimo_meses'] ?>" placeholder="<?= e(t('0 = sem mínimo')) ?>">
+          <div class="hint"><?= e(t('Quanto tempo o cliente é obrigado a ficar. 0 = pode cancelar quando quiser.')) ?></div>
         </div>
         <script>
         function togglePeriodoMin() {
@@ -269,29 +269,29 @@ if ($acao === 'novo' || $acao === 'editar') {
 
       <!-- PASSO 3 — Preço -->
       <?php $cot_view = cotacao_atual($db); ?>
-      <h2 class="mt-5">3️⃣ Preço</h2>
+      <h2 class="mt-5">3️⃣ <?= e(t('Preço')) ?></h2>
       <div class="card">
-        <p class="muted" style="font-size:13px;">USD é a moeda mestre. BRL e EUR calculados pela cotação do dia (arredondado pra cima): <strong>R$ <?= e(number_format($cot_view['BRL'], 4)) ?></strong> · <strong>€ <?= e(number_format($cot_view['EUR'], 4)) ?></strong></p>
+        <p class="muted" style="font-size:13px;"><?= e(t('USD é a moeda mestre. BRL e EUR calculados pela cotação do dia (arredondado pra cima):')) ?> <strong>R$ <?= e(number_format($cot_view['BRL'], 4)) ?></strong> · <strong>€ <?= e(number_format($cot_view['EUR'], 4)) ?></strong></p>
 
         <div class="field">
-          <label>Preço em USD ($) *</label>
-          <input type="number" step="0.01" min="0" name="preco_usd" id="preco_usd" value="<?= $item['preco_usd']!==null && $item['preco_usd']!==''?e(number_format((float)$item['preco_usd'],2,'.','')):'' ?>" placeholder="vazio = não vende neste preço fixo" oninput="atualizarPreview()">
+          <label><?= e(t('Preço em USD ($) *')) ?></label>
+          <input type="number" step="0.01" min="0" name="preco_usd" id="preco_usd" value="<?= $item['preco_usd']!==null && $item['preco_usd']!==''?e(number_format((float)$item['preco_usd'],2,'.','')):'' ?>" placeholder="<?= e(t('vazio = não vende neste preço fixo')) ?>" oninput="atualizarPreview()">
         </div>
         <div class="grid-2">
-          <div class="field"><label>BRL calculado</label><input type="text" id="prev_brl" value="<?= $item['preco_brl']!==null && $item['preco_brl']!==''?'R$ '.e(number_format((float)$item['preco_brl'],0,',','.')):'—' ?>" disabled></div>
-          <div class="field"><label>EUR calculado</label><input type="text" id="prev_eur" value="<?= $item['preco_eur']!==null && $item['preco_eur']!==''?'€ '.e(number_format((float)$item['preco_eur'],0,',','.')):'—' ?>" disabled></div>
+          <div class="field"><label><?= e(t('BRL calculado')) ?></label><input type="text" id="prev_brl" value="<?= $item['preco_brl']!==null && $item['preco_brl']!==''?'R$ '.e(number_format((float)$item['preco_brl'],0,',','.')):'—' ?>" disabled></div>
+          <div class="field"><label><?= e(t('EUR calculado')) ?></label><input type="text" id="prev_eur" value="<?= $item['preco_eur']!==null && $item['preco_eur']!==''?'€ '.e(number_format((float)$item['preco_eur'],0,',','.')):'—' ?>" disabled></div>
         </div>
 
-        <label class="check mt-3"><input type="checkbox" name="a_negociar" <?= $item['a_negociar']?'checked':'' ?>> 💬 Preço a negociar (cada cliente fecha valor diferente)</label>
+        <label class="check mt-3"><input type="checkbox" name="a_negociar" <?= $item['a_negociar']?'checked':'' ?>> 💬 <?= e(t('Preço a negociar (cada cliente fecha valor diferente)')) ?></label>
 
-        <label class="check"><input type="checkbox" name="tem_variante_ia" id="check_variante_ia" onchange="toggleVarianteIA()" <?= $item['tem_variante_ia']?'checked':'' ?>> 🤖 Tem variante "com IA" (preço alternativo)</label>
+        <label class="check"><input type="checkbox" name="tem_variante_ia" id="check_variante_ia" onchange="toggleVarianteIA()" <?= $item['tem_variante_ia']?'checked':'' ?>> 🤖 <?= e(t('Tem variante "com IA" (preço alternativo)')) ?></label>
 
         <div id="variante_ia_box" style="display:<?= $item['tem_variante_ia']?'block':'none' ?>; margin-top:var(--s-3); padding:var(--s-3); background:var(--bg-input); border-radius:6px;">
-          <div class="section-label">Preço da variante com IA</div>
+          <div class="section-label"><?= e(t('Preço da variante com IA')) ?></div>
           <div class="field"><label>USD ($)</label><input type="number" step="0.01" min="0" name="preco_ia_usd" id="preco_ia_usd" value="<?= $item['preco_ia_usd']!==null && $item['preco_ia_usd']!==''?e(number_format((float)$item['preco_ia_usd'],2,'.','')):'' ?>" oninput="atualizarPreview()"></div>
           <div class="grid-2">
-            <div class="field"><label>BRL calculado</label><input type="text" id="prev_ia_brl" value="<?= $item['preco_ia_brl']!==null && $item['preco_ia_brl']!==''?'R$ '.e(number_format((float)$item['preco_ia_brl'],0,',','.')):'—' ?>" disabled></div>
-            <div class="field"><label>EUR calculado</label><input type="text" id="prev_ia_eur" value="<?= $item['preco_ia_eur']!==null && $item['preco_ia_eur']!==''?'€ '.e(number_format((float)$item['preco_ia_eur'],0,',','.')):'—' ?>" disabled></div>
+            <div class="field"><label><?= e(t('BRL calculado')) ?></label><input type="text" id="prev_ia_brl" value="<?= $item['preco_ia_brl']!==null && $item['preco_ia_brl']!==''?'R$ '.e(number_format((float)$item['preco_ia_brl'],0,',','.')):'—' ?>" disabled></div>
+            <div class="field"><label><?= e(t('EUR calculado')) ?></label><input type="text" id="prev_ia_eur" value="<?= $item['preco_ia_eur']!==null && $item['preco_ia_eur']!==''?'€ '.e(number_format((float)$item['preco_ia_eur'],0,',','.')):'—' ?>" disabled></div>
           </div>
         </div>
       </div>
@@ -317,33 +317,33 @@ if ($acao === 'novo' || $acao === 'editar') {
       </script>
 
       <!-- PASSO 4 — Responsabilidades -->
-      <h2 class="mt-5">4️⃣ Responsabilidades <span class="muted" style="font-size:13px; font-weight:normal;">(quem faz o quê)</span></h2>
+      <h2 class="mt-5">4️⃣ <?= e(t('Responsabilidades')) ?> <span class="muted" style="font-size:13px; font-weight:normal;"><?= e(t('(quem faz o quê)')) ?></span></h2>
       <div class="card">
         <div class="field">
-          <label>🏢 O que a Dite Ads entrega</label>
-          <textarea name="resp_agencia" id="cat_resp_a" rows="3" placeholder="• Setup das campanhas&#10;• Otimização semanal&#10;• Relatórios mensais"><?= e($item['resp_agencia'] ?? '') ?></textarea>
+          <label>🏢 <?= e(t('O que a Dite Ads entrega')) ?></label>
+          <textarea name="resp_agencia" id="cat_resp_a" rows="3" placeholder="<?= e(t('• Setup das campanhas&#10;• Otimização semanal&#10;• Relatórios mensais')) ?>"><?= e($item['resp_agencia'] ?? '') ?></textarea>
         </div>
         <div class="field">
-          <label>💼 O que o funcionário responsável faz</label>
-          <textarea name="resp_funcionario" id="cat_resp_f" rows="3" placeholder="• Criação dos criativos&#10;• Programação das postagens"><?= e($item['resp_funcionario'] ?? '') ?></textarea>
+          <label>💼 <?= e(t('O que o funcionário responsável faz')) ?></label>
+          <textarea name="resp_funcionario" id="cat_resp_f" rows="3" placeholder="<?= e(t('• Criação dos criativos&#10;• Programação das postagens')) ?>"><?= e($item['resp_funcionario'] ?? '') ?></textarea>
         </div>
         <div class="field">
-          <label>🤝 O que o cliente precisa fornecer</label>
-          <textarea name="resp_cliente" id="cat_resp_c" rows="3" placeholder="• Acesso às contas&#10;• Briefing&#10;• Orçamento de mídia"><?= e($item['resp_cliente'] ?? '') ?></textarea>
+          <label>🤝 <?= e(t('O que o cliente precisa fornecer')) ?></label>
+          <textarea name="resp_cliente" id="cat_resp_c" rows="3" placeholder="<?= e(t('• Acesso às contas&#10;• Briefing&#10;• Orçamento de mídia')) ?>"><?= e($item['resp_cliente'] ?? '') ?></textarea>
         </div>
       </div>
 
       <!-- PASSO 5 — Opções avançadas -->
-      <h2 class="mt-5">5️⃣ Opções</h2>
+      <h2 class="mt-5">5️⃣ <?= e(t('Opções')) ?></h2>
       <div class="card">
-        <label class="check"><input type="checkbox" name="ativo" <?= $item['ativo']?'checked':'' ?>> ✅ Item ativo (aparece para contratar)</label>
-        <div class="hint" style="margin-left:24px; margin-bottom:var(--s-2);">Desmarque pra remover do catálogo de vendas sem apagar (preserva histórico das assinaturas existentes).</div>
+        <label class="check"><input type="checkbox" name="ativo" <?= $item['ativo']?'checked':'' ?>> ✅ <?= e(t('Item ativo (aparece para contratar)')) ?></label>
+        <div class="hint" style="margin-left:24px; margin-bottom:var(--s-2);"><?= e(t('Desmarque pra remover do catálogo de vendas sem apagar (preserva histórico das assinaturas existentes).')) ?></div>
 
-        <label class="check"><input type="checkbox" name="e_pacote" <?= $item['e_pacote']?'checked':'' ?>> 📦 Este item é um pacote (combo de outros)</label>
-        <div class="hint" style="margin-left:24px;">Marque se for um combo. Você define a composição depois de salvar.</div>
+        <label class="check"><input type="checkbox" name="e_pacote" <?= $item['e_pacote']?'checked':'' ?>> 📦 <?= e(t('Este item é um pacote (combo de outros)')) ?></label>
+        <div class="hint" style="margin-left:24px;"><?= e(t('Marque se for um combo. Você define a composição depois de salvar.')) ?></div>
       </div>
 
-      <button class="btn block mt-5" type="submit" style="font-size:16px; padding:var(--s-4);">💾 <?= $item['id'] ? 'Salvar alterações' : 'Criar item' ?></button>
+      <button class="btn block mt-5" type="submit" style="font-size:16px; padding:var(--s-4);">💾 <?= $item['id'] ? e(t('Salvar alterações')) : e(t('Criar item')) ?></button>
     </form>
 
     <script>
@@ -353,12 +353,12 @@ if ($acao === 'novo' || $acao === 'editar') {
       const nome = document.getElementById('cat_nome').value.trim();
       const descricao = document.getElementById('cat_descricao').value.trim();
       if (!nome && !descricao) {
-        msg.innerHTML = '<span style="color:var(--c-danger);">Preencha o nome ou a descrição primeiro.</span>';
+        msg.innerHTML = '<span style="color:var(--c-danger);"><?= e(t('Preencha o nome ou a descrição primeiro.')) ?></span>';
         return;
       }
       btn.disabled = true;
-      btn.innerHTML = '⏳ Analisando...';
-      msg.innerHTML = 'Consultando IA (~10s)...';
+      btn.innerHTML = '⏳ <?= e(t('Analisando...')) ?>';
+      msg.innerHTML = '<?= e(t('Consultando IA (~10s)...')) ?>';
       const fd = new FormData();
       fd.append('csrf', '<?= e(csrf_token()) ?>');
       fd.append('nome', nome);
@@ -367,7 +367,7 @@ if ($acao === 'novo' || $acao === 'editar') {
         const resp = await fetch('<?= e(APP_BASE_URL) ?>/simulador_ia.php', { method: 'POST', body: fd });
         const data = await resp.json();
         if (!resp.ok || !data.ok) {
-          msg.innerHTML = '<span style="color:var(--c-danger);">' + (data.error || 'Erro') + '</span>';
+          msg.innerHTML = '<span style="color:var(--c-danger);">' + (data.error || '<?= e(t('Erro')) ?>') + '</span>';
           return;
         }
         const s = data.sugestao;
@@ -385,18 +385,18 @@ if ($acao === 'novo' || $acao === 'editar') {
         if (s.resp_agencia)     document.getElementById('cat_resp_a').value = s.resp_agencia;
         if (s.resp_funcionario) document.getElementById('cat_resp_f').value = s.resp_funcionario;
         if (s.resp_cliente)     document.getElementById('cat_resp_c').value = s.resp_cliente;
-        msg.innerHTML = '<span style="color:var(--c-success);">✓ Sugestão aplicada! Revise antes de salvar.</span>';
+        msg.innerHTML = '<span style="color:var(--c-success);">✓ <?= e(t('Sugestão aplicada! Revise antes de salvar.')) ?></span>';
       } catch (e) {
-        msg.innerHTML = '<span style="color:var(--c-danger);">Erro: ' + e.message + '</span>';
+        msg.innerHTML = '<span style="color:var(--c-danger);"><?= e(t('Erro: ')) ?>' + e.message + '</span>';
       } finally {
         btn.disabled = false;
-        btn.innerHTML = '✨ Preencher/Refinar com IA';
+        btn.innerHTML = '✨ <?= e(t('Preencher/Refinar com IA')) ?>';
       }
     }
     </script>
 
     <?php if ($item['id']): ?>
-    <h2 class="mt-5">⚠ Zona de perigo</h2>
+    <h2 class="mt-5">⚠ <?= e(t('Zona de perigo')) ?></h2>
     <?php
       // Conta vínculos pra avisar
       $n_assin_v = (int)$db->query('SELECT COUNT(*) FROM assinaturas WHERE item_id = ' . (int)$item['id'])->fetchColumn();
@@ -405,21 +405,21 @@ if ($acao === 'novo' || $acao === 'editar') {
     ?>
     <div class="card">
       <p class="muted" style="font-size:13px;">
-        Vínculos atuais:
-        <strong><?= $n_assin_v ?></strong> assinatura(s)<?= $n_assin_v?' (ativas/pausadas/canceladas)':'' ?>
-        · <strong><?= $n_pkg_v ?></strong> pacote(s) usando este como componente.
+        <?= e(t('Vínculos atuais:')) ?>
+        <strong><?= $n_assin_v ?></strong> <?= e(t('assinatura(s)')) ?><?= $n_assin_v?' '.e(t('(ativas/pausadas/canceladas)')):'' ?>
+        · <strong><?= $n_pkg_v ?></strong> <?= e(t('pacote(s) usando este como componente.')) ?>
       </p>
       <?php if ($n_assin_v > 0): ?>
-        <div class="hint" style="color:var(--c-orange);">⚠ Item com assinaturas vinculadas. Pra apagar definitivamente, primeiro desative o item (desmarque "Item ativo" e salve) — assim ele não aparece pra contratar novos, e o histórico fica preservado. Apagar só funciona se NÃO houver assinaturas.</div>
+        <div class="hint" style="color:var(--c-orange);">⚠ <?= e(t('Item com assinaturas vinculadas. Pra apagar definitivamente, primeiro desative o item (desmarque "Item ativo" e salve) — assim ele não aparece pra contratar novos, e o histórico fica preservado. Apagar só funciona se NÃO houver assinaturas.')) ?></div>
       <?php else: ?>
-        <div class="hint">Sem assinaturas — pode apagar com segurança. Composições de pacotes serão desfeitas (CASCADE).</div>
+        <div class="hint"><?= e(t('Sem assinaturas — pode apagar com segurança. Composições de pacotes serão desfeitas (CASCADE).')) ?></div>
       <?php endif; ?>
-      <form method="post" class="mt-3" onsubmit="return confirm('APAGAR DEFINITIVAMENTE este item do catálogo?\n\nNão pode ser desfeito. Se houver pacotes usando este item como componente, eles vão perder essa composição.\n\nConfirmar?');">
+      <form method="post" class="mt-3" onsubmit="return confirm('<?= e(t('APAGAR DEFINITIVAMENTE este item do catálogo?\n\nNão pode ser desfeito. Se houver pacotes usando este item como componente, eles vão perder essa composição.\n\nConfirmar?')) ?>');">
         <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
         <input type="hidden" name="op" value="apagar_item">
         <input type="hidden" name="id" value="<?= (int)$item['id'] ?>">
-        <button class="btn btn-danger block" type="submit" <?= $n_assin_v > 0 ? 'disabled title="Tem assinaturas vinculadas — desative em vez de apagar"' : '' ?>>
-          🗑 Apagar este item definitivamente
+        <button class="btn btn-danger block" type="submit" <?= $n_assin_v > 0 ? 'disabled title="'.e(t('Tem assinaturas vinculadas — desative em vez de apagar')).'"' : '' ?>>
+          🗑 <?= e(t('Apagar este item definitivamente')) ?>
         </button>
       </form>
     </div>
@@ -431,14 +431,14 @@ if ($acao === 'novo' || $acao === 'editar') {
         $componentes = $stmt->fetchAll();
         $outros = $db->query('SELECT id, nome FROM itens_catalogo WHERE e_pacote = 0 AND ativo = 1 ORDER BY nome')->fetchAll();
     ?>
-    <h2 id="composicao">Composição do pacote</h2>
+    <h2 id="composicao"><?= e(t('Composição do pacote')) ?></h2>
     <div class="card">
       <?php if ($componentes): ?>
         <?php foreach ($componentes as $c): ?>
           <div class="list-card">
             <div class="info">
               <div class="nome"><?= (int)$c['quantidade'] ?>× <?= e($c['nome']) ?></div>
-              <div class="sub">Variante: <?= $c['variante']==='ia' ? '<span class="status status-ia">com IA</span>' : 'normal' ?></div>
+              <div class="sub"><?= e(t('Variante:')) ?> <?= $c['variante']==='ia' ? '<span class="status status-ia">'.e(t('com IA')).'</span>' : e(t('normal')) ?></div>
             </div>
             <form method="post" style="margin:0;">
               <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
@@ -446,39 +446,39 @@ if ($acao === 'novo' || $acao === 'editar') {
               <input type="hidden" name="pacote_id" value="<?= (int)$item['id'] ?>">
               <input type="hidden" name="componente_id" value="<?= (int)$c['componente_id'] ?>">
               <input type="hidden" name="variante" value="<?= e($c['variante']) ?>">
-              <button class="btn btn-ghost small" type="submit">Remover</button>
+              <button class="btn btn-ghost small" type="submit"><?= e(t('Remover')) ?></button>
             </form>
           </div>
         <?php endforeach; ?>
       <?php else: ?>
-        <p class="muted">Nenhum componente. Adicione abaixo.</p>
+        <p class="muted"><?= e(t('Nenhum componente. Adicione abaixo.')) ?></p>
       <?php endif; ?>
     </div>
 
-    <h2>Adicionar componente</h2>
+    <h2><?= e(t('Adicionar componente')) ?></h2>
     <div class="card">
       <form method="post">
         <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
         <input type="hidden" name="op" value="comp_add">
         <input type="hidden" name="pacote_id" value="<?= (int)$item['id'] ?>">
-        <div class="field"><label>Item</label>
+        <div class="field"><label><?= e(t('Item')) ?></label>
           <select name="componente_id" required>
-            <option value="">— selecione —</option>
+            <option value="">— <?= e(t('selecione')) ?> —</option>
             <?php foreach ($outros as $o): ?>
               <option value="<?= (int)$o['id'] ?>"><?= e($o['nome']) ?></option>
             <?php endforeach; ?>
           </select>
         </div>
         <div class="grid-2">
-          <div class="field"><label>Quantidade</label><input type="number" min="1" name="quantidade" value="1" required></div>
-          <div class="field"><label>Variante</label>
+          <div class="field"><label><?= e(t('Quantidade')) ?></label><input type="number" min="1" name="quantidade" value="1" required></div>
+          <div class="field"><label><?= e(t('Variante')) ?></label>
             <select name="variante">
-              <option value="normal">Normal</option>
-              <?php if ($item['tem_variante_ia']): ?><option value="ia">Com IA</option><?php endif; ?>
+              <option value="normal"><?= e(t('Normal')) ?></option>
+              <?php if ($item['tem_variante_ia']): ?><option value="ia"><?= e(t('Com IA')) ?></option><?php endif; ?>
             </select>
           </div>
         </div>
-        <button class="btn block" type="submit">Adicionar</button>
+        <button class="btn block" type="submit"><?= e(t('Adicionar')) ?></button>
       </form>
     </div>
     <?php endif; ?>
@@ -504,17 +504,17 @@ $itens = $stmt->fetchAll();
 $f_moeda = $_GET['moeda'] ?? 'USD';
 if (!in_array($f_moeda, ['USD','EUR','BRL'], true)) $f_moeda = 'USD';
 ?>
-<h1 class="page-title">Catálogo</h1>
+<h1 class="page-title"><?= e(t('Catálogo')) ?></h1>
 <?php if ($flash): ?><div class="flash <?= e($flash[0]) ?>"><?= e($flash[1]) ?></div><?php endif; ?>
 
 <div class="btn-pair">
-  <a href="?acao=novo" class="btn btn-brand">+ Novo item</a>
-  <a href="<?= e(APP_BASE_URL) ?>/simulador_preco.php" class="btn btn-secondary">📊 Simulador de preço</a>
+  <a href="?acao=novo" class="btn btn-brand">+ <?= e(t('Novo item')) ?></a>
+  <a href="<?= e(APP_BASE_URL) ?>/simulador_preco.php" class="btn btn-secondary">📊 <?= e(t('Simulador de preço')) ?></a>
 </div>
-<form method="post" class="mt-2" onsubmit="return confirm('Recalcular BRL e EUR de TODOS os itens usando a cotação do dia?\n\nUsa o preco_usd como base e aplica ceil() pra arredondar pra cima.');">
+<form method="post" class="mt-2" onsubmit="return confirm('<?= e(t('Recalcular BRL e EUR de TODOS os itens usando a cotação do dia?\n\nUsa o preco_usd como base e aplica ceil() pra arredondar pra cima.')) ?>');">
   <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
   <input type="hidden" name="op" value="recalcular_todos">
-  <button type="submit" class="btn btn-ghost small block">🔄 Recalcular preços (cotação)</button>
+  <button type="submit" class="btn btn-ghost small block">🔄 <?= e(t('Recalcular preços (cotação)')) ?></button>
 </form>
 
 <nav class="tabs-bar mt-3">
@@ -526,29 +526,29 @@ if (!in_array($f_moeda, ['USD','EUR','BRL'], true)) $f_moeda = 'USD';
 <form method="get" class="card">
   <input type="hidden" name="moeda" value="<?= e($f_moeda) ?>">
   <div class="field" style="margin:0;">
-    <label>Tipo</label>
+    <label><?= e(t('Tipo')) ?></label>
     <select name="tipo" onchange="this.form.submit()">
-      <option value="">Todos os tipos</option>
-      <option value="unico"       <?= $f_tipo==='unico'?'selected':'' ?>>Únicos</option>
-      <option value="mensal"      <?= $f_tipo==='mensal'?'selected':'' ?>>Mensais</option>
-      <option value="por_unidade" <?= $f_tipo==='por_unidade'?'selected':'' ?>>Por unidade</option>
+      <option value=""><?= e(t('Todos os tipos')) ?></option>
+      <option value="unico"       <?= $f_tipo==='unico'?'selected':'' ?>><?= e(t('Únicos')) ?></option>
+      <option value="mensal"      <?= $f_tipo==='mensal'?'selected':'' ?>><?= e(t('Mensais')) ?></option>
+      <option value="por_unidade" <?= $f_tipo==='por_unidade'?'selected':'' ?>><?= e(t('Por unidade')) ?></option>
     </select>
   </div>
 </form>
 
-<div class="section-label">Itens (<?= count($itens) ?>)</div>
+<div class="section-label"><?= e(t('Itens')) ?> (<?= count($itens) ?>)</div>
 <?php foreach ($itens as $it): ?>
   <a class="list-card" href="?acao=editar&id=<?= (int)$it['id'] ?>">
     <div class="info">
       <div class="nome">
         <?= e($it['nome']) ?>
-        <?php if ($it['e_pacote']): ?><span class="status status-ia">pacote</span><?php endif; ?>
-        <?php if (!$it['ativo']): ?><span class="status status-info">inativo</span><?php endif; ?>
-        <?php if ($it['tem_variante_ia']): ?><span class="status status-ia">com IA</span><?php endif; ?>
+        <?php if ($it['e_pacote']): ?><span class="status status-ia"><?= e(t('pacote')) ?></span><?php endif; ?>
+        <?php if (!$it['ativo']): ?><span class="status status-info"><?= e(t('inativo')) ?></span><?php endif; ?>
+        <?php if ($it['tem_variante_ia']): ?><span class="status status-ia"><?= e(t('com IA')) ?></span><?php endif; ?>
       </div>
       <div class="sub">
-        <?= e(['unico'=>'único','mensal'=>'mensal','por_unidade'=>'por unidade'][$it['tipo']]) ?>
-        <?php if ($it['a_negociar']): ?> · <span class="status status-warning">a negociar</span><?php endif; ?>
+        <?= e(['unico'=>t('único'),'mensal'=>t('mensal'),'por_unidade'=>t('por unidade')][$it['tipo']]) ?>
+        <?php if ($it['a_negociar']): ?> · <span class="status status-warning"><?= e(t('a negociar')) ?></span><?php endif; ?>
       </div>
     </div>
     <div class="right">
@@ -560,13 +560,13 @@ if (!in_array($f_moeda, ['USD','EUR','BRL'], true)) $f_moeda = 'USD';
       ?>
       <div class="money md"><?= $val !== null ? e(money_fmt((float)$val, $f_moeda)) : '—' ?></div>
       <?php if ($it['tem_variante_ia'] && $val_ia !== null): ?>
-        <div class="muted" style="font-size:11px;">IA: <?= e(money_fmt((float)$val_ia, $f_moeda)) ?></div>
+        <div class="muted" style="font-size:11px;"><?= e(t('IA:')) ?> <?= e(money_fmt((float)$val_ia, $f_moeda)) ?></div>
       <?php endif; ?>
     </div>
   </a>
 <?php endforeach; ?>
 <?php if (!$itens): ?>
-  <p class="muted center">Nenhum item ainda. Clique em "+ Novo item" ou rode <code>db/seed_catalogo.sql</code>.</p>
+  <p class="muted center"><?= e(t('Nenhum item ainda. Clique em "+ Novo item" ou rode')) ?> <code>db/seed_catalogo.sql</code>.</p>
 <?php endif; ?>
 
 <?php require __DIR__ . '/includes/footer.php'; ?>

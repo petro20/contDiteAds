@@ -16,9 +16,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $c = cotacao_atual($db, true); // forcar refresh
         audit_log('cotacao.atualizada', 'configuracoes', 0);
         if ($c['fonte'] === 'api') {
-            $flash = ['ok', sprintf('Cotação atualizada. USD→BRL %.4f · USD→EUR %.4f (de %s)', $c['BRL'], $c['EUR'], $c['data'])];
+            $flash = ['ok', sprintf(t('Cotação atualizada. USD→BRL %.4f · USD→EUR %.4f (de %s)'), $c['BRL'], $c['EUR'], $c['data'])];
         } else {
-            $flash = ['err', 'API de cotação indisponível. Usando último valor: USD→BRL ' . number_format($c['BRL'],4) . ' · USD→EUR ' . number_format($c['EUR'],4) . ' (' . $c['data'] . ')'];
+            $flash = ['err', t('API de cotação indisponível. Usando último valor:') . ' USD→BRL ' . number_format($c['BRL'],4) . ' · USD→EUR ' . number_format($c['EUR'],4) . ' (' . $c['data'] . ')'];
         }
         goto fim_post; // NÃO cai no save principal
     }
@@ -40,7 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $api_ia = trim((string)($_POST['anthropic_api_key'] ?? ''));
 
     if ($wise && !preg_match('~^https?://~i', $wise)) {
-        $flash = ['err', 'O link do Wise precisa começar com http:// ou https://'];
+        $flash = ['err', t('O link do Wise precisa começar com http:// ou https://')];
     } else {
         config_set($db, 'pagamento_zelle_email', $zelle);
         config_set($db, 'pagamento_wise_link',   $wise);
@@ -57,9 +57,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $orig = (string)$_FILES['zelle_qr']['name'];
             $ext = strtolower(pathinfo($orig, PATHINFO_EXTENSION));
             if (!in_array($ext, ['png','jpg','jpeg','webp'], true)) {
-                $flash = ['err', 'Formato não suportado. Use PNG, JPG ou WEBP.'];
+                $flash = ['err', t('Formato não suportado. Use PNG, JPG ou WEBP.')];
             } elseif ($size > 2 * 1024 * 1024) {
-                $flash = ['err', 'Arquivo muito grande (máx 2MB).'];
+                $flash = ['err', t('Arquivo muito grande (máx 2MB).')];
             } else {
                 $dir = UPLOAD_DIR . '/zelle';
                 if (!is_dir($dir)) @mkdir($dir, 0775, true);
@@ -83,31 +83,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                     config_set($db, 'pagamento_zelle_qr', 'zelle/' . $nome);
                 } else {
-                    $flash = ['err', 'Falhou ao salvar o arquivo.'];
+                    $flash = ['err', t('Falhou ao salvar o arquivo.')];
                 }
             }
         }
 
         if (!$flash) {
             audit_log('config_pagamento.atualizada', 'configuracoes', 0);
-            $flash = ['ok', 'Configurações de pagamento salvas.'];
+            $flash = ['ok', t('Configurações de pagamento salvas.')];
         }
     }
     fim_post:;
 }
-if (isset($_GET['ok']) && $_GET['ok'] === 'qr_removido') $flash = ['ok', 'QR Code removido.'];
+if (isset($_GET['ok']) && $_GET['ok'] === 'qr_removido') $flash = ['ok', t('QR Code removido.')];
 
 $cfg = config_pagamento($db);
 
-$page = 'Formas de pagamento';
+$page = t('Formas de pagamento');
 $show_back = true;
 $back_to = APP_BASE_URL . '/dashboard.php';
 require __DIR__ . '/includes/header.php';
 ?>
-<h1 class="page-title">Finanças</h1>
+<h1 class="page-title"><?= e(t('Finanças')) ?></h1>
 <?php render_group_tabs('financas', 'pagamento_cfg'); ?>
-<h2>Formas de pagamento</h2>
-<p class="muted">Configure os métodos de pagamento que serão exibidos nas cobranças e disponibilizados nas mensagens (templates).</p>
+<h2><?= e(t('Formas de pagamento')) ?></h2>
+<p class="muted"><?= e(t('Configure os métodos de pagamento que serão exibidos nas cobranças e disponibilizados nas mensagens (templates).')) ?></p>
 
 <?php if ($flash): ?><div class="flash <?= e($flash[0]) ?>"><?= e($flash[1]) ?></div><?php endif; ?>
 
@@ -117,22 +117,22 @@ require __DIR__ . '/includes/header.php';
   $atualizada_hoje = ($cot['data'] === $hoje);
 ?>
 <div class="card brand">
-  <div class="title" style="color:var(--c-primary-2);">💱 Cotação USD (moeda mestre)</div>
-  <p class="muted" style="font-size:13px;">Dite Ads cobra todos os serviços em USD. Pra clientes em BRL/EUR, o sistema converte automaticamente usando a cotação do dia.</p>
+  <div class="title" style="color:var(--c-primary-2);">💱 <?= e(t('Cotação USD (moeda mestre)')) ?></div>
+  <p class="muted" style="font-size:13px;"><?= e(t('Dite Ads cobra todos os serviços em USD. Pra clientes em BRL/EUR, o sistema converte automaticamente usando a cotação do dia.')) ?></p>
   <div class="info-pair"><span class="l">USD → BRL</span><span class="v"><strong>R$ <?= e(number_format($cot['BRL'], 4)) ?></strong></span></div>
   <div class="info-pair"><span class="l">USD → EUR</span><span class="v"><strong>€ <?= e(number_format($cot['EUR'], 4)) ?></strong></span></div>
   <div class="info-pair muted" style="font-size:12px;">
-    <span class="l">Atualizada em <?= e($cot['data']) ?></span>
+    <span class="l"><?= e(t('Atualizada em')) ?> <?= e($cot['data']) ?></span>
     <span class="v">
       <?php if ($cot['fonte'] === 'api'): ?><span class="status status-paga">api</span>
-      <?php elseif ($cot['fonte'] === 'cache' && $atualizada_hoje): ?><span class="status status-info">do dia</span>
-      <?php else: ?><span class="status status-vencida">defasada</span><?php endif; ?>
+      <?php elseif ($cot['fonte'] === 'cache' && $atualizada_hoje): ?><span class="status status-info"><?= e(t('do dia')) ?></span>
+      <?php else: ?><span class="status status-vencida"><?= e(t('defasada')) ?></span><?php endif; ?>
     </span>
   </div>
   <form method="post" class="mt-3">
     <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
     <input type="hidden" name="op" value="atualizar_cotacao">
-    <button type="submit" class="btn btn-secondary block">🔄 Atualizar cotação agora</button>
+    <button type="submit" class="btn btn-secondary block">🔄 <?= e(t('Atualizar cotação agora')) ?></button>
   </form>
 </div>
 
@@ -144,76 +144,76 @@ require __DIR__ . '/includes/header.php';
   <div class="card">
     <div class="title">💜 Zelle</div>
     <div class="field">
-      <label>Email cadastrado no Zelle</label>
-      <input type="email" name="zelle_email" value="<?= e($cfg['zelle_email']) ?>" placeholder="ex: voce@gmail.com">
-      <div class="hint">O cliente vai usar este email no app do banco dele.</div>
+      <label><?= e(t('Email cadastrado no Zelle')) ?></label>
+      <input type="email" name="zelle_email" value="<?= e($cfg['zelle_email']) ?>" placeholder="<?= e(t('ex: voce@gmail.com')) ?>">
+      <div class="hint"><?= e(t('O cliente vai usar este email no app do banco dele.')) ?></div>
     </div>
     <div class="field">
-      <label>QR Code do Zelle (opcional)</label>
+      <label><?= e(t('QR Code do Zelle (opcional)')) ?></label>
       <?php if ($qr_path): ?>
         <div style="text-align:center; padding:var(--s-3); background:#fff; border-radius:8px; margin-bottom:var(--s-3);">
-          <img src="<?= e(APP_BASE_URL) ?>/uploads/<?= e($qr_path) ?>" alt="QR Code Zelle" style="max-width:200px; height:auto;">
+          <img src="<?= e(APP_BASE_URL) ?>/uploads/<?= e($qr_path) ?>" alt="<?= e(t('QR Code Zelle')) ?>" style="max-width:200px; height:auto;">
         </div>
       <?php endif; ?>
       <input type="file" name="zelle_qr" accept="image/png,image/jpeg,image/webp">
-      <div class="hint">PNG/JPG/WEBP até 2MB. <?= $qr_path ? 'Enviar novo substitui o atual.' : 'Salve o QR do Zelle como imagem e suba aqui.' ?></div>
+      <div class="hint"><?= e(t('PNG/JPG/WEBP até 2MB.')) ?> <?= $qr_path ? e(t('Enviar novo substitui o atual.')) : e(t('Salve o QR do Zelle como imagem e suba aqui.')) ?></div>
     </div>
     <?php if ($qr_path): ?>
-      <button type="submit" name="op" value="remover_qr" formnovalidate class="btn btn-ghost small" onclick="return confirm('Remover o QR Code atual?');" style="color:var(--c-danger);">🗑 Remover QR atual</button>
+      <button type="submit" name="op" value="remover_qr" formnovalidate class="btn btn-ghost small" onclick="return confirm('<?= e(t('Remover o QR Code atual?')) ?>');" style="color:var(--c-danger);">🗑 <?= e(t('Remover QR atual')) ?></button>
     <?php endif; ?>
   </div>
 
   <div class="card">
-    <div class="title">🌍 Wise — Link público de pagamento</div>
+    <div class="title">🌍 <?= e(t('Wise — Link público de pagamento')) ?></div>
     <div class="field">
-      <label>URL do Wisetag / Quick Pay</label>
+      <label><?= e(t('URL do Wisetag / Quick Pay')) ?></label>
       <input type="url" name="wise_link" value="<?= e($cfg['wise_link'] ?? '') ?>" placeholder="https://wise.com/pay/business/diteadsteams">
-      <div class="hint">Link reusável da sua conta business. Cliente clica, <strong>preenche o valor da cobrança</strong> e paga. O webhook detecta o pagamento e casa com a cobrança automaticamente. Pegue em "Crie um link de pagamento" na página inicial do Wise.</div>
+      <div class="hint"><?= t('Link reusável da sua conta business. Cliente clica, <strong>preenche o valor da cobrança</strong> e paga. O webhook detecta o pagamento e casa com a cobrança automaticamente. Pegue em "Crie um link de pagamento" na página inicial do Wise.') ?></div>
     </div>
   </div>
 
   <div class="card">
-    <div class="title">📝 Instruções adicionais</div>
+    <div class="title">📝 <?= e(t('Instruções adicionais')) ?></div>
     <div class="field">
-      <label>Texto extra (opcional)</label>
-      <textarea name="instrucoes" rows="3" placeholder="ex: Após o pagamento, envie o comprovante pelo botão abaixo."><?= e($cfg['instrucoes']) ?></textarea>
+      <label><?= e(t('Texto extra (opcional)')) ?></label>
+      <textarea name="instrucoes" rows="3" placeholder="<?= e(t('ex: Após o pagamento, envie o comprovante pelo botão abaixo.')) ?>"><?= e($cfg['instrucoes']) ?></textarea>
     </div>
   </div>
 
   <div class="card">
-    <div class="title">🌍 Wise — Sincronização automática</div>
-    <p class="muted" style="font-size:13px;">2 opções para receber pagamentos automaticamente no sistema:</p>
-    <a href="<?= e(APP_BASE_URL) ?>/wise_eventos.php" class="btn btn-brand block">🪝 Webhook em tempo real (recomendado)</a>
-    <div class="hint">Configure 1 vez no painel Wise e pagamentos casam automaticamente assim que chegam.</div>
-    <a href="<?= e(APP_BASE_URL) ?>/wise_sync.php" class="btn btn-secondary block mt-2">📤 Upload de CSV (manual)</a>
-    <div class="hint">Alternativa: baixa o extrato do Wise e sobe aqui.</div>
+    <div class="title">🌍 <?= e(t('Wise — Sincronização automática')) ?></div>
+    <p class="muted" style="font-size:13px;"><?= e(t('2 opções para receber pagamentos automaticamente no sistema:')) ?></p>
+    <a href="<?= e(APP_BASE_URL) ?>/wise_eventos.php" class="btn btn-brand block">🪝 <?= e(t('Webhook em tempo real (recomendado)')) ?></a>
+    <div class="hint"><?= e(t('Configure 1 vez no painel Wise e pagamentos casam automaticamente assim que chegam.')) ?></div>
+    <a href="<?= e(APP_BASE_URL) ?>/wise_sync.php" class="btn btn-secondary block mt-2">📤 <?= e(t('Upload de CSV (manual)')) ?></a>
+    <div class="hint"><?= e(t('Alternativa: baixa o extrato do Wise e sobe aqui.')) ?></div>
   </div>
 
   <div class="card">
-    <div class="title">🤖 IA (Anthropic Claude)</div>
-    <p class="muted" style="font-size:13px;">Usado pelo Simulador de preço pra sugerir custos automaticamente. Pegue uma chave em <a href="https://console.anthropic.com/" target="_blank" rel="noopener" style="color:var(--c-primary-2);">console.anthropic.com</a> (começa com <code>sk-ant-</code>).</p>
+    <div class="title">🤖 <?= e(t('IA (Anthropic Claude)')) ?></div>
+    <p class="muted" style="font-size:13px;"><?= t('Usado pelo Simulador de preço pra sugerir custos automaticamente. Pegue uma chave em <a href="https://console.anthropic.com/" target="_blank" rel="noopener" style="color:var(--c-primary-2);">console.anthropic.com</a> (começa com <code>sk-ant-</code>).') ?></p>
     <div class="field">
-      <label>API key</label>
+      <label><?= e(t('API key')) ?></label>
       <?php $tem_key = (bool)config_get($db, 'anthropic_api_key'); ?>
       <div class="field-password">
         <input type="password" name="anthropic_api_key" value="<?= $tem_key ? '••••••••' : '' ?>" placeholder="sk-ant-..." autocomplete="off">
-        <button type="button" class="password-toggle" onclick="togglePassword(this)" aria-label="Mostrar chave">👁</button>
+        <button type="button" class="password-toggle" onclick="togglePassword(this)" aria-label="<?= e(t('Mostrar chave')) ?>">👁</button>
       </div>
-      <div class="hint"><?= $tem_key ? '✓ Chave já configurada. Deixe em branco pra manter, ou cole uma nova pra trocar.' : 'Nenhuma chave configurada — o botão "✨ Preencher com IA" do simulador não funciona sem isso.' ?></div>
+      <div class="hint"><?= $tem_key ? e(t('✓ Chave já configurada. Deixe em branco pra manter, ou cole uma nova pra trocar.')) : e(t('Nenhuma chave configurada — o botão "✨ Preencher com IA" do simulador não funciona sem isso.')) ?></div>
     </div>
   </div>
 
-  <button class="btn block" type="submit">Salvar</button>
+  <button class="btn block" type="submit"><?= e(t('Salvar')) ?></button>
 </form>
 
-<div class="section-label mt-5">Variáveis nos templates</div>
+<div class="section-label mt-5"><?= e(t('Variáveis nos templates')) ?></div>
 <div class="card">
-  <p>Você pode usar nos templates de email/WhatsApp:</p>
+  <p><?= e(t('Você pode usar nos templates de email/WhatsApp:')) ?></p>
   <ul style="padding-left:20px; color:var(--txt-2);">
-    <li><code>{zelle_email}</code> → email cadastrado no Zelle</li>
-    <li><code>{zelle_qr_url}</code> → URL pública da imagem do QR Code</li>
-    <li><code>{link_wise}</code> → link público Quick Pay do Wise</li>
-    <li><code>{instrucoes_pagamento}</code> → texto extra</li>
+    <li><code>{zelle_email}</code> → <?= e(t('email cadastrado no Zelle')) ?></li>
+    <li><code>{zelle_qr_url}</code> → <?= e(t('URL pública da imagem do QR Code')) ?></li>
+    <li><code>{link_wise}</code> → <?= e(t('link público Quick Pay do Wise')) ?></li>
+    <li><code>{instrucoes_pagamento}</code> → <?= e(t('texto extra')) ?></li>
   </ul>
 </div>
 

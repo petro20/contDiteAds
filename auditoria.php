@@ -29,42 +29,42 @@ $logs = $stmt->fetchAll();
 $usuarios = $db->query('SELECT id, nome FROM usuarios ORDER BY nome')->fetchAll();
 $entidades = $db->query('SELECT DISTINCT entidade FROM audit_log WHERE entidade IS NOT NULL ORDER BY entidade')->fetchAll(PDO::FETCH_COLUMN);
 
-$page = 'Auditoria';
+$page = t('Auditoria');
 $show_back = true;
 $back_to = APP_BASE_URL . '/dashboard.php';
 require __DIR__ . '/includes/header.php';
 ?>
-<h1 class="page-title">Auditoria</h1>
+<h1 class="page-title"><?= e(t('Auditoria')) ?></h1>
 
 <form method="get" class="card">
   <div class="grid-2">
-    <div class="field"><label>Usuário</label>
+    <div class="field"><label><?= e(t('Usuário')) ?></label>
       <select name="usuario_id" onchange="this.form.submit()">
-        <option value="0">Todos</option>
+        <option value="0"><?= e(t('Todos')) ?></option>
         <?php foreach ($usuarios as $u): ?><option value="<?= (int)$u['id'] ?>" <?= $f_usuario==$u['id']?'selected':'' ?>><?= e($u['nome']) ?></option><?php endforeach; ?>
       </select>
     </div>
-    <div class="field"><label>Entidade</label>
+    <div class="field"><label><?= e(t('Entidade')) ?></label>
       <select name="entidade" onchange="this.form.submit()">
-        <option value="">Todas</option>
+        <option value=""><?= e(t('Todas')) ?></option>
         <?php foreach ($entidades as $en): ?><option value="<?= e($en) ?>" <?= $f_entidade===$en?'selected':'' ?>><?= e($en) ?></option><?php endforeach; ?>
       </select>
     </div>
-    <div class="field"><label>De</label><input type="date" name="de" value="<?= e($f_de) ?>"></div>
-    <div class="field"><label>Até</label><input type="date" name="ate" value="<?= e($f_ate) ?>"></div>
+    <div class="field"><label><?= e(t('De')) ?></label><input type="date" name="de" value="<?= e($f_de) ?>"></div>
+    <div class="field"><label><?= e(t('Até')) ?></label><input type="date" name="ate" value="<?= e($f_ate) ?>"></div>
   </div>
-  <div class="field"><label>Ação (prefix)</label><input name="acao" value="<?= e($f_acao) ?>" placeholder="ex: cobranca, cliente, pagamento"></div>
-  <button class="btn block" type="submit">Filtrar</button>
+  <div class="field"><label><?= e(t('Ação (prefix)')) ?></label><input name="acao" value="<?= e($f_acao) ?>" placeholder="<?= e(t('ex: cobranca, cliente, pagamento')) ?>"></div>
+  <button class="btn block" type="submit"><?= e(t('Filtrar')) ?></button>
 </form>
 
-<div class="section-label mt-5">Eventos (<?= count($logs) ?>)</div>
+<div class="section-label mt-5"><?= e(t('Eventos')) ?> (<?= count($logs) ?>)</div>
 <?php foreach ($logs as $l): ?>
   <div class="card">
     <div class="spaced">
       <div>
         <div class="title"><?= e($l['acao']) ?></div>
         <div class="sub muted">
-          <?= e($l['usuario_nome'] ?? 'sistema') ?> ·
+          <?= e($l['usuario_nome'] ?? t('sistema')) ?> ·
           <?= e($l['entidade'] ?? '—') ?><?= $l['entidade_id'] ? ' #' . (int)$l['entidade_id'] : '' ?>
           <?php if ($l['ip']): ?> · <?= e($l['ip']) ?><?php endif; ?>
         </div>
@@ -76,6 +76,6 @@ require __DIR__ . '/includes/header.php';
     </div>
   </div>
 <?php endforeach; ?>
-<?php if (!$logs): ?><p class="muted center mt-5">Nenhum evento.</p><?php endif; ?>
+<?php if (!$logs): ?><p class="muted center mt-5"><?= e(t('Nenhum evento.')) ?></p><?php endif; ?>
 
 <?php require __DIR__ . '/includes/footer.php'; ?>

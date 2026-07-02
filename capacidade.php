@@ -35,18 +35,18 @@ foreach ($funcs as &$f) {
 }
 unset($f);
 
-$page = 'Capacidade da equipe';
+$page = t('Capacidade da equipe');
 $show_back = true;
 $back_to = APP_BASE_URL . '/dashboard.php';
 require __DIR__ . '/includes/header.php';
 ?>
-<h1 class="page-title">Equipe</h1>
+<h1 class="page-title"><?= e(t('Equipe')) ?></h1>
 <?php render_group_tabs('equipe', 'capacidade'); ?>
-<h2>Capacidade da equipe</h2>
-<p class="muted">Mês de referência: <strong><?= e($competencia) ?></strong></p>
+<h2><?= e(t('Capacidade da equipe')) ?></h2>
+<p class="muted"><?= e(t('Mês de referência:')) ?> <strong><?= e($competencia) ?></strong></p>
 
 <?php if (!$funcs): ?>
-  <p class="muted">Nenhum funcionário ativo.</p>
+  <p class="muted"><?= e(t('Nenhum funcionário ativo.')) ?></p>
 <?php endif; ?>
 
 <?php foreach ($funcs as $f): ?>
@@ -54,10 +54,10 @@ require __DIR__ . '/includes/header.php';
     <div class="spaced mb-3">
       <div>
         <div class="title"><?= e($f['nome']) ?> <?= $f['aceitando_clientes'] ? '🟢' : '🔴' ?></div>
-        <div class="sub muted"><?= $f['aceitando_clientes'] ? 'Aceitando novos clientes' : 'Lotado (não aceitando)' ?></div>
+        <div class="sub muted"><?= $f['aceitando_clientes'] ? e(t('Aceitando novos clientes')) : e(t('Lotado (não aceitando)')) ?></div>
       </div>
     </div>
-    <?php foreach ([['criativos','Criativos'],['postagens','Pacotes POSTAGEM'],['sites_projetos','Sites/projetos']] as [$cat,$lbl]):
+    <?php foreach ([['criativos',t('Criativos')],['postagens',t('Pacotes POSTAGEM')],['sites_projetos',t('Sites/projetos')]] as [$cat,$lbl]):
         $declarado = $f['cap'][$cat] ?? null;
         $ocupado = $f['ocp'][$cat];
     ?>
@@ -67,15 +67,15 @@ require __DIR__ . '/includes/header.php';
           <?php if ($declarado): $pct = round($ocupado / $declarado * 100); ?>
             <strong><?= $ocupado ?>/<?= $declarado ?></strong>
             <span class="muted" style="font-size:12px;">(<?= $pct ?>%)</span>
-            <?php if ($pct >= 90): ?><span class="status status-vencida">cheio</span><?php elseif ($pct >= 70): ?><span class="status status-warning">próximo do limite</span><?php else: ?><span class="status status-paga">tem espaço</span><?php endif; ?>
+            <?php if ($pct >= 90): ?><span class="status status-vencida"><?= e(t('cheio')) ?></span><?php elseif ($pct >= 70): ?><span class="status status-warning"><?= e(t('próximo do limite')) ?></span><?php else: ?><span class="status status-paga"><?= e(t('tem espaço')) ?></span><?php endif; ?>
           <?php else: ?>
             <strong><?= $ocupado ?></strong>
-            <span class="muted" style="font-size:12px;">/ não declarado</span>
+            <span class="muted" style="font-size:12px;"><?= e(t('/ não declarado')) ?></span>
           <?php endif; ?>
         </div>
       </div>
     <?php endforeach; ?>
-    <div class="mt-3"><a class="btn small btn-ghost" href="<?= e(APP_BASE_URL) ?>/funcionarios.php?acao=editar&id=<?= (int)$f['id'] ?>">Editar funcionário →</a></div>
+    <div class="mt-3"><a class="btn small btn-ghost" href="<?= e(APP_BASE_URL) ?>/funcionarios.php?acao=editar&id=<?= (int)$f['id'] ?>"><?= e(t('Editar funcionário →')) ?></a></div>
   </div>
 <?php endforeach; ?>
 

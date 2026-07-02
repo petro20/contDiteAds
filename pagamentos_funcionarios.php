@@ -14,7 +14,7 @@ $flash = null;
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_check();
     if (($_POST['op'] ?? '') === 'apagar_pagamento') {
-        if (!is_sadmin()) { http_response_code(403); exit('Apenas Super Admin pode apagar pagamentos.'); }
+        if (!is_sadmin()) { http_response_code(403); exit(t('Apenas Super Admin pode apagar pagamentos.')); }
         $pid = (int)($_POST['id'] ?? 0);
         if ($pid > 0) {
             try {
@@ -27,7 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 header('Location: ' . APP_BASE_URL . '/pagamentos_funcionarios.php?ok=del'); exit;
             } catch (Throwable $e) {
                 if ($db->inTransaction()) $db->rollBack();
-                $flash = ['err', 'Erro ao apagar: ' . $e->getMessage()];
+                $flash = ['err', t('Erro ao apagar: ') . $e->getMessage()];
             }
         }
     }
@@ -48,11 +48,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $func = $stmt->fetch();
             if ($func && $func['email']) {
                 $link = APP_BASE_URL . '/comprovante_funcionario.php?id=' . $pid;
-                $html = '<p>Olá, ' . htmlspecialchars($func['nome']) . '.</p>'
-                      . '<p>Seu pagamento foi processado. Acesse o comprovante:</p>'
+                $html = '<p>' . t('Olá,') . ' ' . htmlspecialchars($func['nome']) . '.</p>'
+                      . '<p>' . t('Seu pagamento foi processado. Acesse o comprovante:') . '</p>'
                       . '<p><a href="' . $link . '">' . $link . '</a></p>'
                       . '<p>— Dite Ads</p>';
-                $r = email_enviar($func['email'], 'Comprovante de pagamento — Dite Ads', $html);
+                $r = email_enviar($func['email'], t('Comprovante de pagamento — Dite Ads'), $html);
                 if ($r !== true) error_log('Email comprovante: ' . (string)$r);
             }
             header('Location: ' . APP_BASE_URL . '/pagamentos_funcionarios.php?acao=detalhe&id=' . $pid . '&ok=1'); exit;
@@ -62,7 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$page = 'Pagamentos';
+$page = t('Pagamentos');
 $nav_active = '';
 
 if ($acao === 'detalhe') {
@@ -70,17 +70,17 @@ if ($acao === 'detalhe') {
     $stmt = $db->prepare('SELECT p.*, u.nome AS func_nome, u.wisetag, u.email FROM pagamentos_funcionario p JOIN usuarios u ON u.id = p.funcionario_id WHERE p.id = ?');
     $stmt->execute([$pid]);
     $pag = $stmt->fetch();
-    if (!$pag) { http_response_code(404); exit('Pagamento não encontrado.'); }
+    if (!$pag) { http_response_code(404); exit(t('Pagamento não encontrado.')); }
     $detalhes = detalhes_pagamento_funcionario($db, $pid);
 
     $show_back = true; $back_to = APP_BASE_URL . '/pagamentos_funcionarios.php';
-    $page = 'Pagamento #' . $pid;
+    $page = t('Pagamento #') . $pid;
     $page_sub = $pag['func_nome'];
     require __DIR__ . '/includes/header.php';
     ?>
-    <?php if (isset($_GET['ok'])): ?><div class="flash ok">Pagamento registrado. Email enviado ao funcionário.</div><?php endif; ?>
+    <?php if (isset($_GET['ok'])): ?><div class="flash ok"><?= e(t('Pagamento registrado. Email enviado ao funcionário.')) ?></div><?php endif; ?>
     <div class="card hero success">
-      <div class="label">Valor pago</div>
+      <div class="label"><?= e(t('Valor pago')) ?></div>
       <div class="value">$<?= e(number_format((float)$pag['valor_usd'], 2, '.', ',')) ?></div>
       <div class="sub"><?= e($pag['func_nome']) ?> · <?= e(date('d/m/Y', strtotime($pag['data_pagamento']))) ?></div>
     </div>
@@ -89,7 +89,7 @@ if ($acao === 'detalhe') {
       <div class="info-pair"><span class="l">Email</span><span class="v"><?= e($pag['email']) ?></span></div>
     </div>
 
-    <h2>Detalhamento</h2>
+    <h2><?= e(t('Detalhamento')) ?></h2>
     <?php foreach ($detalhes as $d): ?>
       <div class="card">
         <div class="spaced">
@@ -106,15 +106,15 @@ if ($acao === 'detalhe') {
       </div>
     <?php endforeach; ?>
 
-    <a class="btn btn-secondary block mt-5" href="<?= e(APP_BASE_URL) ?>/comprovante_funcionario.php?id=<?= (int)$pag['id'] ?>" target="_blank">📄 Ver comprovante (para imprimir/PDF)</a>
+    <a class="btn btn-secondary block mt-5" href="<?= e(APP_BASE_URL) ?>/comprovante_funcionario.php?id=<?= (int)$pag['id'] ?>" target="_blank">📄 <?= e(t('Ver comprovante (para imprimir/PDF)')) ?></a>
 
     <?php if (is_sadmin()): ?>
-      <h2 class="mt-5">⚠ Zona de perigo</h2>
-      <form method="post" action="<?= e(APP_BASE_URL) ?>/pagamentos_funcionarios.php" onsubmit="return confirm('APAGAR este pagamento DEFINITIVAMENTE?\n\nOs itens vão voltar pra fila como pendentes.\n\nConfirmar?');">
+      <h2 class="mt-5">⚠ <?= e(t('Zona de perigo')) ?></h2>
+      <form method="post" action="<?= e(APP_BASE_URL) ?>/pagamentos_funcionarios.php" onsubmit="return confirm('<?= e(t('APAGAR este pagamento DEFINITIVAMENTE?\n\nOs itens vão voltar pra fila como pendentes.\n\nConfirmar?')) ?>');">
         <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
         <input type="hidden" name="op" value="apagar_pagamento">
         <input type="hidden" name="id" value="<?= (int)$pag['id'] ?>">
-        <button class="btn btn-danger block" type="submit">🗑 Apagar este pagamento</button>
+        <button class="btn btn-danger block" type="submit">🗑 <?= e(t('Apagar este pagamento')) ?></button>
       </form>
     <?php endif; ?>
     <?php
@@ -126,16 +126,16 @@ if ($acao === 'pagar' && $fid) {
     $stmt = $db->prepare('SELECT id, nome, wisetag FROM usuarios WHERE id = ? AND role IN ("admin","funcionario")');
     $stmt->execute([$fid]);
     $func = $stmt->fetch();
-    if (!$func) { http_response_code(404); exit('Funcionário não encontrado.'); }
+    if (!$func) { http_response_code(404); exit(t('Funcionário não encontrado.')); }
     $itens = itens_pendentes_funcionario($db, $fid);
     $total = (float)array_sum(array_column($itens, 'subtotal_usd'));
 
     $show_back = true; $back_to = APP_BASE_URL . '/pagamentos_funcionarios.php';
-    $page = 'Pagar ' . $func['nome'];
+    $page = t('Pagar ') . $func['nome'];
     require __DIR__ . '/includes/header.php';
     ?>
     <?php if ($flash): ?><div class="flash <?= e($flash[0]) ?>"><?= e($flash[1]) ?></div><?php endif; ?>
-    <p class="muted">Marque os itens que serão incluídos neste pagamento. Total atualiza conforme você seleciona.</p>
+    <p class="muted"><?= e(t('Marque os itens que serão incluídos neste pagamento. Total atualiza conforme você seleciona.')) ?></p>
 
     <form method="post" id="form_pagar">
       <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
@@ -143,12 +143,12 @@ if ($acao === 'pagar' && $fid) {
       <input type="hidden" name="funcionario_id" value="<?= (int)$fid ?>">
 
       <?php if (!$itens): ?>
-        <p class="muted">Nenhum item pendente.</p>
+        <p class="muted"><?= e(t('Nenhum item pendente.')) ?></p>
       <?php else: foreach ($itens as $it): ?>
         <label class="card check" style="display:flex; gap:12px; align-items:center; cursor:pointer;">
           <input type="checkbox" name="items[]" value="<?= (int)$it['id'] ?>" checked data-valor="<?= e(number_format((float)$it['subtotal_usd'], 2, '.', '')) ?>" onchange="recalcular()">
           <div class="info" style="flex:1;">
-            <div class="title"><?= e($it['item_nome']) ?><?= $it['sem_valor'] ? ' <span class="status status-vencida">sem valor USD!</span>' : '' ?></div>
+            <div class="title"><?= e($it['item_nome']) ?><?= $it['sem_valor'] ? ' <span class="status status-vencida">' . e(t('sem valor USD!')) . '</span>' : '' ?></div>
             <div class="sub muted"><?= e($it['nome_empresa']) ?> · <?= e($it['competencia_mes']) ?> · <?= (int)$it['quantidade'] ?>× $<?= e(number_format((float)$it['valor_unitario_usd'], 2, '.', ',')) ?></div>
           </div>
           <div class="money md">$<?= e(number_format((float)$it['subtotal_usd'], 2, '.', ',')) ?></div>
@@ -157,11 +157,11 @@ if ($acao === 'pagar' && $fid) {
 
       <?php if ($itens): ?>
         <div class="card success spaced mt-3">
-          <span>Total selecionado:</span>
+          <span><?= e(t('Total selecionado:')) ?></span>
           <div class="money lg">$<span id="total_sel"><?= e(number_format($total, 2, '.', ',')) ?></span></div>
         </div>
-        <div class="field"><label>Data do pagamento</label><input type="date" name="data_pagamento" required value="<?= e(date('Y-m-d')) ?>"></div>
-        <button class="btn btn-success block" type="submit" onclick="return confirm('Confirmar pagamento? Os itens marcados serão registrados como pagos.');">Marquei como pago</button>
+        <div class="field"><label><?= e(t('Data do pagamento')) ?></label><input type="date" name="data_pagamento" required value="<?= e(date('Y-m-d')) ?>"></div>
+        <button class="btn btn-success block" type="submit" onclick="return confirm('<?= e(t('Confirmar pagamento? Os itens marcados serão registrados como pagos.')) ?>');"><?= e(t('Marquei como pago')) ?></button>
       <?php endif; ?>
     </form>
 
@@ -182,26 +182,26 @@ $fila = fila_pagamentos_funcionarios($db);
 
 require __DIR__ . '/includes/header.php';
 ?>
-<h1 class="page-title">Equipe</h1>
+<h1 class="page-title"><?= e(t('Equipe')) ?></h1>
 <?php render_group_tabs('equipe', 'pagamentos'); ?>
-<h2>Pagamentos a funcionários</h2>
-<?php if (isset($_GET['ok']) && $_GET['ok'] === 'del'): ?><div class="flash ok">Pagamento apagado.</div><?php endif; ?>
+<h2><?= e(t('Pagamentos a funcionários')) ?></h2>
+<?php if (isset($_GET['ok']) && $_GET['ok'] === 'del'): ?><div class="flash ok"><?= e(t('Pagamento apagado.')) ?></div><?php endif; ?>
 <?php if ($flash): ?><div class="flash <?= e($flash[0]) ?>"><?= e($flash[1]) ?></div><?php endif; ?>
 
 <?php if (!$fila): ?>
-  <div class="card"><div class="title">Fila vazia ✅</div><div class="desc">Nenhum funcionário com valores liberados pendentes.</div></div>
+  <div class="card"><div class="title"><?= e(t('Fila vazia')) ?> ✅</div><div class="desc"><?= e(t('Nenhum funcionário com valores liberados pendentes.')) ?></div></div>
 <?php else: ?>
   <?php $tot_geral = (float)array_sum(array_column($fila, 'total_usd')); ?>
-  <div class="kpi"><div class="v">$<?= e(number_format($tot_geral, 2, '.', ',')) ?></div><div class="l">Total a pagar (USD)</div></div>
-  <div class="section-label">Fila (<?= count($fila) ?> funcionários)</div>
+  <div class="kpi"><div class="v">$<?= e(number_format($tot_geral, 2, '.', ',')) ?></div><div class="l"><?= e(t('Total a pagar (USD)')) ?></div></div>
+  <div class="section-label"><?= e(t('Fila')) ?> (<?= count($fila) ?> <?= e(t('funcionários')) ?>)</div>
   <?php foreach ($fila as $f): ?>
     <a class="list-card" href="?acao=pagar&funcionario_id=<?= (int)$f['funcionario_id'] ?>">
       <div class="info">
         <div class="nome">
           <?= e($f['nome']) ?>
-          <?php if ((int)$f['sem_valor_def'] > 0): ?><span class="status status-vencida"><?= (int)$f['sem_valor_def'] ?> sem valor</span><?php endif; ?>
+          <?php if ((int)$f['sem_valor_def'] > 0): ?><span class="status status-vencida"><?= (int)$f['sem_valor_def'] ?> <?= e(t('sem valor')) ?></span><?php endif; ?>
         </div>
-        <div class="sub"><?= (int)$f['itens_count'] ?> itens · <?= e($f['wisetag'] ?? 'sem WiseTag') ?></div>
+        <div class="sub"><?= (int)$f['itens_count'] ?> <?= e(t('itens')) ?> · <?= e($f['wisetag'] ?? t('sem WiseTag')) ?></div>
       </div>
       <div class="right">
         <div class="money md">$<?= e(number_format((float)$f['total_usd'], 2, '.', ',')) ?></div>
@@ -210,13 +210,13 @@ require __DIR__ . '/includes/header.php';
   <?php endforeach; ?>
 <?php endif; ?>
 
-<h2 class="mt-5">Histórico recente</h2>
+<h2 class="mt-5"><?= e(t('Histórico recente')) ?></h2>
 <?php
 $stmt = $db->query('SELECT p.id, p.valor_usd, p.data_pagamento, u.nome FROM pagamentos_funcionario p JOIN usuarios u ON u.id = p.funcionario_id ORDER BY p.data_pagamento DESC, p.id DESC LIMIT 30');
 $hist = $stmt->fetchAll();
 ?>
 <?php if (!$hist): ?>
-  <p class="muted">Nenhum pagamento realizado ainda.</p>
+  <p class="muted"><?= e(t('Nenhum pagamento realizado ainda.')) ?></p>
 <?php else: foreach ($hist as $h): ?>
   <a class="list-card" href="?acao=detalhe&id=<?= (int)$h['id'] ?>">
     <div class="info">

@@ -7,14 +7,14 @@ require_once __DIR__ . '/lib/despesas.php';
 require_once __DIR__ . '/lib/audit.php';
 require_once __DIR__ . '/lib/cotacao.php';
 $u = require_login();
-if (!is_admin()) { http_response_code(403); exit('Apenas sócios.'); }
+if (!is_admin()) { http_response_code(403); exit(t('Apenas sócios.')); }
 $db = db();
 $flash = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_check();
     if (($_POST['op'] ?? '') === 'apagar_pagamento_socio') {
-        if (!is_sadmin()) { http_response_code(403); exit('Apenas Super Admin pode apagar pagamentos a sócios.'); }
+        if (!is_sadmin()) { http_response_code(403); exit(t('Apenas Super Admin pode apagar pagamentos a sócios.')); }
         $pid = (int)($_POST['id'] ?? 0);
         $comp_back = $_POST['competencia'] ?? date('Y-m');
         if ($pid > 0) {
@@ -23,7 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 audit_log('socio.pagamento_apagado', 'pagamentos_socio', $pid);
                 header('Location: ' . APP_BASE_URL . '/distribuicao.php?mes=' . urlencode($comp_back) . '&del=1'); exit;
             } catch (PDOException $e) {
-                $flash = ['err', 'Erro ao apagar: ' . $e->getMessage()];
+                $flash = ['err', t('Erro ao apagar: ') . $e->getMessage()];
             }
         }
     }
@@ -65,9 +65,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $disponivel = $quota - $ja_pago;
 
                 if ($disponivel <= 0) {
-                    $flash = ['err', 'Esse beneficiário já recebeu o total da quota disponível (' . number_format($quota, 2, ',', '.') . ' ' . $moeda . ') nesta competência.'];
+                    $flash = ['err', t('Esse beneficiário já recebeu o total da quota disponível (') . number_format($quota, 2, ',', '.') . ' ' . $moeda . t(') nesta competência.')];
                 } elseif ($valor > $disponivel + 0.01) {
-                    $flash = ['err', sprintf('Valor excede a quota disponível. Quota total: %.2f %s · Já pago: %.2f %s · Disponível: %.2f %s', $quota, $moeda, $ja_pago, $moeda, $disponivel, $moeda)];
+                    $flash = ['err', sprintf(t('Valor excede a quota disponível. Quota total: %.2f %s · Já pago: %.2f %s · Disponível: %.2f %s'), $quota, $moeda, $ja_pago, $moeda, $disponivel, $moeda)];
                 } else {
                     $stmt = $db->prepare('INSERT INTO pagamentos_socio (socio_id, competencia_mes, moeda, valor, data_pagamento, observacao, criado_por) VALUES (?,?,?,?,?,?,?)');
                     $stmt->execute([$socio_id, $comp, $moeda, $valor, $data, $obs, (int)$u['id']]);
@@ -75,15 +75,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     header('Location: ' . APP_BASE_URL . '/distribuicao.php?mes=' . urlencode($comp) . '&ok=1'); exit;
                 }
             } catch (PDOException $e) {
-                $flash = ['err', 'Erro: ' . $e->getMessage()];
+                $flash = ['err', t('Erro: ') . $e->getMessage()];
             }
         } else {
-            $flash = ['err', 'Valor deve ser maior que zero.'];
+            $flash = ['err', t('Valor deve ser maior que zero.')];
         }
     }
 }
-if (isset($_GET['ok'])) $flash = ['ok', 'Pagamento registrado.'];
-if (isset($_GET['del'])) $flash = ['ok', 'Pagamento apagado.'];
+if (isset($_GET['ok'])) $flash = ['ok', t('Pagamento registrado.')];
+if (isset($_GET['del'])) $flash = ['ok', t('Pagamento apagado.')];
 
 $competencia = $_GET['mes'] ?? date('Y-m');
 if (!preg_match('/^\d{4}-\d{2}$/', $competencia)) $competencia = date('Y-m');
@@ -120,15 +120,15 @@ $nome_mes = ['','janeiro','fevereiro','março','abril','maio','junho','julho','a
 
 $historico = cobrancas_pagas_recentes($db, 30);
 
-$page = 'Distribuição de lucro';
+$page = t('Distribuição de lucro');
 $show_back = true;
 $back_to = APP_BASE_URL . '/dashboard.php';
 require __DIR__ . '/includes/header.php';
 ?>
-<h1 class="page-title">Finanças</h1>
+<h1 class="page-title"><?= e(t('Finanças')) ?></h1>
 <?php render_group_tabs('financas', 'distribuicao'); ?>
-<h2>Distribuição de lucro</h2>
-<p class="muted">Receita das cobranças pagas é dividida em <strong><?= $total_quotas ?> quotas iguais</strong>: <?= $n_socios ?> sócio<?= $n_socios===1?'':'s' ?> + empresa.</p>
+<h2><?= e(t('Distribuição de lucro')) ?></h2>
+<p class="muted"><?= e(t('Receita das cobranças pagas é dividida em')) ?> <strong><?= $total_quotas ?> <?= e(t('quotas iguais')) ?></strong>: <?= $n_socios ?> <?= e($n_socios===1?t('sócio'):t('sócios')) ?> + <?= e(t('empresa')) ?>.</p>
 
 <div class="spaced mb-3">
   <a class="btn btn-ghost small" href="?mes=<?= e($mes_ant) ?>">← <?= e($mes_ant) ?></a>
@@ -150,30 +150,30 @@ require __DIR__ . '/includes/header.php';
   $cot_data = (string)($cot['data'] ?? '');
   $cot_data_fmt = preg_match('/^\d{4}-\d{2}-\d{2}$/', $cot_data) ? date('d/m/Y', strtotime($cot_data)) : $cot_data;
 ?>
-<h2>Resumo consolidado (em US$)</h2>
+<h2><?= e(t('Resumo consolidado (em US$)')) ?></h2>
 <div class="card brand">
-  <div class="title">🌎 Total convertido para dólar</div>
-  <div class="spaced" style="padding:6px 0;"><span>Receita</span><strong style="color:var(--c-success);"><?= e(money_fmt($rec_usd, 'USD')) ?></strong></div>
+  <div class="title">🌎 <?= e(t('Total convertido para dólar')) ?></div>
+  <div class="spaced" style="padding:6px 0;"><span><?= e(t('Receita')) ?></span><strong style="color:var(--c-success);"><?= e(money_fmt($rec_usd, 'USD')) ?></strong></div>
   <?php if ($desp_usd > 0): ?>
-    <div class="spaced" style="padding:6px 0;"><span>Despesas</span><strong style="color:var(--c-danger);">− <?= e(money_fmt($desp_usd, 'USD')) ?></strong></div>
+    <div class="spaced" style="padding:6px 0;"><span><?= e(t('Despesas')) ?></span><strong style="color:var(--c-danger);">− <?= e(money_fmt($desp_usd, 'USD')) ?></strong></div>
   <?php endif; ?>
   <?php if ($pf_usd > 0): ?>
-    <div class="spaced" style="padding:6px 0;"><span>Pagos a funcionários</span><strong style="color:var(--c-danger);">− <?= e(money_fmt($pf_usd, 'USD')) ?></strong></div>
+    <div class="spaced" style="padding:6px 0;"><span><?= e(t('Pagos a funcionários')) ?></span><strong style="color:var(--c-danger);">− <?= e(money_fmt($pf_usd, 'USD')) ?></strong></div>
   <?php endif; ?>
   <div class="spaced" style="padding:6px 0; border-top:1px solid var(--border);">
-    <strong>Lucro líquido</strong>
+    <strong><?= e(t('Lucro líquido')) ?></strong>
     <strong style="font-size:18px; color:<?= $liq_usd >= 0 ? 'var(--c-success)' : 'var(--c-danger)' ?>;"><?= e(money_fmt($liq_usd, 'USD')) ?></strong>
   </div>
   <div class="spaced" style="padding:6px 0; color:var(--c-primary-2);">
-    <span>Por quota (÷ <?= $total_quotas ?>)</span>
+    <span><?= e(t('Por quota (÷')) ?> <?= $total_quotas ?>)</span>
     <strong><?= e(money_fmt($parte_usd, 'USD')) ?></strong>
   </div>
   <div class="muted" style="font-size:11px; margin-top:8px; border-top:1px dashed var(--border); padding-top:8px;">
-    💱 US$ 1 = <?= e(money_fmt($cot['BRL'] ?? 0, 'BRL')) ?> · <?= e(money_fmt($cot['EUR'] ?? 0, 'EUR')) ?><?= $cot_data_fmt ? ' · cotação de ' . e($cot_data_fmt) : '' ?>
+    💱 US$ 1 = <?= e(money_fmt($cot['BRL'] ?? 0, 'BRL')) ?> · <?= e(money_fmt($cot['EUR'] ?? 0, 'EUR')) ?><?= $cot_data_fmt ? ' · ' . e(t('cotação de')) . ' ' . e($cot_data_fmt) : '' ?>
   </div>
 </div>
 
-<h2>Receita × Despesas × Lucro líquido</h2>
+<h2><?= e(t('Receita × Despesas × Lucro líquido')) ?></h2>
 <?php foreach (['BRL','USD','EUR'] as $m):
     $rec = $rec_mes[$m]; $desp = $desp_mes['totais'][$m] ?? 0;
     $pf = ($m === 'USD') ? $pag_func_mes : 0;
@@ -182,19 +182,19 @@ require __DIR__ . '/includes/header.php';
 ?>
   <div class="card">
     <div class="title"><?= $m ?></div>
-    <div class="spaced" style="padding:6px 0;"><span>Receita</span><strong style="color:var(--c-success);"><?= e(money_fmt($rec, $m)) ?></strong></div>
+    <div class="spaced" style="padding:6px 0;"><span><?= e(t('Receita')) ?></span><strong style="color:var(--c-success);"><?= e(money_fmt($rec, $m)) ?></strong></div>
     <?php if ($desp > 0): ?>
-      <div class="spaced" style="padding:6px 0;"><span>Despesas</span><strong style="color:var(--c-danger);">− <?= e(money_fmt($desp, $m)) ?></strong></div>
+      <div class="spaced" style="padding:6px 0;"><span><?= e(t('Despesas')) ?></span><strong style="color:var(--c-danger);">− <?= e(money_fmt($desp, $m)) ?></strong></div>
     <?php endif; ?>
     <?php if ($pf > 0): ?>
-      <div class="spaced" style="padding:6px 0;"><span>Pagos a funcionários</span><strong style="color:var(--c-danger);">− <?= e(money_fmt($pf, $m)) ?></strong></div>
+      <div class="spaced" style="padding:6px 0;"><span><?= e(t('Pagos a funcionários')) ?></span><strong style="color:var(--c-danger);">− <?= e(money_fmt($pf, $m)) ?></strong></div>
     <?php endif; ?>
     <div class="spaced" style="padding:6px 0; border-top:1px solid var(--border);">
-      <strong>Lucro líquido</strong>
+      <strong><?= e(t('Lucro líquido')) ?></strong>
       <strong style="color:<?= $liq>=0 ? 'var(--c-success)' : 'var(--c-danger)' ?>;"><?= e(money_fmt($liq, $m)) ?></strong>
     </div>
     <div class="spaced" style="padding:6px 0; color:var(--c-primary-2);">
-      <span>Por quota (÷ <?= $total_quotas ?>)</span>
+      <span><?= e(t('Por quota (÷')) ?> <?= $total_quotas ?>)</span>
       <strong><?= e(money_fmt($parte, $m)) ?></strong>
     </div>
   </div>
@@ -224,16 +224,16 @@ require __DIR__ . '/includes/header.php';
       ?>
       <div class="card<?= $is_empresa ? '' : '' ?>" <?= $is_empresa ? 'style="border-color:var(--c-orange);"' : '' ?>>
         <div class="title"><?= e($nome) ?> <?= $tag_html ?></div>
-        <div class="sub muted">1 quota</div>
+        <div class="sub muted"><?= e(t('1 quota')) ?></div>
         <div class="grid-2 mt-3">
           <div>
-            <div class="muted" style="font-size:11px;">Quota total</div>
+            <div class="muted" style="font-size:11px;"><?= e(t('Quota total')) ?></div>
             <div class="money md"><?= e(money_fmt($quota_brl, 'BRL')) ?></div>
             <div class="money md"><?= e(money_fmt($quota_usd, 'USD')) ?></div>
             <div class="money md"><?= e(money_fmt($quota_eur, 'EUR')) ?></div>
           </div>
           <div>
-            <div class="muted" style="font-size:11px;">Já pago</div>
+            <div class="muted" style="font-size:11px;"><?= e(t('Já pago')) ?></div>
             <div class="money md" style="color:var(--c-success);"><?= e(money_fmt($jp['BRL'], 'BRL')) ?></div>
             <div class="money md" style="color:var(--c-success);"><?= e(money_fmt($jp['USD'], 'USD')) ?></div>
             <div class="money md" style="color:var(--c-success);"><?= e(money_fmt($jp['EUR'], 'EUR')) ?></div>
@@ -242,7 +242,7 @@ require __DIR__ . '/includes/header.php';
         <?php if ($tem_pendente): ?>
           <div class="mt-3">
             <details>
-              <summary class="btn btn-secondary block" style="cursor:pointer;"><?= $is_empresa ? '🏦 Registrar retenção da empresa' : '💵 Registrar pagamento' ?></summary>
+              <summary class="btn btn-secondary block" style="cursor:pointer;"><?= $is_empresa ? '🏦 ' . e(t('Registrar retenção da empresa')) : '💵 ' . e(t('Registrar pagamento')) ?></summary>
               <?php foreach (['BRL','USD','EUR'] as $m): if ($pendente[$m] <= 0) continue; ?>
                 <form method="post" class="mt-3" onsubmit="return confirmaPagar(this);">
                   <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
@@ -251,17 +251,17 @@ require __DIR__ . '/includes/header.php';
                   <input type="hidden" name="competencia" value="<?= e($competencia) ?>">
                   <input type="hidden" name="moeda" value="<?= e($m) ?>">
                   <div class="grid-2">
-                    <div class="field"><label>Valor (<?= e($m) ?>)</label><input type="number" step="0.01" min="0.01" name="valor" required value="<?= e(number_format($pendente[$m], 2, '.', '')) ?>" data-moeda="<?= e($m) ?>" oninput="atualizaBtnPagar(this)"></div>
-                    <div class="field"><label>Data</label><input type="date" name="data_pagamento" required value="<?= e(date('Y-m-d')) ?>"></div>
+                    <div class="field"><label><?= e(t('Valor')) ?> (<?= e($m) ?>)</label><input type="number" step="0.01" min="0.01" name="valor" required value="<?= e(number_format($pendente[$m], 2, '.', '')) ?>" data-moeda="<?= e($m) ?>" oninput="atualizaBtnPagar(this)"></div>
+                    <div class="field"><label><?= e(t('Data')) ?></label><input type="date" name="data_pagamento" required value="<?= e(date('Y-m-d')) ?>"></div>
                   </div>
-                  <div class="field"><label>Observação</label><input name="observacao" placeholder="opcional"></div>
-                  <button class="btn block" type="submit" data-btn-pagar><?= e(money_fmt($pendente[$m], $m)) ?> · marcar como pago</button>
+                  <div class="field"><label><?= e(t('Observação')) ?></label><input name="observacao" placeholder="<?= e(t('opcional')) ?>"></div>
+                  <button class="btn block" type="submit" data-btn-pagar><?= e(money_fmt($pendente[$m], $m)) ?> · <?= e(t('marcar como pago')) ?></button>
                 </form>
               <?php endforeach; ?>
             </details>
           </div>
         <?php else: ?>
-          <div class="mt-3"><span class="status status-paga">✅ pago neste mês</span></div>
+          <div class="mt-3"><span class="status status-paga">✅ <?= e(t('pago neste mês')) ?></span></div>
         <?php endif; ?>
       </div>
       <?php
@@ -274,17 +274,17 @@ require __DIR__ . '/includes/header.php';
   // Destinatários da divisão: sócios + empresa (cada um = 1 quota)
   $div_destinatarios = [];
   foreach ($socios as $s) $div_destinatarios[] = $s['nome'];
-  $div_destinatarios[] = '🏢 Empresa (reserva)';
+  $div_destinatarios[] = '🏢 ' . t('Empresa (reserva)');
 ?>
 
-<h2>🧮 Dividir lucro entre os sócios</h2>
+<h2>🧮 <?= e(t('Dividir lucro entre os sócios')) ?></h2>
 <div class="card">
-  <p class="muted" style="font-size:13px;">Marque as moedas que quer dividir (lucro ÷ <?= $total_quotas ?> quotas: <?= $n_socios ?> sócio<?= $n_socios===1?'':'s' ?> + empresa). A coluna da direita mostra o <strong>total em US$</strong> (as moedas marcadas, convertidas pra dólar). <strong>Só simulação — não registra pagamento.</strong></p>
+  <p class="muted" style="font-size:13px;"><?= e(t('Marque as moedas que quer dividir (lucro ÷')) ?> <?= $total_quotas ?> <?= e(t('quotas:')) ?> <?= $n_socios ?> <?= e($n_socios===1?t('sócio'):t('sócios')) ?> + <?= e(t('empresa')) ?>). <?= e(t('A coluna da direita mostra o')) ?> <strong><?= e(t('total em US$')) ?></strong> <?= e(t('(as moedas marcadas, convertidas pra dólar).')) ?> <strong><?= e(t('Só simulação — não registra pagamento.')) ?></strong></p>
   <div class="spaced" style="gap:18px; flex-wrap:wrap; margin:var(--s-3) 0;">
     <?php foreach (['BRL','USD','EUR'] as $m): ?>
       <label class="check" style="display:inline-flex; align-items:center; gap:6px; cursor:pointer;">
         <input type="checkbox" class="moeda-div" value="<?= $m ?>" checked onchange="recalcDivisao()">
-        <strong><?= $m ?></strong> <span class="muted" style="font-size:12px;">(lucro <?= e(money_fmt($liq_mes[$m], $m)) ?>)</span>
+        <strong><?= $m ?></strong> <span class="muted" style="font-size:12px;">(<?= e(t('lucro')) ?> <?= e(money_fmt($liq_mes[$m], $m)) ?>)</span>
       </label>
     <?php endforeach; ?>
   </div>
@@ -322,7 +322,7 @@ require __DIR__ . '/includes/header.php';
     var sel = Array.prototype.slice.call(document.querySelectorAll('.moeda-div:checked')).map(function (c) { return c.value; });
     var box = document.getElementById('divisao_resultado');
     if (!box) return;
-    if (!sel.length) { box.innerHTML = '<div class="muted" style="padding:8px 0;">Selecione ao menos uma moeda.</div>'; return; }
+    if (!sel.length) { box.innerHTML = '<div class="muted" style="padding:8px 0;">' + <?= json_encode(t('Selecione ao menos uma moeda.')) ?> + '</div>'; return; }
     var html = '', totalUsd = 0;
     RECIPIENTS.forEach(function (nome) {
       var breakdown = sel.map(function (m) { return fmt(QUOTAS[m], m); }).join(' · ');
@@ -333,24 +333,24 @@ require __DIR__ . '/includes/header.php';
             +   '<strong style="white-space:nowrap;">' + fmt(usd, 'USD') + '</strong>'
             + '</div>';
     });
-    html += '<div class="spaced" style="padding:10px 0 2px; color:var(--c-primary-2);"><strong>Total dividido (US$)</strong><strong>' + fmt(totalUsd, 'USD') + '</strong></div>';
-    html += '<div class="muted" style="font-size:11px; margin-top:6px; border-top:1px dashed var(--border); padding-top:6px;">💱 US$ 1 = ' + fmt(RATES.BRL, 'BRL') + ' · ' + fmt(RATES.EUR, 'EUR') + ' — coluna da direita já convertida pra dólar</div>';
+    html += '<div class="spaced" style="padding:10px 0 2px; color:var(--c-primary-2);"><strong>' + <?= json_encode(t('Total dividido (US$)')) ?> + '</strong><strong>' + fmt(totalUsd, 'USD') + '</strong></div>';
+    html += '<div class="muted" style="font-size:11px; margin-top:6px; border-top:1px dashed var(--border); padding-top:6px;">💱 US$ 1 = ' + fmt(RATES.BRL, 'BRL') + ' · ' + fmt(RATES.EUR, 'EUR') + ' — ' + <?= json_encode(t('coluna da direita já convertida pra dólar')) ?> + '</div>';
     box.innerHTML = html;
   };
   recalcDivisao();
 })();
 </script>
 
-<h2>Sócios ativos</h2>
+<h2><?= e(t('Sócios ativos')) ?></h2>
 <?php foreach ($socios as $s):
     $key = 'socio_' . (int)$s['id'];
-    $tag = '<span class="status status-' . ($s['role']==='sadmin'?'destaque':'ia') . '">' . ($s['role']==='sadmin'?'super admin':'admin') . '</span>';
-    if ((int)$s['id'] === (int)$u['id']) $tag .= ' <span class="status status-paga">você</span>';
+    $tag = '<span class="status status-' . ($s['role']==='sadmin'?'destaque':'ia') . '">' . ($s['role']==='sadmin'?e(t('super admin')):e(t('admin'))) . '</span>';
+    if ((int)$s['id'] === (int)$u['id']) $tag .= ' <span class="status status-paga">' . e(t('você')) . '</span>';
     bloco_socio($s['nome'], $key, false, $tag, $quota_brl, $quota_usd, $quota_eur, $ja_pago_por, $competencia, (int)$u['id']);
 ?>
 <?php endforeach; ?>
 
-<?php bloco_socio('🏢 Empresa (reserva)', 'empresa', true, '', $quota_brl, $quota_usd, $quota_eur, $ja_pago_por, $competencia, (int)$u['id']); ?>
+<?php bloco_socio('🏢 ' . t('Empresa (reserva)'), 'empresa', true, '', $quota_brl, $quota_usd, $quota_eur, $ja_pago_por, $competencia, (int)$u['id']); ?>
 
 <?php if ($flash): ?><div class="flash <?= e($flash[0]) ?> mt-3"><?= e($flash[1]) ?></div><?php endif; ?>
 
@@ -370,9 +370,9 @@ require __DIR__ . '/includes/header.php';
 ?>
 
 <?php if ($pagamentos_mes): ?>
-  <h2 class="mt-5">Pagamentos lançados em <?= e($nome_mes) ?></h2>
+  <h2 class="mt-5"><?= e(t('Pagamentos lançados em')) ?> <?= e($nome_mes) ?></h2>
   <?php foreach ($pagamentos_mes as $p):
-      $nome_destino = $p['socio_id'] === null ? '🏢 Empresa (reserva)' : $p['socio_nome'];
+      $nome_destino = $p['socio_id'] === null ? '🏢 ' . t('Empresa (reserva)') : $p['socio_nome'];
   ?>
     <div class="card spaced">
       <div class="info" style="flex:1;">
@@ -385,12 +385,12 @@ require __DIR__ . '/includes/header.php';
       <div class="right" style="display:flex; gap:8px; align-items:center;">
         <div class="money md" style="color:var(--c-danger);">− <?= e(money_fmt((float)$p['valor'], $p['moeda'])) ?></div>
         <?php if (is_sadmin()): ?>
-          <form method="post" style="margin:0;" onsubmit="return confirm('Apagar este pagamento de <?= e($nome_destino) ?> (<?= e(money_fmt((float)$p['valor'], $p['moeda'])) ?>)?');">
+          <form method="post" style="margin:0;" onsubmit="return confirm('<?= e(t('Apagar este pagamento de')) ?> <?= e($nome_destino) ?> (<?= e(money_fmt((float)$p['valor'], $p['moeda'])) ?>)?');">
             <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
             <input type="hidden" name="op" value="apagar_pagamento_socio">
             <input type="hidden" name="id" value="<?= (int)$p['id'] ?>">
             <input type="hidden" name="competencia" value="<?= e($competencia) ?>">
-            <button class="btn btn-ghost small" type="submit" title="Apagar" style="color:var(--c-danger);">🗑</button>
+            <button class="btn btn-ghost small" type="submit" title="<?= e(t('Apagar')) ?>" style="color:var(--c-danger);">🗑</button>
           </form>
         <?php endif; ?>
       </div>
@@ -398,31 +398,31 @@ require __DIR__ . '/includes/header.php';
   <?php endforeach; ?>
 <?php endif; ?>
 
-<h2>Acumulado total (todas as cobranças pagas até hoje)</h2>
+<h2><?= e(t('Acumulado total (todas as cobranças pagas até hoje)')) ?></h2>
 <div class="grid-2">
   <?php foreach (['BRL','USD','EUR'] as $m): $valor = $rec_total[$m]; $parte = $total_quotas > 0 ? $valor / $total_quotas : 0; ?>
     <div class="kpi">
       <div class="v"><?= e(money_fmt($valor, $m)) ?></div>
-      <div class="l">Total <?= $m ?> · sua parte <?= e(money_fmt($parte, $m)) ?></div>
+      <div class="l"><?= e(t('Total')) ?> <?= $m ?> · <?= e(t('sua parte')) ?> <?= e(money_fmt($parte, $m)) ?></div>
     </div>
   <?php endforeach; ?>
 </div>
 
-<h2>Cobranças pagas recentes</h2>
+<h2><?= e(t('Cobranças pagas recentes')) ?></h2>
 <?php foreach ($historico as $h): $parte = $total_quotas > 0 ? (float)$h['valor_total'] / $total_quotas : 0; ?>
   <a class="list-card" href="<?= e(APP_BASE_URL) ?>/cobrancas.php?id=<?= (int)$h['id'] ?>">
     <div class="info">
       <div class="nome"><?= e($h['nome_empresa']) ?></div>
-      <div class="sub"><?= e($h['competencia_mes']) ?> · pago <?= $h['data_quitacao'] ? e(date('d/m/Y', strtotime($h['data_quitacao']))) : '—' ?></div>
+      <div class="sub"><?= e($h['competencia_mes']) ?> · <?= e(t('pago')) ?> <?= $h['data_quitacao'] ? e(date('d/m/Y', strtotime($h['data_quitacao']))) : '—' ?></div>
     </div>
     <div class="right">
       <div class="money md"><?= e(money_fmt((float)$h['valor_total'], $h['moeda'])) ?></div>
-      <div class="muted" style="font-size:11px;">quota: <?= e(money_fmt($parte, $h['moeda'])) ?></div>
+      <div class="muted" style="font-size:11px;"><?= e(t('quota:')) ?> <?= e(money_fmt($parte, $h['moeda'])) ?></div>
     </div>
   </a>
 <?php endforeach; ?>
 <?php if (!$historico): ?>
-  <p class="muted center mt-5">Nenhuma cobrança paga ainda.</p>
+  <p class="muted center mt-5"><?= e(t('Nenhuma cobrança paga ainda.')) ?></p>
 <?php endif; ?>
 
 <script>
@@ -447,13 +447,13 @@ function atualizaBtnPagar(input) {
   var form = input.closest('form'); if (!form) return;
   var btn = form.querySelector('[data-btn-pagar]'); if (!btn) return;
   var v = _valorDoForm(input);
-  btn.textContent = (isNaN(v) ? '' : _moneyFmt(v, input.dataset.moeda || '') + ' · ') + 'marcar como pago';
+  btn.textContent = (isNaN(v) ? '' : _moneyFmt(v, input.dataset.moeda || '') + ' · ') + <?= json_encode(t('marcar como pago')) ?>;
 }
 function confirmaPagar(form) {
   var input = form.querySelector('input[name="valor"]');
   var v = _valorDoForm(input);
-  var txt = isNaN(v) ? 'este valor' : _moneyFmt(v, input.dataset.moeda || '');
-  return confirm('Confirmar pagamento de ' + txt + '?');
+  var txt = isNaN(v) ? <?= json_encode(t('este valor')) ?> : _moneyFmt(v, input.dataset.moeda || '');
+  return confirm(<?= json_encode(t('Confirmar pagamento de ')) ?> + txt + '?');
 }
 </script>
 <?php require __DIR__ . '/includes/footer.php'; ?>

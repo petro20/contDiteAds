@@ -52,10 +52,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header('Location: ' . APP_BASE_URL . '/funcionarios.php?acao=editar&id=' . $fid . '&ok=upd'); exit;
     }
     if (($_POST['op'] ?? '') === 'apagar') {
-        if (!is_sadmin()) { http_response_code(403); exit('Apenas Sadmin pode apagar.'); }
+        if (!is_sadmin()) { http_response_code(403); exit(t('Apenas Sadmin pode apagar.')); }
         $pid = (int)($_POST['id'] ?? 0);
         if ($pid === (int)$me['id']) {
-            $flash = ['err', 'Você não pode apagar a si mesmo.'];
+            $flash = ['err', t('Você não pode apagar a si mesmo.')];
         } else {
             // Trava: não dá pra apagar o último sadmin ativo
             $stmt = $db->prepare('SELECT role, ativo FROM usuarios WHERE id = ?');
@@ -64,7 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($alvo && $alvo['role'] === 'sadmin' && (int)$alvo['ativo'] === 1) {
                 $count = (int)$db->query("SELECT COUNT(*) FROM usuarios WHERE role='sadmin' AND ativo=1")->fetchColumn();
                 if ($count <= 1) {
-                    $flash = ['err', 'Não dá pra apagar o único Super Admin. Crie outro sadmin primeiro.'];
+                    $flash = ['err', t('Não dá pra apagar o único Super Admin. Crie outro sadmin primeiro.')];
                     goto skip_delete;
                 }
             }
@@ -73,7 +73,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 audit_log('usuario.apagado_cascade', 'usuarios', $pid);
                 header('Location: ' . APP_BASE_URL . '/funcionarios.php?ok=del'); exit;
             } catch (Throwable $e) {
-                $flash = ['err', 'Erro ao apagar: ' . $e->getMessage()];
+                $flash = ['err', t('Erro ao apagar: ') . $e->getMessage()];
             }
             skip_delete:;
         }
@@ -98,7 +98,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->execute([$pid]);
             $cur_role = $stmt->fetchColumn();
             if (in_array($cur_role, ['admin','sadmin'], true)) {
-                http_response_code(403); exit('Admin comum não pode editar outro admin.');
+                http_response_code(403); exit(t('Admin comum não pode editar outro admin.'));
             }
         }
 
@@ -114,7 +114,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($vai_perder_sadmin) {
                     $count = (int)$db->query("SELECT COUNT(*) FROM usuarios WHERE role='sadmin' AND ativo=1")->fetchColumn();
                     if ($count <= 1) {
-                        $flash = ['err', 'Não dá pra rebaixar/desativar o único Super Admin. Crie outro sadmin primeiro.'];
+                        $flash = ['err', t('Não dá pra rebaixar/desativar o único Super Admin. Crie outro sadmin primeiro.')];
                         $acao = 'editar'; $id = $pid;
                         goto skip_save;
                     }
@@ -131,10 +131,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($trabalha_com === $pid) $trabalha_com = null; // não pode trabalhar consigo mesmo
 
         if ($nome === '' || $email === '') {
-            $flash = ['err','Nome e email são obrigatórios.'];
+            $flash = ['err',t('Nome e email são obrigatórios.')];
             $acao = $pid ? 'editar' : 'novo'; $id = $pid;
         } elseif (!$pid && $senha === '') {
-            $flash = ['err','Defina uma senha.']; $acao = 'novo';
+            $flash = ['err',t('Defina uma senha.')]; $acao = 'novo';
         } else {
             try {
                 if ($pid) {
@@ -155,7 +155,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             } catch (PDOException $e) {
                 if ((int)$e->errorInfo[1] === 1062) {
-                    $flash = ['err','Já existe usuário com este email.'];
+                    $flash = ['err',t('Já existe usuário com este email.')];
                     $acao = $pid ? 'editar' : 'novo'; $id = $pid;
                 } else { throw $e; }
             }
@@ -163,9 +163,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         skip_save:;
     }
 }
-if (isset($_GET['ok'])) $flash = ['ok', $_GET['ok'] === 'add' ? 'Criado.' : 'Atualizado.'];
+if (isset($_GET['ok'])) $flash = ['ok', $_GET['ok'] === 'add' ? t('Criado.') : t('Atualizado.')];
 
-$page = 'Funcionários';
+$page = t('Funcionários');
 $nav_active = '';
 
 if ($acao === 'novo' || $acao === 'editar') {
@@ -184,7 +184,7 @@ if ($acao === 'novo' || $acao === 'editar') {
             $func = array_merge($func, $row);
         }
     }
-    $page = $func['id'] ? 'Editar funcionário' : 'Novo funcionário';
+    $page = $func['id'] ? t('Editar funcionário') : t('Novo funcionário');
     require __DIR__ . '/includes/header.php';
     ?>
     <?php if ($flash): ?><div class="flash <?= e($flash[0]) ?>"><?= e($flash[1]) ?></div><?php endif; ?>
@@ -193,54 +193,54 @@ if ($acao === 'novo' || $acao === 'editar') {
       <input type="hidden" name="op" value="salvar">
       <input type="hidden" name="id" value="<?= (int)$func['id'] ?>">
       <div class="card">
-        <div class="field"><label>Nome *</label><input name="nome" required value="<?= e($func['nome']) ?>"></div>
-        <div class="field"><label>Email (login) *</label><input type="email" name="email" required value="<?= e($func['email']) ?>"></div>
-        <div class="field"><label>Perfil</label>
+        <div class="field"><label><?= e(t('Nome *')) ?></label><input name="nome" required value="<?= e($func['nome']) ?>"></div>
+        <div class="field"><label><?= e(t('Email (login) *')) ?></label><input type="email" name="email" required value="<?= e($func['email']) ?>"></div>
+        <div class="field"><label><?= e(t('Perfil')) ?></label>
           <select name="role" id="role_select" data-original="<?= e($func['role']) ?>" data-original-name="<?= e($func['nome']) ?>" data-is-self="<?= ((int)$func['id'] === (int)$me['id']) ? '1' : '0' ?>" <?= is_sadmin() ? '' : 'disabled' ?>>
-            <option value="funcionario" <?= $func['role']==='funcionario'?'selected':'' ?>>Funcionário</option>
+            <option value="funcionario" <?= $func['role']==='funcionario'?'selected':'' ?>><?= e(t('Funcionário')) ?></option>
             <?php if (is_sadmin()): ?>
-              <option value="admin"  <?= $func['role']==='admin'?'selected':'' ?>>Admin</option>
-              <option value="sadmin" <?= $func['role']==='sadmin'?'selected':'' ?>>Super Admin</option>
+              <option value="admin"  <?= $func['role']==='admin'?'selected':'' ?>><?= e(t('Admin')) ?></option>
+              <option value="sadmin" <?= $func['role']==='sadmin'?'selected':'' ?>><?= e(t('Super Admin')) ?></option>
             <?php endif; ?>
           </select>
-          <?php if (!is_sadmin()): ?><div class="hint">Só Super Admin pode promover usuários.</div><?php endif; ?>
+          <?php if (!is_sadmin()): ?><div class="hint"><?= e(t('Só Super Admin pode promover usuários.')) ?></div><?php endif; ?>
         </div>
-        <div class="field"><label>CPF (opcional)</label><input name="cpf" value="<?= e($func['cpf']) ?>"></div>
-        <div class="field"><label>WiseTag (recebe USD)</label><input name="wisetag" value="<?= e($func['wisetag']) ?>" placeholder="@wisetag"></div>
-        <div class="field"><label>País</label><input name="pais" value="<?= e($func['pais']) ?>"></div>
+        <div class="field"><label><?= e(t('CPF (opcional)')) ?></label><input name="cpf" value="<?= e($func['cpf']) ?>"></div>
+        <div class="field"><label><?= e(t('WiseTag (recebe USD)')) ?></label><input name="wisetag" value="<?= e($func['wisetag']) ?>" placeholder="@wisetag"></div>
+        <div class="field"><label><?= e(t('País')) ?></label><input name="pais" value="<?= e($func['pais']) ?>"></div>
         <div class="field">
-          <label>Senha <?= $func['id'] ? '(deixe em branco para manter)' : '*' ?></label>
+          <label><?= e(t('Senha')) ?> <?= $func['id'] ? e(t('(deixe em branco para manter)')) : '*' ?></label>
           <div class="field-password">
             <input type="password" name="senha" <?= $func['id']?'':'required' ?> autocomplete="new-password">
-            <button type="button" class="password-toggle" onclick="togglePassword(this)" aria-label="Mostrar senha">👁</button>
+            <button type="button" class="password-toggle" onclick="togglePassword(this)" aria-label="<?= e(t('Mostrar senha')) ?>">👁</button>
           </div>
         </div>
-        <label class="check"><input type="checkbox" name="ativo" <?= $func['ativo']?'checked':'' ?>> Ativo</label>
-        <label class="check"><input type="checkbox" name="aceitando_clientes" <?= $func['aceitando_clientes']?'checked':'' ?>> Aceitando novos clientes</label>
+        <label class="check"><input type="checkbox" name="ativo" <?= $func['ativo']?'checked':'' ?>> <?= e(t('Ativo')) ?></label>
+        <label class="check"><input type="checkbox" name="aceitando_clientes" <?= $func['aceitando_clientes']?'checked':'' ?>> <?= e(t('Aceitando novos clientes')) ?></label>
 
         <div class="field mt-3">
-          <label>👥 Trabalha em dupla com (opcional)</label>
+          <label>👥 <?= e(t('Trabalha em dupla com (opcional)')) ?></label>
           <select name="trabalha_com_id">
-            <option value="">— sozinho (sem dupla) —</option>
+            <option value=""><?= e(t('— sozinho (sem dupla) —')) ?></option>
             <?php
               $duplas = $db->query("SELECT id, nome FROM usuarios WHERE ativo=1 AND role IN ('funcionario','admin','sadmin') AND id != " . (int)$func['id'] . " ORDER BY nome")->fetchAll();
               foreach ($duplas as $d): ?>
               <option value="<?= (int)$d['id'] ?>" <?= $func['trabalha_com_id']==$d['id']?'selected':'' ?>><?= e($d['nome']) ?></option>
             <?php endforeach; ?>
           </select>
-          <div class="hint">Se essa pessoa trabalha em dupla com outra, ela <strong>vê a mesma agenda</strong> e pode marcar entregas — mas o <strong>pagamento vai todo</strong> para a pessoa selecionada.</div>
+          <div class="hint"><?= t('Se essa pessoa trabalha em dupla com outra, ela <strong>vê a mesma agenda</strong> e pode marcar entregas — mas o <strong>pagamento vai todo</strong> para a pessoa selecionada.') ?></div>
         </div>
       </div>
-      <button class="btn block" type="submit">Salvar</button>
+      <button class="btn block" type="submit"><?= e(t('Salvar')) ?></button>
     </form>
 
     <?php if ($func['id'] && is_sadmin() && (int)$func['id'] !== (int)$me['id']): ?>
-      <h2>⚠ Zona de perigo</h2>
-      <form method="post" onsubmit="return confirm('APAGAR DEFINITIVAMENTE este usuário?\n\n⚠ Vai apagar EM CASCATA tudo ligado a ele:\n  • pagamentos recebidos (funcionário e sócio)\n  • entregas que executou\n  • capacidade declarada e valores por item\n\nCobranças/pagamentos/despesas que ele CRIOU serão reatribuídas a você.\n\nConfirmar?');">
+      <h2>⚠ <?= e(t('Zona de perigo')) ?></h2>
+      <form method="post" onsubmit="return confirm('<?= e(t('APAGAR DEFINITIVAMENTE este usuário?\n\n⚠ Vai apagar EM CASCATA tudo ligado a ele:\n  • pagamentos recebidos (funcionário e sócio)\n  • entregas que executou\n  • capacidade declarada e valores por item\n\nCobranças/pagamentos/despesas que ele CRIOU serão reatribuídas a você.\n\nConfirmar?')) ?>');">
         <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
         <input type="hidden" name="op" value="apagar">
         <input type="hidden" name="id" value="<?= (int)$func['id'] ?>">
-        <button class="btn btn-danger block" type="submit">🗑 Apagar definitivamente</button>
+        <button class="btn btn-danger block" type="submit">🗑 <?= e(t('Apagar definitivamente')) ?></button>
       </form>
     <?php endif; ?>
 
@@ -253,13 +253,13 @@ if ($acao === 'novo' || $acao === 'editar') {
       var nome  = sel.dataset.originalName;
       var euMesmo = sel.dataset.isSelf === '1';
       if (orig && atual !== orig) {
-        var rotulo = {admin:'Admin', funcionario:'Funcionário'};
-        var msg = 'Você está mudando o perfil de "' + nome + '"\n' +
-                  'de ' + (rotulo[orig]||orig) + ' → ' + (rotulo[atual]||atual) + '\n\n';
+        var rotulo = {admin:<?= json_encode(t('Admin')) ?>, funcionario:<?= json_encode(t('Funcionário')) ?>};
+        var msg = <?= json_encode(t('Você está mudando o perfil de "')) ?> + nome + '"\n' +
+                  <?= json_encode(t('de ')) ?> + (rotulo[orig]||orig) + ' → ' + (rotulo[atual]||atual) + '\n\n';
         if (euMesmo && orig === 'admin' && atual !== 'admin') {
-          msg += '⚠ ATENÇÃO: este é o SEU usuário. Se confirmar, você perde acesso de administrador imediatamente.\n\n';
+          msg += <?= json_encode(t('⚠ ATENÇÃO: este é o SEU usuário. Se confirmar, você perde acesso de administrador imediatamente.') . "\n\n") ?>;
         }
-        msg += 'Confirma a mudança?';
+        msg += <?= json_encode(t('Confirma a mudança?')) ?>;
         return confirm(msg);
       }
       return true;
@@ -274,22 +274,22 @@ if ($acao === 'novo' || $acao === 'editar') {
         $cap_map = [];
         foreach ($stmt->fetchAll() as $r) $cap_map[$r['categoria']] = (int)$r['capacidade_mensal'];
     ?>
-      <h2>Capacidade mensal declarada</h2>
+      <h2><?= e(t('Capacidade mensal declarada')) ?></h2>
       <form method="post">
         <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
         <input type="hidden" name="op" value="salvar_capacidade">
         <input type="hidden" name="funcionario_id" value="<?= (int)$func['id'] ?>">
         <div class="card">
-          <p class="muted">Quantos itens este funcionário consegue absorver por mês. Sistema usa pra mostrar 🟢/🔴 ao atribuir.</p>
+          <p class="muted"><?= e(t('Quantos itens este funcionário consegue absorver por mês. Sistema usa pra mostrar 🟢/🔴 ao atribuir.')) ?></p>
           <?php foreach ($cap_categorias as $cat):
-              $label = ['criativos'=>'Criativos (CTF/CTV/CTI)','postagens'=>'Pacotes POSTAGEM','sites_projetos'=>'Sites/projetos únicos'][$cat];
+              $label = ['criativos'=>t('Criativos (CTF/CTV/CTI)'),'postagens'=>t('Pacotes POSTAGEM'),'sites_projetos'=>t('Sites/projetos únicos')][$cat];
           ?>
             <div class="field">
               <label><?= e($label) ?></label>
               <input type="number" min="0" name="cap[<?= e($cat) ?>]" value="<?= isset($cap_map[$cat]) ? (int)$cap_map[$cat] : '' ?>" placeholder="0">
             </div>
           <?php endforeach; ?>
-          <button class="btn block" type="submit">Salvar capacidade</button>
+          <button class="btn block" type="submit"><?= e(t('Salvar capacidade')) ?></button>
         </div>
       </form>
 
@@ -305,20 +305,20 @@ if ($acao === 'novo' || $acao === 'editar') {
         $valores_map = [];
         foreach ($stmt->fetchAll() as $r) $valores_map[(int)$r['item_id']] = (float)$r['valor_usd'];
     ?>
-      <h2>Quanto este funcionário recebe (USD)</h2>
+      <h2><?= e(t('Quanto este funcionário recebe (USD)')) ?></h2>
       <form method="post" action="<?= e(APP_BASE_URL) ?>/funcionarios.php?acao=editar&id=<?= (int)$func['id'] ?>">
         <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
         <input type="hidden" name="op" value="salvar_valores">
         <input type="hidden" name="funcionario_id" value="<?= (int)$func['id'] ?>">
         <div class="card">
-          <p class="muted">Quanto o funcionário recebe (em USD) cada vez que executa um item. Pacotes mensais: valor fixo por mês. Por unidade: valor × quantidade entregue.</p>
+          <p class="muted"><?= e(t('Quanto o funcionário recebe (em USD) cada vez que executa um item. Pacotes mensais: valor fixo por mês. Por unidade: valor × quantidade entregue.')) ?></p>
           <?php foreach ($itens_cat as $it): ?>
             <div class="field">
               <label><?= e($it['nome']) ?> <span class="muted">(<?= e($it['tipo']) ?>)</span></label>
               <input type="number" step="0.01" min="0" name="valor[<?= (int)$it['id'] ?>]" value="<?= isset($valores_map[(int)$it['id']]) ? e(number_format($valores_map[(int)$it['id']], 2, '.', '')) : '' ?>" placeholder="0.00">
             </div>
           <?php endforeach; ?>
-          <button class="btn block" type="submit">Salvar valores</button>
+          <button class="btn block" type="submit"><?= e(t('Salvar valores')) ?></button>
         </div>
       </form>
     <?php endif; ?>
@@ -350,18 +350,18 @@ foreach ($users as $u) {
     }
 }
 ?>
-<h1 class="page-title">Equipe</h1>
+<h1 class="page-title"><?= e(t('Equipe')) ?></h1>
 <?php render_group_tabs('equipe', 'funcionarios'); ?>
 <?php if ($flash): ?><div class="flash <?= e($flash[0]) ?>"><?= e($flash[1]) ?></div><?php endif; ?>
 <div class="btn-pair">
-  <a href="?acao=novo" class="btn btn-brand">+ Novo</a>
-  <a href="<?= e(APP_BASE_URL) ?>/convites.php" class="btn btn-secondary">✉️ Convidar</a>
+  <a href="?acao=novo" class="btn btn-brand">+ <?= e(t('Novo')) ?></a>
+  <a href="<?= e(APP_BASE_URL) ?>/convites.php" class="btn btn-secondary">✉️ <?= e(t('Convidar')) ?></a>
 </div>
 
 <?php if ($duplas): ?>
   <details class="card mt-3">
-    <summary style="cursor:pointer; padding:8px 0;"><strong>👥 Duplas configuradas (<?= count($duplas) ?>)</strong></summary>
-    <p class="muted" style="font-size:13px; margin-top:8px;">Pessoas que compartilham agenda. O pagamento vai todo pro principal (à esquerda).</p>
+    <summary style="cursor:pointer; padding:8px 0;"><strong>👥 <?= e(t('Duplas configuradas')) ?> (<?= count($duplas) ?>)</strong></summary>
+    <p class="muted" style="font-size:13px; margin-top:8px;"><?= e(t('Pessoas que compartilham agenda. O pagamento vai todo pro principal (à esquerda).')) ?></p>
     <?php foreach ($duplas as $d): ?>
       <div class="info-pair" style="padding:8px 0; border-bottom:1px solid var(--border);">
         <span>
@@ -371,24 +371,24 @@ foreach ($users as $u) {
         </span>
       </div>
     <?php endforeach; ?>
-    <p class="hint" style="margin-top:8px;">Pra desfazer uma dupla, clique no nome subordinado e mude "Trabalha em dupla com" pra "— sozinho —".</p>
+    <p class="hint" style="margin-top:8px;"><?= e(t('Pra desfazer uma dupla, clique no nome subordinado e mude "Trabalha em dupla com" pra "— sozinho —".')) ?></p>
   </details>
 <?php endif; ?>
 
-<div class="section-label mt-5">Equipe (<?= count($users) ?>)</div>
+<div class="section-label mt-5"><?= e(t('Equipe')) ?> (<?= count($users) ?>)</div>
 <?php foreach ($users as $u): ?>
   <a class="list-card" href="?acao=editar&id=<?= (int)$u['id'] ?>">
     <div class="info">
       <div class="nome">
         <?= e($u['nome']) ?>
-        <?php if ($u['role'] === 'sadmin'): ?><span class="status status-destaque">super admin</span><?php elseif ($u['role'] === 'admin'): ?><span class="status status-ia">admin</span><?php endif; ?>
-        <?php if (!$u['ativo']): ?><span class="status status-info">inativo</span><?php endif; ?>
-        <?php if ($u['trabalha_com_id']): ?><span class="status status-info">👥 dupla com <?= e($u['dupla_nome']) ?></span><?php endif; ?>
+        <?php if ($u['role'] === 'sadmin'): ?><span class="status status-destaque"><?= e(t('super admin')) ?></span><?php elseif ($u['role'] === 'admin'): ?><span class="status status-ia"><?= e(t('admin')) ?></span><?php endif; ?>
+        <?php if (!$u['ativo']): ?><span class="status status-info"><?= e(t('inativo')) ?></span><?php endif; ?>
+        <?php if ($u['trabalha_com_id']): ?><span class="status status-info">👥 <?= e(t('dupla com')) ?> <?= e($u['dupla_nome']) ?></span><?php endif; ?>
       </div>
       <div class="sub">
         <?= e($u['email']) ?>
         <?php if ($u['wisetag']): ?> · <?= e($u['wisetag']) ?><?php endif; ?>
-        <?php if ($u['role'] === 'funcionario'): ?> · <?= $u['aceitando_clientes'] ? '<span class="status status-paga">🟢 aceitando</span>' : '<span class="status status-vencida">🔴 cheio</span>' ?><?php endif; ?>
+        <?php if ($u['role'] === 'funcionario'): ?> · <?= $u['aceitando_clientes'] ? '<span class="status status-paga">🟢 ' . e(t('aceitando')) . '</span>' : '<span class="status status-vencida">🔴 ' . e(t('cheio')) . '</span>' ?><?php endif; ?>
       </div>
     </div>
   </a>

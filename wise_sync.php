@@ -26,7 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['op'] ?? '') === 'confirmar
         }
     }
     audit_log('wise.csv_import', 'cobrancas', $n);
-    $flash = ['ok', $n . ' pagamento(s) registrado(s) com sucesso!'];
+    $flash = ['ok', $n . ' ' . t('pagamento(s) registrado(s) com sucesso!')];
 }
 
 // --- Processar upload de CSV ---
@@ -36,11 +36,11 @@ $debug_csv = null;
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['op'] ?? '') === 'upload_csv') {
     csrf_check();
     if (empty($_FILES['csv']['tmp_name']) || $_FILES['csv']['error'] !== UPLOAD_ERR_OK) {
-        $erro_csv = 'Selecione um arquivo CSV.';
+        $erro_csv = t('Selecione um arquivo CSV.');
     } else {
         $h = fopen($_FILES['csv']['tmp_name'], 'r');
         if (!$h) {
-            $erro_csv = 'Não consegui abrir o arquivo.';
+            $erro_csv = t('Não consegui abrir o arquivo.');
         } else {
             $primeira = fgets($h);
             // Remove BOM se houver
@@ -166,7 +166,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['op'] ?? '') === 'upload_cs
                 'primeiras_linhas' => $primeiras_linhas,
             ];
 
-            if (!$transacoes && !$erro_csv) $erro_csv = 'Nenhum crédito encontrado. Veja o debug abaixo pra entender o que aconteceu com seu CSV.';
+            if (!$transacoes && !$erro_csv) $erro_csv = t('Nenhum crédito encontrado. Veja o debug abaixo pra entender o que aconteceu com seu CSV.');
         }
     }
 }
@@ -212,54 +212,54 @@ foreach ($transacoes as $tx) {
     else      $unmatched[] = $tx;
 }
 
-$page = 'Wise CSV — Sincronizar pagamentos';
+$page = t('Wise CSV — Sincronizar pagamentos');
 $show_back = true;
 $back_to = APP_BASE_URL . '/config_pagamento.php';
 require __DIR__ . '/includes/header.php';
 ?>
-<h1 class="page-title">🌍 Wise — Importar CSV de pagamentos</h1>
+<h1 class="page-title">🌍 <?= e(t('Wise — Importar CSV de pagamentos')) ?></h1>
 
 <?php if ($flash): ?><div class="flash <?= e($flash[0]) ?>"><?= e($flash[1]) ?></div><?php endif; ?>
 <?php if ($erro_csv): ?><div class="flash err"><?= e($erro_csv) ?></div><?php endif; ?>
 
 <?php if ($debug_csv): ?>
   <details class="card" style="border-color:var(--c-orange);">
-    <summary style="cursor:pointer; padding:8px 0; color:var(--c-orange);"><strong>🔍 Debug do CSV</strong> (colunas detectadas, linhas processadas)</summary>
+    <summary style="cursor:pointer; padding:8px 0; color:var(--c-orange);"><strong>🔍 <?= e(t('Debug do CSV')) ?></strong> <?= e(t('(colunas detectadas, linhas processadas)')) ?></summary>
     <div style="font-size:12px; margin-top:8px;">
-      <p><strong>Separador detectado:</strong> <code>"<?= e($debug_csv['separador']) ?>"</code></p>
-      <p><strong>Total de linhas lidas:</strong> <?= (int)$debug_csv['total_linhas'] ?> ·
-         <strong>Aceitas:</strong> <?= (int)$debug_csv['aceitas'] ?> ·
-         <strong>Rejeitadas (saída):</strong> <?= (int)$debug_csv['rejeitadas_direcao'] ?> ·
-         <strong>Rejeitadas (valor zero):</strong> <?= (int)$debug_csv['rejeitadas_valor'] ?></p>
-      <p><strong>Cabeçalhos do CSV:</strong></p>
+      <p><strong><?= e(t('Separador detectado:')) ?></strong> <code>"<?= e($debug_csv['separador']) ?>"</code></p>
+      <p><strong><?= e(t('Total de linhas lidas:')) ?></strong> <?= (int)$debug_csv['total_linhas'] ?> ·
+         <strong><?= e(t('Aceitas:')) ?></strong> <?= (int)$debug_csv['aceitas'] ?> ·
+         <strong><?= e(t('Rejeitadas (saída):')) ?></strong> <?= (int)$debug_csv['rejeitadas_direcao'] ?> ·
+         <strong><?= e(t('Rejeitadas (valor zero):')) ?></strong> <?= (int)$debug_csv['rejeitadas_valor'] ?></p>
+      <p><strong><?= e(t('Cabeçalhos do CSV:')) ?></strong></p>
       <code style="display:block; background:var(--bg-input); padding:8px; border-radius:4px; word-break:break-all; font-size:11px;">
         <?= e(implode(' | ', $debug_csv['header'])) ?>
       </code>
-      <p style="margin-top:8px;"><strong>Colunas mapeadas:</strong></p>
+      <p style="margin-top:8px;"><strong><?= e(t('Colunas mapeadas:')) ?></strong></p>
       <pre style="background:var(--bg-input); padding:8px; border-radius:4px; font-size:11px; overflow-x:auto;"><?= e(print_r($debug_csv['colunas_mapeadas'], true)) ?></pre>
       <?php if ($debug_csv['primeiras_linhas']): ?>
-        <p style="margin-top:8px;"><strong>Primeiras linhas do CSV (pra você verificar):</strong></p>
+        <p style="margin-top:8px;"><strong><?= e(t('Primeiras linhas do CSV (pra você verificar):')) ?></strong></p>
         <?php foreach ($debug_csv['primeiras_linhas'] as $idx => $linha): ?>
           <code style="display:block; background:var(--bg-input); padding:8px; border-radius:4px; word-break:break-all; font-size:11px; margin-bottom:4px;">
             #<?= $idx + 1 ?>: <?= e(implode(' | ', array_slice($linha, 0, 12))) ?>
           </code>
         <?php endforeach; ?>
       <?php endif; ?>
-      <p class="hint" style="margin-top:8px;">Se as colunas não foram identificadas corretamente, me envie esse debug pra eu ajustar o parser.</p>
+      <p class="hint" style="margin-top:8px;"><?= e(t('Se as colunas não foram identificadas corretamente, me envie esse debug pra eu ajustar o parser.')) ?></p>
     </div>
   </details>
 <?php endif; ?>
 
 <details class="card">
-  <summary class="muted" style="cursor:pointer; padding:8px 0;"><strong>📋 Como exportar o CSV do Wise</strong></summary>
+  <summary class="muted" style="cursor:pointer; padding:8px 0;"><strong>📋 <?= e(t('Como exportar o CSV do Wise')) ?></strong></summary>
   <ol style="padding-left:20px; margin-top:8px; color:var(--txt-2); font-size:13px;">
-    <li>Entre em <a href="https://wise.com/all-transactions" target="_blank" rel="noopener" style="color:var(--c-primary-2);">wise.com/all-transactions</a></li>
-    <li>Aplique filtros (período, conta da Dite Ads Teams)</li>
-    <li>Clica em <strong>"Baixar"</strong> ou <strong>"Exportar"</strong> → escolhe <strong>CSV</strong></li>
-    <li>Salva o arquivo no computador/celular</li>
-    <li>Volta aqui e faz upload abaixo</li>
+    <li><?= e(t('Entre em')) ?> <a href="https://wise.com/all-transactions" target="_blank" rel="noopener" style="color:var(--c-primary-2);">wise.com/all-transactions</a></li>
+    <li><?= e(t('Aplique filtros (período, conta da Dite Ads Teams)')) ?></li>
+    <li><?= e(t('Clica em')) ?> <strong>"<?= e(t('Baixar')) ?>"</strong> <?= e(t('ou')) ?> <strong>"<?= e(t('Exportar')) ?>"</strong> → <?= e(t('escolhe')) ?> <strong>CSV</strong></li>
+    <li><?= e(t('Salva o arquivo no computador/celular')) ?></li>
+    <li><?= e(t('Volta aqui e faz upload abaixo')) ?></li>
   </ol>
-  <p class="hint">O sistema lê automaticamente as colunas. Aceita CSV em PT-BR ou inglês, separado por vírgula ou ponto-e-vírgula.</p>
+  <p class="hint"><?= e(t('O sistema lê automaticamente as colunas. Aceita CSV em PT-BR ou inglês, separado por vírgula ou ponto-e-vírgula.')) ?></p>
 </details>
 
 <form method="post" enctype="multipart/form-data" class="mt-3">
@@ -267,17 +267,17 @@ require __DIR__ . '/includes/header.php';
   <input type="hidden" name="op" value="upload_csv">
   <div class="card">
     <div class="field">
-      <label>Arquivo CSV do extrato</label>
+      <label><?= e(t('Arquivo CSV do extrato')) ?></label>
       <input type="file" name="csv" accept=".csv,text/csv" required>
-      <div class="hint">Aceita o CSV de "Todas as transações" exportado da Wise.</div>
+      <div class="hint"><?= e(t('Aceita o CSV de "Todas as transações" exportado da Wise.')) ?></div>
     </div>
-    <button class="btn btn-brand block" type="submit">📤 Enviar e analisar CSV</button>
+    <button class="btn btn-brand block" type="submit">📤 <?= e(t('Enviar e analisar CSV')) ?></button>
   </div>
 </form>
 
 <?php if ($matched): ?>
-  <h2 class="mt-5">✅ Pagamentos casados (<?= count($matched) ?>)</h2>
-  <p class="muted" style="font-size:13px;">Esses créditos batem exatamente com cobranças abertas (mesma moeda e valor exato). Revise e confirme.</p>
+  <h2 class="mt-5">✅ <?= e(t('Pagamentos casados')) ?> (<?= count($matched) ?>)</h2>
+  <p class="muted" style="font-size:13px;"><?= e(t('Esses créditos batem exatamente com cobranças abertas (mesma moeda e valor exato). Revise e confirme.')) ?></p>
   <form method="post">
     <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
     <input type="hidden" name="op" value="confirmar_match">
@@ -288,28 +288,28 @@ require __DIR__ . '/includes/header.php';
       <div class="card success" style="margin-bottom:var(--s-3);">
         <label class="check" style="font-weight:600;">
           <input type="checkbox" name="match[<?= (int)$idx ?>]" value="<?= (int)$cob['id'] ?>" checked>
-          Registrar este pagamento
+          <?= e(t('Registrar este pagamento')) ?>
         </label>
         <div class="info-pair muted" style="font-size:12px; margin-top:8px;">
           <span class="l">🌍 Wise: <?= e($tx['payer'] ?: '—') ?></span>
           <span class="v"><?= e($tx['moeda']) ?> <?= number_format($tx['valor'], 2, ',', '.') ?> · <?= e($tx['data']) ?></span>
         </div>
         <div class="info-pair" style="font-size:13px;">
-          <span class="l">💳 Cobrança</span>
-          <span class="v"><strong><?= e($cob['nome_empresa']) ?></strong> · saldo <?= e($cob['moeda']) ?> <?= number_format($cob['saldo'], 2, ',', '.') ?></span>
+          <span class="l">💳 <?= e(t('Cobrança')) ?></span>
+          <span class="v"><strong><?= e($cob['nome_empresa']) ?></strong> · <?= e(t('saldo')) ?> <?= e($cob['moeda']) ?> <?= number_format($cob['saldo'], 2, ',', '.') ?></span>
         </div>
         <input type="hidden" name="valor[<?= (int)$idx ?>]" value="<?= e(number_format($tx['valor'], 2, '.', '')) ?>">
         <input type="hidden" name="data[<?= (int)$idx ?>]" value="<?= e($tx['data']) ?>">
         <input type="hidden" name="ref[<?= (int)$idx ?>]" value="<?= e($tx['ref']) ?>">
       </div>
     <?php endforeach; ?>
-    <button type="submit" class="btn btn-success block mt-3">✓ Confirmar e registrar (<?= count($matched) ?>) pagamento(s)</button>
+    <button type="submit" class="btn btn-success block mt-3">✓ <?= e(t('Confirmar e registrar')) ?> (<?= count($matched) ?>) <?= e(t('pagamento(s)')) ?></button>
   </form>
 <?php endif; ?>
 
 <?php if ($unmatched): ?>
-  <h2 class="mt-5">❓ Créditos sem casamento (<?= count($unmatched) ?>)</h2>
-  <p class="muted" style="font-size:13px;">Esses créditos não batem com nenhuma cobrança em aberto (moeda diferente, valor diferente, ou cobrança não existe).</p>
+  <h2 class="mt-5">❓ <?= e(t('Créditos sem casamento')) ?> (<?= count($unmatched) ?>)</h2>
+  <p class="muted" style="font-size:13px;"><?= e(t('Esses créditos não batem com nenhuma cobrança em aberto (moeda diferente, valor diferente, ou cobrança não existe).')) ?></p>
   <?php foreach ($unmatched as $tx): ?>
     <div class="card attention">
       <div class="info-pair">

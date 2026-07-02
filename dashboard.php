@@ -4,11 +4,11 @@ require_once __DIR__ . '/lib/money.php';
 $u  = require_login();
 $db = db();
 
-$page = 'Início';
+$page = t('Início');
 $nav_active = is_admin() ? 'painel' : ($u['role'] === 'funcionario' ? 'agenda' : 'cobrancas');
 require __DIR__ . '/includes/header.php';
 ?>
-<h1 class="page-title">Olá, <?= e($u['nome']) ?></h1>
+<h1 class="page-title"><?= e(t('Olá,')) ?> <?= e($u['nome']) ?></h1>
 
 <?php if (is_admin()): ?>
   <?php
@@ -213,10 +213,10 @@ require __DIR__ . '/includes/header.php';
   ?>
 
   <a class="card brand" href="<?= e(APP_BASE_URL) ?>/painel.php" style="text-decoration:none;">
-    <div class="title" style="color:var(--c-primary-2);">🔮 Previsão do mês <span class="muted" style="font-weight:normal; font-size:12px;">(<?= e(date('M/y')) ?>)</span></div>
+    <div class="title" style="color:var(--c-primary-2);">🔮 <?= e(t('Previsão do mês')) ?> <span class="muted" style="font-weight:normal; font-size:12px;">(<?= e(date('M/y')) ?>)</span></div>
 
     <div class="info-pair" style="margin-top:var(--s-3);">
-      <span class="l"><strong>📥 Recebimento</strong></span>
+      <span class="l"><strong>📥 <?= e(t('Recebimento')) ?></strong></span>
       <span class="v" style="text-align:right;">
         <?php
           $partes_prev = [];
@@ -228,11 +228,11 @@ require __DIR__ . '/includes/header.php';
       </span>
     </div>
     <div class="info-pair muted" style="font-size:12px;">
-      <span class="l">↳ cobranças + assinaturas ativas</span>
+      <span class="l">↳ <?= e(t('cobranças + assinaturas ativas')) ?></span>
     </div>
 
     <div class="info-pair" style="margin-top:var(--s-2);">
-      <span class="l"><strong>📤 Pagamento</strong></span>
+      <span class="l"><strong>📤 <?= e(t('Pagamento')) ?></strong></span>
       <span class="v" style="text-align:right;">
         <?php
           $partes_pag = [];
@@ -244,7 +244,7 @@ require __DIR__ . '/includes/header.php';
       </span>
     </div>
     <div class="info-pair muted" style="font-size:12px;">
-      <span class="l">↳ 💸 Despesas (<?= (int)$qtd_despesas ?>)</span>
+      <span class="l">↳ 💸 <?= e(t('Despesas')) ?> (<?= (int)$qtd_despesas ?>)</span>
       <span class="v">
         <?php
           $partes_d = [];
@@ -254,17 +254,17 @@ require __DIR__ . '/includes/header.php';
       </span>
     </div>
     <div class="info-pair muted" style="font-size:12px;">
-      <span class="l">↳ 💵 Funcionários (<?= (int)$qtd_assin_func ?> assin.)</span>
+      <span class="l">↳ 💵 <?= e(t('Funcionários')) ?> (<?= (int)$qtd_assin_func ?> <?= e(t('assin.')) ?>)</span>
       <span class="v"><?= $pag_func_previsto > 0 ? e(money_fmt($pag_func_previsto, 'USD')) : '—' ?></span>
     </div>
     <?php if ($qtd_assin_sem_valor > 0): ?>
       <div class="info-pair" style="font-size:12px; color:var(--c-orange);">
-        <span class="l">⚠ <?= (int)$qtd_assin_sem_valor ?> assinatura<?= $qtd_assin_sem_valor>1?'s':'' ?> sem valor USD configurado</span>
+        <span class="l">⚠ <?= (int)$qtd_assin_sem_valor ?> <?= $qtd_assin_sem_valor>1?e(t('assinaturas sem valor USD configurado')):e(t('assinatura sem valor USD configurado')) ?></span>
       </div>
     <?php endif; ?>
 
     <div class="info-pair" style="border-top:1px solid var(--border); padding-top:var(--s-3); margin-top:var(--s-3);">
-      <strong style="font-size:15px;">💎 Lucro previsto</strong>
+      <strong style="font-size:15px;">💎 <?= e(t('Lucro previsto')) ?></strong>
       <span class="v" style="text-align:right;">
         <?php
           $partes_lucro = [];
@@ -282,8 +282,8 @@ require __DIR__ . '/includes/header.php';
 
   <?php if ($tot_em_analise > 0): ?>
     <a class="card attention" href="<?= e(APP_BASE_URL) ?>/cobrancas.php?status=em_analise">
-      <div class="title" style="color:var(--c-orange);">🔔 <?= $tot_em_analise ?> comprovante<?= $tot_em_analise>1?'s':'' ?> aguardando verificação</div>
-      <div class="desc">Cliente enviou comprovante de pagamento. Aceite ou rejeite para concluir o ciclo.</div>
+      <div class="title" style="color:var(--c-orange);">🔔 <?= $tot_em_analise ?> <?= $tot_em_analise>1?e(t('comprovantes aguardando verificação')):e(t('comprovante aguardando verificação')) ?></div>
+      <div class="desc"><?= e(t('Cliente enviou comprovante de pagamento. Aceite ou rejeite para concluir o ciclo.')) ?></div>
     </a>
   <?php endif; ?>
 
@@ -296,39 +296,39 @@ require __DIR__ . '/includes/header.php';
   if ($tot_wise_pend > 0):
   ?>
     <a class="card attention" href="<?= e(APP_BASE_URL) ?>/wise_eventos.php">
-      <div class="title" style="color:var(--c-orange);">🪝 <?= $tot_wise_pend ?> pagamento<?= $tot_wise_pend>1?'s':'' ?> Wise aguardando reconciliação</div>
-      <div class="desc">Webhook detectou pagamentos automaticamente. Revise e confirme/rejeite no painel Wise.</div>
+      <div class="title" style="color:var(--c-orange);">🪝 <?= $tot_wise_pend ?> <?= $tot_wise_pend>1?e(t('pagamentos Wise aguardando reconciliação')):e(t('pagamento Wise aguardando reconciliação')) ?></div>
+      <div class="desc"><?= e(t('Webhook detectou pagamentos automaticamente. Revise e confirme/rejeite no painel Wise.')) ?></div>
     </a>
   <?php endif; ?>
 
   <?php if ($tot_vencidas > 0): ?>
     <a class="card danger" href="<?= e(APP_BASE_URL) ?>/cobrancas.php?status=aberta">
-      <div class="title" style="color:var(--c-danger);">💢 <?= $tot_vencidas ?> cobrança<?= $tot_vencidas>1?'s':'' ?> vencida<?= $tot_vencidas>1?'s':'' ?></div>
+      <div class="title" style="color:var(--c-danger);">💢 <?= $tot_vencidas ?> <?= $tot_vencidas>1?e(t('cobranças vencidas')):e(t('cobrança vencida')) ?></div>
       <div class="desc">
         <?php $partes = []; foreach ($val_vencidas as $m => $v) $partes[] = money_fmt($v, $m); echo e(implode(' · ', $partes)); ?>
-         · cobrar urgência via WhatsApp ou régua
+         · <?= e(t('cobrar urgência via WhatsApp ou régua')) ?>
       </div>
     </a>
   <?php endif; ?>
 
   <?php if ($sem_wisetag_com_grana > 0): ?>
     <a class="card attention" href="<?= e(APP_BASE_URL) ?>/funcionarios.php">
-      <div class="title" style="color:var(--c-orange);">💳 <?= $sem_wisetag_com_grana ?> funcionário<?= $sem_wisetag_com_grana>1?'s':'' ?> sem WiseTag com USD a receber</div>
-      <div class="desc">Cadastre o @wisetag no perfil deles pra liberar o pagamento.</div>
+      <div class="title" style="color:var(--c-orange);">💳 <?= $sem_wisetag_com_grana ?> <?= $sem_wisetag_com_grana>1?e(t('funcionários sem WiseTag com USD a receber')):e(t('funcionário sem WiseTag com USD a receber')) ?></div>
+      <div class="desc"><?= e(t('Cadastre o @wisetag no perfil deles pra liberar o pagamento.')) ?></div>
     </a>
   <?php endif; ?>
 
   <?php if ($sobrecarga > 0): ?>
     <a class="card attention" href="<?= e(APP_BASE_URL) ?>/capacidade.php">
-      <div class="title" style="color:var(--c-orange);">📊 <?= $sobrecarga ?> funcionário<?= $sobrecarga>1?'s':'' ?> acima da capacidade</div>
-      <div class="desc">A agenda do mês passou do que ele declarou conseguir entregar.</div>
+      <div class="title" style="color:var(--c-orange);">📊 <?= $sobrecarga ?> <?= $sobrecarga>1?e(t('funcionários acima da capacidade')):e(t('funcionário acima da capacidade')) ?></div>
+      <div class="desc"><?= e(t('A agenda do mês passou do que ele declarou conseguir entregar.')) ?></div>
     </a>
   <?php endif; ?>
 
   <?php if ($dist_pendente): ?>
     <a class="card attention" href="<?= e(APP_BASE_URL) ?>/distribuicao.php">
-      <div class="title" style="color:var(--c-orange);">💎 Lucro do mês pendente de distribuir</div>
-      <div class="desc">Já passou do dia 5 e o lucro ainda não foi distribuído aos sócios.</div>
+      <div class="title" style="color:var(--c-orange);">💎 <?= e(t('Lucro do mês pendente de distribuir')) ?></div>
+      <div class="desc"><?= e(t('Já passou do dia 5 e o lucro ainda não foi distribuído aos sócios.')) ?></div>
     </a>
   <?php endif; ?>
   <div class="grid-2">
@@ -339,7 +339,7 @@ require __DIR__ . '/includes/header.php';
         <?php if ($rec_eur > 0): ?><?= e(money_fmt($rec_eur, 'EUR')) ?><?php endif; ?>
         <?php if ($rec_brl == 0 && $rec_usd == 0 && $rec_eur == 0): ?>—<?php endif; ?>
       </div>
-      <div class="l">✅ Recebido este mês</div>
+      <div class="l">✅ <?= e(t('Recebido este mês')) ?></div>
     </a>
     <a class="kpi" href="<?= e(APP_BASE_URL) ?>/cobrancas.php?status=aberta" style="text-decoration:none;">
       <div class="v" style="font-size:18px;">
@@ -348,11 +348,11 @@ require __DIR__ . '/includes/header.php';
         <?php if ($val_abertas_eur > 0): ?><?= e(money_fmt($val_abertas_eur, 'EUR')) ?><?php endif; ?>
         <?php if ($tot_abertas == 0): ?>0<?php endif; ?>
       </div>
-      <div class="l">⏳ A receber (<?= $tot_abertas ?> cobr.)</div>
+      <div class="l">⏳ <?= e(t('A receber')) ?> (<?= $tot_abertas ?> <?= e(t('cobr.')) ?>)</div>
     </a>
     <a class="kpi" href="<?= e(APP_BASE_URL) ?>/pagamentos_funcionarios.php" style="text-decoration:none;" <?= $a_pagar_func>0?'style="border-color:var(--c-orange); text-decoration:none;"':'' ?>>
       <div class="v" style="font-size:18px; color:<?= $a_pagar_func>0?'var(--c-orange)':'var(--txt-1)' ?>;">$<?= e(number_format($a_pagar_func, 2, '.', ',')) ?></div>
-      <div class="l">💵 A pagar funcionários (USD)</div>
+      <div class="l">💵 <?= e(t('A pagar funcionários (USD)')) ?></div>
     </a>
     <a class="kpi" href="<?= e(APP_BASE_URL) ?>/painel.php" style="text-decoration:none;">
       <div class="v" style="font-size:18px;">
@@ -361,94 +361,94 @@ require __DIR__ . '/includes/header.php';
         <?php if ($lucro_eur != 0): ?><span style="color:<?= $lucro_eur>=0?'var(--c-success)':'var(--c-danger)' ?>;"><?= e(money_fmt($lucro_eur, 'EUR')) ?></span><?php endif; ?>
         <?php if ($lucro_brl == 0 && $lucro_usd == 0 && $lucro_eur == 0): ?>—<?php endif; ?>
       </div>
-      <div class="l">💎 Lucro do mês</div>
+      <div class="l">💎 <?= e(t('Lucro do mês')) ?></div>
     </a>
   </div>
 
-  <div class="section-label">Link do sistema (para enviar a clientes/funcionários)</div>
+  <div class="section-label"><?= e(t('Link do sistema (para enviar a clientes/funcionários)')) ?></div>
   <div class="card">
     <div class="spaced" style="gap:8px;">
       <code id="link_sistema_txt" style="flex:1; padding:8px 12px; background:var(--bg-input); border-radius:6px; font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"><?= e(APP_BASE_URL) ?>/</code>
-      <button type="button" class="btn small btn-brand" onclick="copiarLinkSistema(this)">📋 Copiar</button>
+      <button type="button" class="btn small btn-brand" onclick="copiarLinkSistema(this)">📋 <?= e(t('Copiar')) ?></button>
     </div>
-    <div class="hint">Use nas mensagens (WhatsApp, email). Nos templates use a variável <code>{link_sistema}</code>.</div>
+    <div class="hint"><?= e(t('Use nas mensagens (WhatsApp, email). Nos templates use a variável')) ?> <code>{link_sistema}</code>.</div>
   </div>
   <script>
   function copiarLinkSistema(btn) {
     const txt = document.getElementById('link_sistema_txt').textContent.trim();
     navigator.clipboard.writeText(txt).then(() => {
       const orig = btn.innerHTML;
-      btn.innerHTML = '✅ Copiado!';
+      btn.innerHTML = '✅ <?= e(t('Copiado!')) ?>';
       setTimeout(() => btn.innerHTML = orig, 2000);
     });
   }
   </script>
 
-  <div class="section-label">Ações rápidas</div>
+  <div class="section-label"><?= e(t('Ações rápidas')) ?></div>
   <a class="card" href="<?= e(APP_BASE_URL) ?>/painel.php">
-    <div class="title">📊 Painel financeiro</div>
-    <div class="desc">Agenda · Por cliente · Por serviço</div>
+    <div class="title">📊 <?= e(t('Painel financeiro')) ?></div>
+    <div class="desc"><?= e(t('Agenda · Por cliente · Por serviço')) ?></div>
   </a>
   <a class="card" href="<?= e(APP_BASE_URL) ?>/clientes.php">
-    <div class="title">👥 Clientes</div>
-    <div class="desc">Gerenciar clientes e gerar convites</div>
+    <div class="title">👥 <?= e(t('Clientes')) ?></div>
+    <div class="desc"><?= e(t('Gerenciar clientes e gerar convites')) ?></div>
   </a>
   <a class="card" href="<?= e(APP_BASE_URL) ?>/funcionarios.php">
-    <div class="title">🧑‍💼 Equipe</div>
-    <div class="desc">Lista · Capacidade · Pagamentos a funcionários</div>
+    <div class="title">🧑‍💼 <?= e(t('Equipe')) ?></div>
+    <div class="desc"><?= e(t('Lista · Capacidade · Pagamentos a funcionários')) ?></div>
   </a>
   <a class="card" href="<?= e(APP_BASE_URL) ?>/assinaturas.php">
-    <div class="title">📝 Assinaturas</div>
-    <div class="desc">Atribuir itens do catálogo a clientes</div>
+    <div class="title">📝 <?= e(t('Assinaturas')) ?></div>
+    <div class="desc"><?= e(t('Atribuir itens do catálogo a clientes')) ?></div>
   </a>
   <a class="card" href="<?= e(APP_BASE_URL) ?>/cobrancas.php">
-    <div class="title">💳 Cobranças</div>
-    <div class="desc">Ver e gerar cobranças</div>
+    <div class="title">💳 <?= e(t('Cobranças')) ?></div>
+    <div class="desc"><?= e(t('Ver e gerar cobranças')) ?></div>
   </a>
   <a class="card" href="<?= e(APP_BASE_URL) ?>/agenda_geral.php">
-    <div class="title">📋 Acompanhamento geral</div>
-    <div class="desc">Visão consolidada do que cada funcionário está executando no mês</div>
+    <div class="title">📋 <?= e(t('Acompanhamento geral')) ?></div>
+    <div class="desc"><?= e(t('Visão consolidada do que cada funcionário está executando no mês')) ?></div>
   </a>
   <?php if (is_sadmin()): ?>
   <a class="card" href="<?= e(APP_BASE_URL) ?>/catalogo.php">
-    <div class="title">📦 Catálogo</div>
-    <div class="desc">Cadastrar e editar itens <span class="status status-destaque">sadmin</span></div>
+    <div class="title">📦 <?= e(t('Catálogo')) ?></div>
+    <div class="desc"><?= e(t('Cadastrar e editar itens')) ?> <span class="status status-destaque">sadmin</span></div>
   </a>
   <a class="card" href="<?= e(APP_BASE_URL) ?>/despesas.php">
-    <div class="title">💰 Finanças</div>
-    <div class="desc">Despesas · Distribuição de lucro · Formas de pagamento <span class="status status-destaque">sadmin</span></div>
+    <div class="title">💰 <?= e(t('Finanças')) ?></div>
+    <div class="desc"><?= e(t('Despesas · Distribuição de lucro · Formas de pagamento')) ?> <span class="status status-destaque">sadmin</span></div>
   </a>
   <a class="card" href="<?= e(APP_BASE_URL) ?>/regua.php">
-    <div class="title">💬 Comunicação</div>
-    <div class="desc">Régua automática · Tarefas WhatsApp · Templates <span class="status status-destaque">sadmin</span></div>
+    <div class="title">💬 <?= e(t('Comunicação')) ?></div>
+    <div class="desc"><?= e(t('Régua automática · Tarefas WhatsApp · Templates')) ?> <span class="status status-destaque">sadmin</span></div>
   </a>
   <a class="card" href="<?= e(APP_BASE_URL) ?>/auditoria.php">
-    <div class="title">🔍 Auditoria</div>
-    <div class="desc">Histórico de tudo no sistema <span class="status status-destaque">sadmin</span></div>
+    <div class="title">🔍 <?= e(t('Auditoria')) ?></div>
+    <div class="desc"><?= e(t('Histórico de tudo no sistema')) ?> <span class="status status-destaque">sadmin</span></div>
   </a>
   <a class="card" href="<?= e(APP_BASE_URL) ?>/acessos_pdf.php" target="_blank">
-    <div class="title">🔐 Matriz de acesso (PDF)</div>
-    <div class="desc">Documento com quem pode o quê — abre em nova aba <span class="status status-destaque">sadmin</span></div>
+    <div class="title">🔐 <?= e(t('Matriz de acesso (PDF)')) ?></div>
+    <div class="desc"><?= e(t('Documento com quem pode o quê — abre em nova aba')) ?> <span class="status status-destaque">sadmin</span></div>
   </a>
   <?php else: // admin não-sadmin tem acesso a distribuição como sócio mas não às configs ?>
   <a class="card" href="<?= e(APP_BASE_URL) ?>/distribuicao.php">
-    <div class="title">💎 Distribuição de lucro</div>
-    <div class="desc">Sua quota como sócio</div>
+    <div class="title">💎 <?= e(t('Distribuição de lucro')) ?></div>
+    <div class="desc"><?= e(t('Sua quota como sócio')) ?></div>
   </a>
   <?php endif; ?>
 
-  <div class="section-label">Minha área de execução (também trabalho nos serviços)</div>
+  <div class="section-label"><?= e(t('Minha área de execução (também trabalho nos serviços)')) ?></div>
   <a class="card" href="<?= e(APP_BASE_URL) ?>/agenda.php">
-    <div class="title">📅 Minha agenda</div>
-    <div class="desc">Marcar entregas dos clientes que eu atendo (como funcionário)</div>
+    <div class="title">📅 <?= e(t('Minha agenda')) ?></div>
+    <div class="desc"><?= e(t('Marcar entregas dos clientes que eu atendo (como funcionário)')) ?></div>
   </a>
   <a class="card" href="<?= e(APP_BASE_URL) ?>/meus_pagamentos.php">
-    <div class="title">💵 Meus pagamentos</div>
-    <div class="desc">O que tenho a receber em USD (quando o cliente paga)</div>
+    <div class="title">💵 <?= e(t('Meus pagamentos')) ?></div>
+    <div class="desc"><?= e(t('O que tenho a receber em USD (quando o cliente paga)')) ?></div>
   </a>
   <a class="card" href="<?= e(APP_BASE_URL) ?>/convites.php">
-    <div class="title">✉️ Gerar convite</div>
-    <div class="desc">Link para cliente ou funcionário se cadastrar</div>
+    <div class="title">✉️ <?= e(t('Gerar convite')) ?></div>
+    <div class="desc"><?= e(t('Link para cliente ou funcionário se cadastrar')) ?></div>
   </a>
 
 <?php elseif ($u['role'] === 'funcionario'): ?>
@@ -502,45 +502,45 @@ require __DIR__ . '/includes/header.php';
   ?>
 
   <a class="card brand" href="<?= e(APP_BASE_URL) ?>/meus_pagamentos.php" style="text-decoration:none;">
-    <div class="title" style="color:var(--c-primary-2);">🔮 Previsão de recebimento <span class="muted" style="font-weight:normal; font-size:12px;">(<?= e(date('M/y')) ?>)</span></div>
+    <div class="title" style="color:var(--c-primary-2);">🔮 <?= e(t('Previsão de recebimento')) ?> <span class="muted" style="font-weight:normal; font-size:12px;">(<?= e(date('M/y')) ?>)</span></div>
     <div class="desc" style="margin-top:6px;">
       <?php if ($prev_func > 0): ?>
         <strong style="color:var(--c-success);">$<?= e(number_format($prev_func, 2, '.', ',')) ?> USD</strong>
       <?php else: ?>
-        <strong class="muted">Sem assinaturas ativas pra este mês</strong>
+        <strong class="muted"><?= e(t('Sem assinaturas ativas pra este mês')) ?></strong>
       <?php endif; ?>
     </div>
-    <div class="desc muted" style="font-size:12px; margin-top:4px;"><?= $qtd_assin_minhas ?> assinatura<?= $qtd_assin_minhas==1?'':'s' ?> ativa<?= $qtd_assin_minhas==1?'':'s' ?> mensal · valor fixo por assinatura</div>
+    <div class="desc muted" style="font-size:12px; margin-top:4px;"><?= $qtd_assin_minhas ?> <?= $qtd_assin_minhas==1?e(t('assinatura ativa mensal')):e(t('assinaturas ativas mensais')) ?> · <?= e(t('valor fixo por assinatura')) ?></div>
   </a>
 
   <div class="grid-2">
-    <div class="kpi"><div class="v"><?= $tot_clientes ?></div><div class="l">Clientes que atendo</div></div>
-    <div class="kpi"><div class="v"><?= $tot_assin ?></div><div class="l">Serviços ativos</div></div>
-    <div class="kpi"><div class="v"><?= $tot_entregas ?></div><div class="l">Entregas este mês</div></div>
+    <div class="kpi"><div class="v"><?= $tot_clientes ?></div><div class="l"><?= e(t('Clientes que atendo')) ?></div></div>
+    <div class="kpi"><div class="v"><?= $tot_assin ?></div><div class="l"><?= e(t('Serviços ativos')) ?></div></div>
+    <div class="kpi"><div class="v"><?= $tot_entregas ?></div><div class="l"><?= e(t('Entregas este mês')) ?></div></div>
     <div class="kpi" <?= $a_receber>0?'style="border-color:var(--c-success);"':'' ?>>
       <div class="v">$<?= e(number_format($a_receber, 2, '.', ',')) ?></div>
-      <div class="l">A receber (USD)</div>
+      <div class="l"><?= e(t('A receber (USD)')) ?></div>
     </div>
   </div>
 
   <?php if ($recebido_mes > 0): ?>
     <div class="card success">
-      <div class="title">💵 $<?= e(number_format($recebido_mes, 2, '.', ',')) ?> USD recebidos este mês</div>
+      <div class="title">💵 $<?= e(number_format($recebido_mes, 2, '.', ',')) ?> <?= e(t('USD recebidos este mês')) ?></div>
     </div>
   <?php endif; ?>
 
-  <div class="section-label">Acesso rápido</div>
+  <div class="section-label"><?= e(t('Acesso rápido')) ?></div>
   <a class="card" href="<?= e(APP_BASE_URL) ?>/agenda.php">
-    <div class="title">📅 Minha agenda</div>
-    <div class="desc">Marcar entregas dos meus clientes</div>
+    <div class="title">📅 <?= e(t('Minha agenda')) ?></div>
+    <div class="desc"><?= e(t('Marcar entregas dos meus clientes')) ?></div>
   </a>
   <a class="card" href="<?= e(APP_BASE_URL) ?>/clientes.php">
-    <div class="title">👥 Meus clientes</div>
-    <div class="desc">Lista de quem eu atendo</div>
+    <div class="title">👥 <?= e(t('Meus clientes')) ?></div>
+    <div class="desc"><?= e(t('Lista de quem eu atendo')) ?></div>
   </a>
   <a class="card" href="<?= e(APP_BASE_URL) ?>/meus_pagamentos.php">
-    <div class="title">💵 Meus pagamentos</div>
-    <div class="desc">A receber + histórico em USD</div>
+    <div class="title">💵 <?= e(t('Meus pagamentos')) ?></div>
+    <div class="desc"><?= e(t('A receber + histórico em USD')) ?></div>
   </a>
 
 <?php else: /* cliente */ ?>
@@ -567,12 +567,12 @@ require __DIR__ . '/includes/header.php';
     } catch (Throwable $e) { error_log('dashboard: ' . $e->getMessage()); }
   ?>
     <div class="card attention">
-      <div class="title">⚠ Conta sem empresa vinculada</div>
-      <div class="desc">Sua conta de cliente ainda não foi associada a uma empresa cadastrada — então não conseguimos exibir suas cobranças e entregas. O administrador precisa fazer essa ligação.</div>
+      <div class="title">⚠ <?= e(t('Conta sem empresa vinculada')) ?></div>
+      <div class="desc"><?= e(t('Sua conta de cliente ainda não foi associada a uma empresa cadastrada — então não conseguimos exibir suas cobranças e entregas. O administrador precisa fazer essa ligação.')) ?></div>
       <?php if ($admin_email): ?>
-        <a class="btn block mt-3" href="mailto:<?= e($admin_email) ?>?subject=<?= e(rawurlencode('Vincular minha conta a uma empresa')) ?>&body=<?= e(rawurlencode("Olá, sou " . $u['nome'] . " (usuário #" . $u['id'] . " · email " . ($u['email'] ?? '') . ").\n\nMinha conta ainda não está vinculada a uma empresa no painel. Pode fazer essa associação?\n\nObrigado!")) ?>">✉ Pedir vínculo ao admin</a>
+        <a class="btn block mt-3" href="mailto:<?= e($admin_email) ?>?subject=<?= e(rawurlencode(t('Vincular minha conta a uma empresa'))) ?>&body=<?= e(rawurlencode(t('Olá, sou') . " " . $u['nome'] . " (" . t('usuário') . " #" . $u['id'] . " · email " . ($u['email'] ?? '') . ").\n\n" . t('Minha conta ainda não está vinculada a uma empresa no painel. Pode fazer essa associação?') . "\n\n" . t('Obrigado!'))) ?>">✉ <?= e(t('Pedir vínculo ao admin')) ?></a>
       <?php endif; ?>
-      <a class="btn btn-ghost block mt-2" href="<?= e(APP_BASE_URL) ?>/logout.php">Sair</a>
+      <a class="btn btn-ghost block mt-2" href="<?= e(APP_BASE_URL) ?>/logout.php"><?= e(t('Sair')) ?></a>
     </div>
   <?php else:
     // Previsão MENSAL do cliente: já pago + em aberto + em análise — só do mês corrente
@@ -621,20 +621,20 @@ require __DIR__ . '/includes/header.php';
     $prev_cli = $ja_pago_cli + $em_aberto_mes + $em_analise_cli + $prev_assin_cli;
   ?>
     <a class="card brand" href="<?= e(APP_BASE_URL) ?>/cobrancas.php" style="text-decoration:none;">
-      <div class="title" style="color:var(--c-primary-2);">🔮 Previsão de gastos <span class="muted" style="font-weight:normal; font-size:12px;">(<?= e(date('M/y')) ?>)</span></div>
+      <div class="title" style="color:var(--c-primary-2);">🔮 <?= e(t('Previsão de gastos')) ?> <span class="muted" style="font-weight:normal; font-size:12px;">(<?= e(date('M/y')) ?>)</span></div>
       <div class="desc" style="margin-top:6px;">
         <?php if ($prev_cli > 0): ?>
           <strong style="color:var(--txt-1);"><?= e(money_fmt($prev_cli, $cli['moeda'])) ?></strong>
         <?php else: ?>
-          <strong class="muted">Sem cobranças neste mês ainda</strong>
+          <strong class="muted"><?= e(t('Sem cobranças neste mês ainda')) ?></strong>
         <?php endif; ?>
       </div>
-      <div class="desc muted" style="font-size:12px; margin-top:4px;">já pago + em aberto + em análise · este mês</div>
+      <div class="desc muted" style="font-size:12px; margin-top:4px;"><?= e(t('já pago + em aberto + em análise · este mês')) ?></div>
     </a>
 
     <div class="grid-2">
-      <div class="kpi"><div class="v"><?= e(money_fmt($em_aberto, $cli['moeda'])) ?></div><div class="l">Em aberto</div></div>
-      <div class="kpi <?= $vencidas?'':'' ?>" <?= $vencidas?'style="border-color:var(--c-danger);"':'' ?>><div class="v"><?= $vencidas ?></div><div class="l"><?= $vencidas?'<span style="color:var(--c-danger);">Vencidas</span>':'Vencidas' ?></div></div>
+      <div class="kpi"><div class="v"><?= e(money_fmt($em_aberto, $cli['moeda'])) ?></div><div class="l"><?= e(t('Em aberto')) ?></div></div>
+      <div class="kpi <?= $vencidas?'':'' ?>" <?= $vencidas?'style="border-color:var(--c-danger);"':'' ?>><div class="v"><?= $vencidas ?></div><div class="l"><?= $vencidas?'<span style="color:var(--c-danger);">'.e(t('Vencidas')).'</span>':e(t('Vencidas')) ?></div></div>
     </div>
 
     <?php
@@ -651,22 +651,22 @@ require __DIR__ . '/includes/header.php';
       $stmt->execute([$cid]);
       $minhas_assin = $stmt->fetchAll();
     ?>
-    <div class="section-label">Meus serviços contratados</div>
+    <div class="section-label"><?= e(t('Meus serviços contratados')) ?></div>
     <?php if (!$minhas_assin): ?>
-      <div class="card"><div class="desc muted">Nenhum serviço ativo. Fale com a Dite Ads pra contratar.</div></div>
+      <div class="card"><div class="desc muted"><?= e(t('Nenhum serviço ativo. Fale com a Dite Ads pra contratar.')) ?></div></div>
     <?php else: foreach ($minhas_assin as $a): ?>
       <div class="card">
         <div class="spaced">
           <div>
             <div class="title" style="color:var(--txt-1);">
               <?= e($a['item_nome']) ?>
-              <?php if ($a['e_pacote']): ?><span class="status status-ia">pacote</span><?php endif; ?>
-              <?php if ($a['variante']==='ia'): ?><span class="status status-destaque">com IA</span><?php endif; ?>
+              <?php if ($a['e_pacote']): ?><span class="status status-ia"><?= e(t('pacote')) ?></span><?php endif; ?>
+              <?php if ($a['variante']==='ia'): ?><span class="status status-destaque"><?= e(t('com IA')) ?></span><?php endif; ?>
             </div>
             <div class="sub muted">
-              <?= e(['unico'=>'único','mensal'=>'mensal','por_unidade'=>'por unidade'][$a['tipo']] ?? $a['tipo']) ?>
-              · ativo desde <?= e(date('d/m/Y', strtotime($a['iniciada_em']))) ?>
-              <?php if ($a['func_nome']): ?> · com <?= e($a['func_nome']) ?><?php endif; ?>
+              <?= e(['unico'=>t('único'),'mensal'=>t('mensal'),'por_unidade'=>t('por unidade')][$a['tipo']] ?? $a['tipo']) ?>
+              · <?= e(t('ativo desde')) ?> <?= e(date('d/m/Y', strtotime($a['iniciada_em']))) ?>
+              <?php if ($a['func_nome']): ?> · <?= e(t('com')) ?> <?= e($a['func_nome']) ?><?php endif; ?>
             </div>
           </div>
           <div class="money md"><?= e(money_fmt((float)$a['valor_cobrado'], $cli['moeda'])) ?></div>
@@ -674,14 +674,14 @@ require __DIR__ . '/includes/header.php';
       </div>
     <?php endforeach; endif; ?>
 
-    <div class="section-label">Acesso rápido</div>
+    <div class="section-label"><?= e(t('Acesso rápido')) ?></div>
     <a class="card" href="<?= e(APP_BASE_URL) ?>/cobrancas.php">
-      <div class="title">💳 Minhas cobranças</div>
-      <div class="desc">Ver, anexar comprovante de pagamento</div>
+      <div class="title">💳 <?= e(t('Minhas cobranças')) ?></div>
+      <div class="desc"><?= e(t('Ver, anexar comprovante de pagamento')) ?></div>
     </a>
     <a class="card" href="<?= e(APP_BASE_URL) ?>/entregas.php">
-      <div class="title">✅ Minhas entregas</div>
-      <div class="desc">Acompanhar o que foi entregue no mês</div>
+      <div class="title">✅ <?= e(t('Minhas entregas')) ?></div>
+      <div class="desc"><?= e(t('Acompanhar o que foi entregue no mês')) ?></div>
     </a>
   <?php endif; ?>
 <?php endif; ?>

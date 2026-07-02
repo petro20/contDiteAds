@@ -72,13 +72,13 @@ $mes_ant = (clone $dt)->modify('-1 month')->format('Y-m');
 $mes_prox = (clone $dt)->modify('+1 month')->format('Y-m');
 $nome_mes = ['','janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'][(int)$dt->format('n')] . ' de ' . $dt->format('Y');
 
-$page = 'Acompanhamento geral';
+$page = t('Acompanhamento geral');
 $show_back = true;
 $back_to = APP_BASE_URL . '/dashboard.php';
 require __DIR__ . '/includes/header.php';
 ?>
-<h1 class="page-title">📋 Acompanhamento geral</h1>
-<p class="muted">Visão consolidada do que cada funcionário e admin está executando. Somente acompanhamento — pra ações use a Agenda individual de cada um.</p>
+<h1 class="page-title">📋 <?= e(t('Acompanhamento geral')) ?></h1>
+<p class="muted"><?= e(t('Visão consolidada do que cada funcionário e admin está executando. Somente acompanhamento — pra ações use a Agenda individual de cada um.')) ?></p>
 
 <div class="spaced mb-3">
   <a class="btn btn-ghost small" href="?mes=<?= e($mes_ant) ?>">← <?= e($mes_ant) ?></a>
@@ -87,14 +87,14 @@ require __DIR__ . '/includes/header.php';
 </div>
 
 <div class="btn-pair mb-3">
-  <a class="btn small <?= !$mostrar_inativos?'btn-brand':'btn-secondary' ?>" href="?mes=<?= e($competencia) ?>">Só com atividade</a>
-  <a class="btn small <?= $mostrar_inativos?'btn-brand':'btn-secondary' ?>" href="?mes=<?= e($competencia) ?>&inativos=1">Todos os funcionários</a>
+  <a class="btn small <?= !$mostrar_inativos?'btn-brand':'btn-secondary' ?>" href="?mes=<?= e($competencia) ?>"><?= e(t('Só com atividade')) ?></a>
+  <a class="btn small <?= $mostrar_inativos?'btn-brand':'btn-secondary' ?>" href="?mes=<?= e($competencia) ?>&inativos=1"><?= e(t('Todos os funcionários')) ?></a>
 </div>
 
 <?php if (!$dados): ?>
   <div class="card">
-    <div class="title muted">Sem atividade neste mês</div>
-    <div class="desc">Ninguém tem assinaturas ativas ou entregas em <?= e($nome_mes) ?>.</div>
+    <div class="title muted"><?= e(t('Sem atividade neste mês')) ?></div>
+    <div class="desc"><?= e(t('Ninguém tem assinaturas ativas ou entregas em')) ?> <?= e($nome_mes) ?>.</div>
   </div>
 <?php else: ?>
   <?php
@@ -104,10 +104,10 @@ require __DIR__ . '/includes/header.php';
     $tot_pessoas = count(array_filter($dados, fn($d) => $d['n_assin'] > 0 || $d['n_entregas'] > 0));
   ?>
   <div class="grid-2">
-    <div class="kpi"><div class="v"><?= $tot_pessoas ?></div><div class="l">Pessoas executando</div></div>
-    <div class="kpi"><div class="v"><?= $tot_assin ?></div><div class="l">Assinaturas ativas</div></div>
-    <div class="kpi"><div class="v"><?= $tot_entregas ?></div><div class="l">Entregas no mês</div></div>
-    <div class="kpi"><div class="v"><?= count($dados) ?></div><div class="l">Pessoas listadas</div></div>
+    <div class="kpi"><div class="v"><?= $tot_pessoas ?></div><div class="l"><?= e(t('Pessoas executando')) ?></div></div>
+    <div class="kpi"><div class="v"><?= $tot_assin ?></div><div class="l"><?= e(t('Assinaturas ativas')) ?></div></div>
+    <div class="kpi"><div class="v"><?= $tot_entregas ?></div><div class="l"><?= e(t('Entregas no mês')) ?></div></div>
+    <div class="kpi"><div class="v"><?= count($dados) ?></div><div class="l"><?= e(t('Pessoas listadas')) ?></div></div>
   </div>
 
   <?php
@@ -116,9 +116,9 @@ require __DIR__ . '/includes/header.php';
     if (!in_array($modo_view, ['compact','expand','calendar'], true)) $modo_view = 'compact';
   ?>
   <div class="btn-pair mb-3" style="flex-wrap:wrap;">
-    <a class="btn small <?= $modo_view==='compact'?'btn-brand':'btn-secondary' ?>" href="?mes=<?= e($competencia) ?><?= $mostrar_inativos?'&inativos=1':'' ?>&view=compact">📋 Lista</a>
-    <a class="btn small <?= $modo_view==='expand'?'btn-brand':'btn-secondary' ?>" href="?mes=<?= e($competencia) ?><?= $mostrar_inativos?'&inativos=1':'' ?>&view=expand">📅 Por pessoa</a>
-    <a class="btn small <?= $modo_view==='calendar'?'btn-brand':'btn-secondary' ?>" href="?mes=<?= e($competencia) ?><?= $mostrar_inativos?'&inativos=1':'' ?>&view=calendar">🗓 Calendário</a>
+    <a class="btn small <?= $modo_view==='compact'?'btn-brand':'btn-secondary' ?>" href="?mes=<?= e($competencia) ?><?= $mostrar_inativos?'&inativos=1':'' ?>&view=compact">📋 <?= e(t('Lista')) ?></a>
+    <a class="btn small <?= $modo_view==='expand'?'btn-brand':'btn-secondary' ?>" href="?mes=<?= e($competencia) ?><?= $mostrar_inativos?'&inativos=1':'' ?>&view=expand">📅 <?= e(t('Por pessoa')) ?></a>
+    <a class="btn small <?= $modo_view==='calendar'?'btn-brand':'btn-secondary' ?>" href="?mes=<?= e($competencia) ?><?= $mostrar_inativos?'&inativos=1':'' ?>&view=calendar">🗓 <?= e(t('Calendário')) ?></a>
   </div>
 
   <?php if ($modo_view === 'calendar'):
@@ -165,7 +165,7 @@ require __DIR__ . '/includes/header.php';
     $dia_semana_ini = (int)$primeiro_dt->format('w'); // 0=Dom, 6=Sáb
   ?>
 
-  <h2 class="mt-5">🗓 Calendário do mês — todos os funcionários</h2>
+  <h2 class="mt-5">🗓 <?= e(t('Calendário do mês — todos os funcionários')) ?></h2>
 
   <?php if ($func_cor): ?>
     <div class="card">
@@ -185,7 +185,7 @@ require __DIR__ . '/includes/header.php';
       <thead>
         <tr>
           <?php foreach (['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'] as $w): ?>
-            <th style="padding:6px; color:var(--txt-3); font-size:12px; text-align:center; border-bottom:1px solid var(--border);"><?= $w ?></th>
+            <th style="padding:6px; color:var(--txt-3); font-size:12px; text-align:center; border-bottom:1px solid var(--border);"><?= e(t($w)) ?></th>
           <?php endforeach; ?>
         </tr>
       </thead>
@@ -227,15 +227,15 @@ require __DIR__ . '/includes/header.php';
     </table>
   </div>
 
-  <p class="muted center mt-3" style="font-size:13px;">Passe o mouse sobre cada chip pra ver detalhes (funcionário, cliente, item).</p>
+  <p class="muted center mt-3" style="font-size:13px;"><?= e(t('Passe o mouse sobre cada chip pra ver detalhes (funcionário, cliente, item).')) ?></p>
 
   <?php else: ?>
 
-  <div class="section-label mt-5">Por pessoa</div>
+  <div class="section-label mt-5"><?= e(t('Por pessoa')) ?></div>
   <?php foreach ($dados as $d):
     $role_badge = '';
-    if ($d['role'] === 'sadmin') $role_badge = '<span class="status status-destaque">super admin</span>';
-    elseif ($d['role'] === 'admin') $role_badge = '<span class="status status-ia">admin</span>';
+    if ($d['role'] === 'sadmin') $role_badge = '<span class="status status-destaque">' . e(t('super admin')) . '</span>';
+    elseif ($d['role'] === 'admin') $role_badge = '<span class="status status-ia">' . e(t('admin')) . '</span>';
     $sem_atividade = ($d['n_assin'] === 0 && $d['n_entregas'] === 0);
   ?>
     <?php if ($modo_view === 'compact'): ?>
@@ -245,18 +245,18 @@ require __DIR__ . '/includes/header.php';
           <div class="title">
             <?= e($d['nome']) ?>
             <?= $role_badge ?>
-            <?php if ($d['trabalha_com_id']): ?><span class="status status-info">👥 dupla com <?= e($d['dupla_nome']) ?></span><?php endif; ?>
+            <?php if ($d['trabalha_com_id']): ?><span class="status status-info">👥 <?= e(t('dupla com')) ?> <?= e($d['dupla_nome']) ?></span><?php endif; ?>
             <?php if ($d['role'] === 'funcionario'): ?>
-              <?= $d['aceitando_clientes'] ? '<span class="status status-paga">🟢 aceitando</span>' : '<span class="status status-vencida">🔴 cheio</span>' ?>
+              <?= $d['aceitando_clientes'] ? '<span class="status status-paga">🟢 ' . e(t('aceitando')) . '</span>' : '<span class="status status-vencida">🔴 ' . e(t('cheio')) . '</span>' ?>
             <?php endif; ?>
           </div>
           <div class="sub muted">
-            <?php if ($d['n_assin'] > 0): ?><strong><?= $d['n_assin'] ?></strong> assinatura<?= $d['n_assin']>1?'s':'' ?> · <?php endif; ?>
+            <?php if ($d['n_assin'] > 0): ?><strong><?= $d['n_assin'] ?></strong> <?= e($d['n_assin']>1 ? t('assinaturas') : t('assinatura')) ?> · <?php endif; ?>
             <?php if ($d['n_entregas'] > 0): ?>
-              <strong><?= $d['n_entregas'] ?></strong> entrega<?= $d['n_entregas']>1?'s':'' ?> no mês · <strong><?= $d['n_clientes'] ?></strong> cliente<?= $d['n_clientes']>1?'s':'' ?>
-            <?php else: ?>sem entregas neste mês<?php endif; ?>
-            <?php if ($d['capacidade'] > 0): ?> · capacidade <strong><?= $d['capacidade'] ?></strong><?php endif; ?>
-            <?php if ($d['ultima']): ?> · última <?= e(date('d/m H:i', strtotime($d['ultima']))) ?><?php endif; ?>
+              <strong><?= $d['n_entregas'] ?></strong> <?= e($d['n_entregas']>1 ? t('entregas') : t('entrega')) ?> <?= e(t('no mês')) ?> · <strong><?= $d['n_clientes'] ?></strong> <?= e($d['n_clientes']>1 ? t('clientes') : t('cliente')) ?>
+            <?php else: ?><?= e(t('sem entregas neste mês')) ?><?php endif; ?>
+            <?php if ($d['capacidade'] > 0): ?> · <?= e(t('capacidade')) ?> <strong><?= $d['capacidade'] ?></strong><?php endif; ?>
+            <?php if ($d['ultima']): ?> · <?= e(t('última')) ?> <?= e(date('d/m H:i', strtotime($d['ultima']))) ?><?php endif; ?>
           </div>
         </div>
         <div class="muted" style="font-size:24px;">→</div>
@@ -269,24 +269,24 @@ require __DIR__ . '/includes/header.php';
           <div class="title">
             <?= e($d['nome']) ?>
             <?= $role_badge ?>
-            <?php if ($d['trabalha_com_id']): ?><span class="status status-info">👥 dupla com <?= e($d['dupla_nome']) ?></span><?php endif; ?>
+            <?php if ($d['trabalha_com_id']): ?><span class="status status-info">👥 <?= e(t('dupla com')) ?> <?= e($d['dupla_nome']) ?></span><?php endif; ?>
             <?php if ($d['role'] === 'funcionario'): ?>
               <?= $d['aceitando_clientes'] ? '<span class="status status-paga">🟢</span>' : '<span class="status status-vencida">🔴</span>' ?>
             <?php endif; ?>
           </div>
           <div class="sub muted">
-            <strong><?= $d['n_entregas'] ?></strong> entrega<?= $d['n_entregas']==1?'':'s' ?> · <strong><?= $d['n_clientes'] ?></strong> cliente<?= $d['n_clientes']==1?'':'s' ?>
-            <?php if ($d['capacidade'] > 0): ?> · capacidade <?= $d['capacidade'] ?><?php endif; ?>
+            <strong><?= $d['n_entregas'] ?></strong> <?= e($d['n_entregas']==1 ? t('entrega') : t('entregas')) ?> · <strong><?= $d['n_clientes'] ?></strong> <?= e($d['n_clientes']==1 ? t('cliente') : t('clientes')) ?>
+            <?php if ($d['capacidade'] > 0): ?> · <?= e(t('capacidade')) ?> <?= $d['capacidade'] ?><?php endif; ?>
           </div>
         </div>
-        <a class="btn btn-ghost small" href="<?= e(APP_BASE_URL) ?>/agenda.php?mes=<?= e($competencia) ?>&funcionario_id=<?= (int)$d['id'] ?>" style="text-decoration:none;">Abrir agenda →</a>
+        <a class="btn btn-ghost small" href="<?= e(APP_BASE_URL) ?>/agenda.php?mes=<?= e($competencia) ?>&funcionario_id=<?= (int)$d['id'] ?>" style="text-decoration:none;"><?= e(t('Abrir agenda')) ?> →</a>
       </div>
 
       <?php
         // Lista assinaturas + contagem de entregas inline
         $assinaturas_func = agenda_assinaturas($db, (int)$d['id'], $competencia);
         if (!$assinaturas_func): ?>
-          <p class="muted" style="font-size:13px; margin-top:var(--s-3);">Sem assinaturas neste mês.</p>
+          <p class="muted" style="font-size:13px; margin-top:var(--s-3);"><?= e(t('Sem assinaturas neste mês.')) ?></p>
         <?php else: ?>
           <div style="margin-top:var(--s-3);">
           <?php foreach ($assinaturas_func as $af):
@@ -295,16 +295,16 @@ require __DIR__ . '/includes/header.php';
             $cnt_af = count($entregas_af);
             // Resumo do progresso
             $progresso = '';
-            if ($modo === 'calendar') $progresso = $cnt_af . ' dia' . ($cnt_af==1?'':'s') . ' marcado' . ($cnt_af==1?'':'s');
-            elseif ($modo === 'tally') $progresso = $cnt_af . ' unidade' . ($cnt_af==1?'':'s');
-            elseif ($modo === 'single') $progresso = $cnt_af > 0 ? '✅ entregue' : '⬜ pendente';
-            else $progresso = $cnt_af > 0 ? $cnt_af . ' marcação' . ($cnt_af==1?'':'es') : 'em andamento';
+            if ($modo === 'calendar') $progresso = $cnt_af . ' ' . ($cnt_af==1 ? t('dia marcado') : t('dias marcados'));
+            elseif ($modo === 'tally') $progresso = $cnt_af . ' ' . ($cnt_af==1 ? t('unidade') : t('unidades'));
+            elseif ($modo === 'single') $progresso = $cnt_af > 0 ? '✅ ' . t('entregue') : '⬜ ' . t('pendente');
+            else $progresso = $cnt_af > 0 ? $cnt_af . ' ' . ($cnt_af==1 ? t('marcação') : t('marcações')) : t('em andamento');
           ?>
             <div class="info-pair" style="padding:8px 0; border-bottom:1px solid var(--border); font-size:13px;">
               <span class="l" style="flex:1;">
                 <strong><?= e($af['nome_empresa']) ?></strong>
                 · <?= e($af['item_nome']) ?>
-                <?php if ($af['e_pacote']): ?><span class="status status-ia" style="font-size:10px;">pacote</span><?php endif; ?>
+                <?php if ($af['e_pacote']): ?><span class="status status-ia" style="font-size:10px;"><?= e(t('pacote')) ?></span><?php endif; ?>
               </span>
               <span class="v" style="color:<?= $cnt_af>0?'var(--c-success)':'var(--c-orange)' ?>;"><?= e($progresso) ?></span>
             </div>
@@ -317,6 +317,6 @@ require __DIR__ . '/includes/header.php';
   <?php endif; // fim do else do view=calendar ?>
 <?php endif; ?>
 
-<p class="muted center mt-5" style="font-size:13px;">Clique num funcionário pra ver a agenda detalhada dele.</p>
+<p class="muted center mt-5" style="font-size:13px;"><?= e(t('Clique num funcionário pra ver a agenda detalhada dele.')) ?></p>
 
 <?php require __DIR__ . '/includes/footer.php'; ?>

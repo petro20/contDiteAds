@@ -26,12 +26,12 @@ if ($cliente_id) {
     $cliente_nome = $stmt->fetchColumn();
 }
 if (!$cliente_nome) {
-    $page = 'Entregas';
+    $page = t('Entregas');
     $nav_active = 'entregas';
     require __DIR__ . '/includes/header.php';
-    echo '<h1 class="page-title">Conta sem cliente vinculado</h1>';
-    echo '<div class="card attention"><div class="title">⚠ Vínculo ausente</div><div class="desc">Sua conta de cliente não está ligada a um registro de empresa. Avise o admin pra corrigir o cadastro.</div></div>';
-    echo '<a class="btn btn-ghost block mt-3" href="' . htmlspecialchars(APP_BASE_URL) . '/perfil.php">Voltar</a>';
+    echo '<h1 class="page-title">' . e(t('Conta sem cliente vinculado')) . '</h1>';
+    echo '<div class="card attention"><div class="title">⚠ ' . e(t('Vínculo ausente')) . '</div><div class="desc">' . e(t('Sua conta de cliente não está ligada a um registro de empresa. Avise o admin pra corrigir o cadastro.')) . '</div></div>';
+    echo '<a class="btn btn-ghost block mt-3" href="' . htmlspecialchars(APP_BASE_URL) . '/perfil.php">' . e(t('Voltar')) . '</a>';
     require __DIR__ . '/includes/footer.php';
     exit;
 }
@@ -41,16 +41,16 @@ $assinaturas = agenda_assinaturas_cliente($db, $cliente_id, $competencia);
 $dt = DateTime::createFromFormat('Y-m', $competencia);
 $mes_ant = (clone $dt)->modify('-1 month')->format('Y-m');
 $mes_prox = (clone $dt)->modify('+1 month')->format('Y-m');
-$nome_mes = ['','janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'][(int)$dt->format('n')] . ' de ' . $dt->format('Y');
+$nome_mes = t(['','janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'][(int)$dt->format('n')]) . ' ' . t('de') . ' ' . $dt->format('Y');
 
-$page = 'Entregas';
+$page = t('Entregas');
 $nav_active = 'entregas';
 $page_sub = is_admin() ? $cliente_nome : null;
 $show_back = is_admin();
 $back_to = APP_BASE_URL . '/painel.php';
 require __DIR__ . '/includes/header.php';
 ?>
-<h1 class="page-title">Entregas do mês</h1>
+<h1 class="page-title"><?= e(t('Entregas do mês')) ?></h1>
 <div class="spaced mb-3">
   <a class="btn btn-ghost small" href="?mes=<?= e($mes_ant) ?><?= is_admin() ? '&cliente_id='.$cliente_id : '' ?>">← <?= e($mes_ant) ?></a>
   <strong><?= e($nome_mes) ?></strong>
@@ -58,7 +58,7 @@ require __DIR__ . '/includes/header.php';
 </div>
 
 <?php if (!$assinaturas): ?>
-  <div class="card"><div class="title">Nenhum serviço ativo</div><div class="desc">Não há assinaturas ativas neste mês.</div></div>
+  <div class="card"><div class="title"><?= e(t('Nenhum serviço ativo')) ?></div><div class="desc"><?= e(t('Não há assinaturas ativas neste mês.')) ?></div></div>
 <?php endif; ?>
 
 <?php foreach ($assinaturas as $a):
@@ -71,12 +71,12 @@ require __DIR__ . '/includes/header.php';
     <div>
       <div class="title"><?= e($a['item_nome']) ?></div>
       <div class="sub muted">
-        <?php if ($a['funcionario_nome']): ?>com <?= e($a['funcionario_nome']) ?> · <?php endif; ?>
+        <?php if ($a['funcionario_nome']): ?><?= e(t('com')) ?> <?= e($a['funcionario_nome']) ?> · <?php endif; ?>
         <?= e($a['tipo']) ?>
       </div>
     </div>
     <?php if ($modo !== 'info'): ?>
-      <div class="muted" style="font-size:13px;"><strong><?= $count ?></strong> realizadas</div>
+      <div class="muted" style="font-size:13px;"><strong><?= $count ?></strong> <?= e(t('realizadas')) ?></div>
     <?php endif; ?>
   </div>
 
@@ -87,7 +87,7 @@ require __DIR__ . '/includes/header.php';
   ?>
     <table style="width:100%; border-collapse:collapse; text-align:center; font-size:13px;">
       <thead><tr>
-        <?php foreach (['D','S','T','Q','Q','S','S'] as $w): ?><th style="padding:6px; color:var(--txt-3);"><?= $w ?></th><?php endforeach; ?>
+        <?php foreach ([t('D'),t('S'),t('T'),t('Q'),t('Q2'),t('S2'),t('Sa')] as $w): ?><th style="padding:6px; color:var(--txt-3);"><?= e($w) ?></th><?php endforeach; ?>
       </tr></thead>
       <tbody>
       <?php foreach ($cal as $row): ?>
@@ -117,22 +117,22 @@ require __DIR__ . '/includes/header.php';
       if ($entregas): ?>
         <?php foreach ($entregas as $en): ?>
           <div style="padding:6px 0; border-bottom:1px solid var(--border);">
-            ✅ Unidade #<?= (int)$en['indice'] ?> · <?= e(date('d/m', strtotime($en['criado_em']))) ?>
+            ✅ <?= e(t('Unidade')) ?> #<?= (int)$en['indice'] ?> · <?= e(date('d/m', strtotime($en['criado_em']))) ?>
           </div>
         <?php endforeach; ?>
       <?php else: ?>
-        <div class="muted">Nada marcado ainda.</div>
+        <div class="muted"><?= e(t('Nada marcado ainda.')) ?></div>
       <?php endif; ?>
 
   <?php elseif ($modo === 'single'):
       $m = $count > 0;
   ?>
     <div class="status status-<?= $m ? 'paga' : 'aberta' ?>" style="font-size:14px; padding:8px 12px;">
-      <?= $m ? '✅ Entregue' : '⏳ Em andamento' ?>
+      <?= $m ? '✅ ' . e(t('Entregue')) : '⏳ ' . e(t('Em andamento')) ?>
     </div>
 
   <?php else: ?>
-    <div class="muted">Serviço contínuo — ativo no mês.</div>
+    <div class="muted"><?= e(t('Serviço contínuo — ativo no mês.')) ?></div>
   <?php endif; ?>
 </div>
 <?php endforeach; ?>

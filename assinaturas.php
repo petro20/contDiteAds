@@ -23,7 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             audit_log('assinatura.apagada', 'assinaturas', $pid);
             header('Location: ' . APP_BASE_URL . '/assinaturas.php?ok=del'); exit;
         } catch (PDOException $e) {
-            $flash = ['err', 'Não dá pra apagar: tem cobranças geradas vinculadas. Mude para "cancelada" se quiser parar de cobrar.'];
+            $flash = ['err', t('Não dá pra apagar: tem cobranças geradas vinculadas. Mude para "cancelada" se quiser parar de cobrar.')];
             $acao = 'editar'; $id = $pid;
         }
     }
@@ -55,7 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt->execute([$func]);
                 $f = $stmt->fetch();
                 if ($f && (int)$f['aceitando_clientes'] === 0) {
-                    $flash = ['err', '🔴 ' . htmlspecialchars($f['nome']) . ' está marcado como NÃO aceitando novos clientes. Se for proposital, marque o checkbox de força abaixo e salve de novo.'];
+                    $flash = ['err', '🔴 ' . htmlspecialchars($f['nome']) . ' ' . t('está marcado como NÃO aceitando novos clientes. Se for proposital, marque o checkbox de força abaixo e salve de novo.')];
                     $a = ['id'=>$pid,'cliente_id'=>$cliente,'item_id'=>$item,'funcionario_id'=>$func,'variante'=>$variante,'valor_cobrado'=>$valor,'status'=>$status,'iniciada_em'=>$iniciada,'cobrar_fixo_mensal'=>$fixo_mensal,'desconto_pct'=>$desconto,'desconto_meses'=>$desconto_meses];
                     $acao = $pid ? 'editar' : 'novo'; $id = $pid;
                     $mostrar_forcar = true;
@@ -65,7 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if (!$cliente || !$item || $valor <= 0) {
-            $flash = ['err', 'Cliente, item e valor (>0) são obrigatórios.'];
+            $flash = ['err', t('Cliente, item e valor (>0) são obrigatórios.')];
             $acao = $pid ? 'editar' : 'novo'; $id = $pid;
         } else {
             try {
@@ -109,7 +109,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             } catch (Throwable $e) {
                 if ($db->inTransaction()) $db->rollBack();
-                $flash = ['err', 'Erro: ' . $e->getMessage()];
+                $flash = ['err', t('Erro') . ': ' . $e->getMessage()];
                 $acao = $pid ? 'editar' : 'novo'; $id = $pid;
             }
         }
@@ -119,12 +119,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $mostrar_forcar = $mostrar_forcar ?? false;
 
 if (isset($_GET['ok'])) {
-    $msg = $_GET['ok'] === 'add' ? 'Assinatura criada.' : 'Assinatura atualizada.';
-    if (isset($_GET['cobranca'])) $msg .= ' Cobrança avulsa gerada (#' . (int)$_GET['cobranca'] . ').';
+    $msg = $_GET['ok'] === 'add' ? t('Assinatura criada.') : t('Assinatura atualizada.');
+    if (isset($_GET['cobranca'])) $msg .= ' ' . t('Cobrança avulsa gerada') . ' (#' . (int)$_GET['cobranca'] . ').';
     $flash = ['ok', $msg];
 }
 
-$page = 'Assinaturas';
+$page = t('Assinaturas');
 $nav_active = '';
 
 if ($acao === 'novo' || $acao === 'editar') {
@@ -158,7 +158,7 @@ if ($acao === 'novo' || $acao === 'editar') {
         $jsClientes[(int)$c['id']] = ['moeda' => strtolower($c['moeda'])];
     }
 
-    $page = $a['id'] ? 'Editar assinatura' : 'Nova assinatura';
+    $page = $a['id'] ? t('Editar assinatura') : t('Nova assinatura');
     require __DIR__ . '/includes/header.php';
     ?>
     <?php if ($flash): ?><div class="flash <?= e($flash[0]) ?>"><?= e($flash[1]) ?></div><?php endif; ?>
@@ -169,9 +169,9 @@ if ($acao === 'novo' || $acao === 'editar') {
 
       <div class="card">
         <div class="field">
-          <label>Cliente *</label>
+          <label><?= e(t('Cliente')) ?> *</label>
           <select name="cliente_id" id="cliente_id" required <?= $a['id']?'disabled':'' ?>>
-            <option value="">— selecione —</option>
+            <option value="">— <?= e(t('selecione')) ?> —</option>
             <?php foreach ($clientes as $c): ?>
               <option value="<?= (int)$c['id'] ?>" <?= $a['cliente_id']==$c['id']?'selected':'' ?>><?= e($c['nome_empresa']) ?> (<?= e($c['moeda']) ?>)</option>
             <?php endforeach; ?>
@@ -180,60 +180,60 @@ if ($acao === 'novo' || $acao === 'editar') {
         </div>
 
         <div class="field">
-          <label>Item do catálogo *</label>
+          <label><?= e(t('Item do catálogo')) ?> *</label>
           <select name="item_id" id="item_id" required>
-            <option value="">— selecione —</option>
+            <option value="">— <?= e(t('selecione')) ?> —</option>
             <?php foreach ($itens as $it): ?>
               <option value="<?= (int)$it['id'] ?>" <?= $a['item_id']==$it['id']?'selected':'' ?>>
-                <?= e($it['nome']) ?> · <?= e($it['tipo']) ?><?= $it['e_pacote']?' · pacote':'' ?>
+                <?= e($it['nome']) ?> · <?= e($it['tipo']) ?><?= $it['e_pacote']?' · '.e(t('pacote')):'' ?>
               </option>
             <?php endforeach; ?>
           </select>
         </div>
 
         <div class="field" id="field_variante" style="display:none;">
-          <label>Variante</label>
+          <label><?= e(t('Variante')) ?></label>
           <select name="variante" id="variante">
-            <option value="normal" <?= $a['variante']==='normal'?'selected':'' ?>>Normal</option>
-            <option value="ia"     <?= $a['variante']==='ia'?'selected':'' ?>>Com IA</option>
+            <option value="normal" <?= $a['variante']==='normal'?'selected':'' ?>><?= e(t('Normal')) ?></option>
+            <option value="ia"     <?= $a['variante']==='ia'?'selected':'' ?>><?= e(t('Com IA')) ?></option>
           </select>
         </div>
 
         <div class="field">
-          <label>Funcionário responsável</label>
+          <label><?= e(t('Funcionário responsável')) ?></label>
           <select name="funcionario_id">
-            <option value="">— (sem atribuição) —</option>
+            <option value="">— <?= e(t('(sem atribuição)')) ?> —</option>
             <?php foreach ($funcs as $f): ?>
               <option value="<?= (int)$f['id'] ?>" <?= $a['funcionario_id']==$f['id']?'selected':'' ?>>
                 <?= e($f['nome']) ?> <?= $f['aceitando_clientes'] ? '🟢' : '🔴' ?>
               </option>
             <?php endforeach; ?>
           </select>
-          <div class="hint">Troca vale para o mês seguinte; histórico fica preservado.</div>
+          <div class="hint"><?= e(t('Troca vale para o mês seguinte; histórico fica preservado.')) ?></div>
           <?php if ($mostrar_forcar): ?>
             <label class="check" style="margin-top:8px; color:var(--c-attention);">
               <input type="checkbox" name="forcar_func_lotado" value="1">
-              Sim, atribuir mesmo que o funcionário esteja marcado como não aceitando clientes
+              <?= e(t('Sim, atribuir mesmo que o funcionário esteja marcado como não aceitando clientes')) ?>
             </label>
           <?php endif; ?>
         </div>
 
         <div class="field">
-          <label>Valor cobrado * <span class="muted" style="font-weight:normal;">(preço cheio)</span></label>
+          <label><?= e(t('Valor cobrado')) ?> * <span class="muted" style="font-weight:normal;">(<?= e(t('preço cheio')) ?>)</span></label>
           <input type="number" step="0.01" min="0.01" name="valor_cobrado" id="valor_cobrado" required value="<?= $a['valor_cobrado']!==''?e(number_format((float)$a['valor_cobrado'],2,'.','')):'' ?>">
-          <div class="hint">Preço normal do serviço (vem da tabela; pode sobrescrever). O desconto abaixo é aplicado nas cobranças, não aqui.</div>
+          <div class="hint"><?= e(t('Preço normal do serviço (vem da tabela; pode sobrescrever). O desconto abaixo é aplicado nas cobranças, não aqui.')) ?></div>
         </div>
 
         <div class="grid-2">
           <div class="field">
-            <label>Desconto (%)</label>
+            <label><?= e(t('Desconto (%)')) ?></label>
             <input type="number" step="0.01" min="0" max="100" name="desconto_pct" id="desconto_pct" value="<?= e(number_format((float)($a['desconto_pct'] ?? 0), 2, '.', '')) ?>" oninput="previewDesconto()">
-            <div class="hint">Ex: <strong>10</strong> = 10% off</div>
+            <div class="hint"><?= e(t('Ex:')) ?> <strong>10</strong> = <?= e(t('10% off')) ?></div>
           </div>
           <div class="field">
-            <label>Desconto dura (meses)</label>
+            <label><?= e(t('Desconto dura (meses)')) ?></label>
             <input type="number" step="1" min="0" name="desconto_meses" id="desconto_meses" value="<?= (int)($a['desconto_meses'] ?? 0) ?>" oninput="previewDesconto()">
-            <div class="hint"><strong>0</strong> = pra sempre</div>
+            <div class="hint"><strong>0</strong> = <?= e(t('pra sempre')) ?></div>
           </div>
         </div>
         <div class="hint" id="preco_hint" style="margin:-4px 0 var(--s-4);"></div>
@@ -241,15 +241,15 @@ if ($acao === 'novo' || $acao === 'editar') {
         <div class="field">
           <label class="check">
             <input type="checkbox" name="cobrar_fixo_mensal" value="1" <?= (int)($a['cobrar_fixo_mensal'] ?? 0) === 1 ? 'checked' : '' ?>>
-            Cobrar valor fixo todo mês (ignora entregas)
+            <?= e(t('Cobrar valor fixo todo mês (ignora entregas)')) ?>
           </label>
-          <div class="hint">Para itens <strong>por unidade</strong>: quando marcado, entra na cobrança mensal com o valor cheio acima, sem depender das entregas do mês anterior. Itens mensais já são fixos — não precisa marcar.</div>
+          <div class="hint"><?= e(t('Para itens')) ?> <strong><?= e(t('por unidade')) ?></strong><?= e(t(': quando marcado, entra na cobrança mensal com o valor cheio acima, sem depender das entregas do mês anterior. Itens mensais já são fixos — não precisa marcar.')) ?></div>
         </div>
 
         <div class="field">
-          <label>Data de início *</label>
+          <label><?= e(t('Data de início')) ?> *</label>
           <input type="date" name="iniciada_em" required value="<?= e($a['iniciada_em']) ?>">
-          <?php if ($a['id']): ?><div class="hint">Mudar a data afeta de quais meses essa assinatura entra em cobrança.</div><?php endif; ?>
+          <?php if ($a['id']): ?><div class="hint"><?= e(t('Mudar a data afeta de quais meses essa assinatura entra em cobrança.')) ?></div><?php endif; ?>
         </div>
 
         <?php if ($a['id']):
@@ -264,38 +264,38 @@ if ($acao === 'novo' || $acao === 'editar') {
                 $hoje = new DateTimeImmutable();
                 if ($hoje < $fim_min) {
                     $dias_faltam = (int)$hoje->diff($fim_min)->format('%a');
-                    $aviso_min = 'Período mínimo de ' . $per_min . ' meses. Faltam ' . $dias_faltam . ' dias (até ' . $fim_min->format('d/m/Y') . ').';
+                    $aviso_min = t('Período mínimo de') . ' ' . $per_min . ' ' . t('meses. Faltam') . ' ' . $dias_faltam . ' ' . t('dias (até') . ' ' . $fim_min->format('d/m/Y') . ').';
                 }
             }
         ?>
         <?php if ($aviso_min): ?>
           <div class="card attention" style="margin:var(--s-2) 0;">
-            <div class="title" style="color:var(--c-orange);">⚠ Dentro do período mínimo</div>
-            <div class="desc"><?= e($aviso_min) ?> Cancelar/pausar agora pode gerar atrito com o cliente.</div>
+            <div class="title" style="color:var(--c-orange);">⚠ <?= e(t('Dentro do período mínimo')) ?></div>
+            <div class="desc"><?= e($aviso_min) ?> <?= e(t('Cancelar/pausar agora pode gerar atrito com o cliente.')) ?></div>
           </div>
         <?php endif; ?>
         <div class="field">
-          <label>Status</label>
+          <label><?= e(t('Status')) ?></label>
           <select name="status">
-            <option value="ativa"      <?= $a['status']==='ativa'?'selected':'' ?>>Ativa</option>
-            <option value="pausada"    <?= $a['status']==='pausada'?'selected':'' ?>>Pausada</option>
-            <option value="cancelada"  <?= $a['status']==='cancelada'?'selected':'' ?>>Cancelada</option>
+            <option value="ativa"      <?= $a['status']==='ativa'?'selected':'' ?>><?= e(t('Ativa')) ?></option>
+            <option value="pausada"    <?= $a['status']==='pausada'?'selected':'' ?>><?= e(t('Pausada')) ?></option>
+            <option value="cancelada"  <?= $a['status']==='cancelada'?'selected':'' ?>><?= e(t('Cancelada')) ?></option>
           </select>
         </div>
         <?php endif; ?>
       </div>
 
-      <button class="btn block" type="submit">Salvar</button>
+      <button class="btn block" type="submit"><?= e(t('Salvar')) ?></button>
     </form>
 
     <?php if ($a['id']): ?>
       <details class="mt-5">
-        <summary class="muted" style="cursor:pointer; padding:var(--s-3);">⚠ Zona de perigo</summary>
-        <form method="post" class="mt-3" onsubmit="return confirm('APAGAR DEFINITIVAMENTE esta assinatura?\n\nSó funciona se NÃO tiver cobranças geradas. Caso tenha, mude o status para cancelada.\n\nConfirmar?');">
+        <summary class="muted" style="cursor:pointer; padding:var(--s-3);">⚠ <?= e(t('Zona de perigo')) ?></summary>
+        <form method="post" class="mt-3" onsubmit="return confirm('<?= e(t('APAGAR DEFINITIVAMENTE esta assinatura?\n\nSó funciona se NÃO tiver cobranças geradas. Caso tenha, mude o status para cancelada.\n\nConfirmar?')) ?>');">
           <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
           <input type="hidden" name="op" value="apagar">
           <input type="hidden" name="id" value="<?= (int)$a['id'] ?>">
-          <button class="btn btn-danger block" type="submit">🗑 Apagar definitivamente</button>
+          <button class="btn btn-danger block" type="submit">🗑 <?= e(t('Apagar definitivamente')) ?></button>
         </form>
       </details>
     <?php endif; ?>
@@ -333,10 +333,10 @@ if ($acao === 'novo' || $acao === 'editar') {
       if (!cheio || desc <= 0) { h.textContent = ''; return; }
       const comDesc = +(cheio * (1 - desc/100)).toFixed(2);
       if (meses > 0) {
-        h.innerHTML = '🏷️ Primeiros <strong>' + meses + ' mês(es)</strong>: <strong>' + m + ' ' + _fmtNum(comDesc) + '</strong> (' + desc + '% off)'
-                    + ' · depois volta pra <strong>' + m + ' ' + _fmtNum(cheio) + '</strong>.';
+        h.innerHTML = '🏷️ <?= e(t('Primeiros')) ?> <strong>' + meses + ' <?= e(t('mês(es)')) ?></strong>: <strong>' + m + ' ' + _fmtNum(comDesc) + '</strong> (' + desc + '<?= e(t('% off')) ?>)'
+                    + ' · <?= e(t('depois volta pra')) ?> <strong>' + m + ' ' + _fmtNum(cheio) + '</strong>.';
       } else {
-        h.innerHTML = '🏷️ Desconto <strong>permanente</strong> de ' + desc + '%: <strong>' + m + ' ' + _fmtNum(comDesc) + '</strong> por mês.';
+        h.innerHTML = '🏷️ <?= e(t('Desconto')) ?> <strong><?= e(t('permanente')) ?></strong> <?= e(t('de')) ?> ' + desc + '%: <strong>' + m + ' ' + _fmtNum(comDesc) + '</strong> <?= e(t('por mês')) ?>.';
       }
     }
     // Item/cliente/variante mudou: preenche o PREÇO CHEIO (respeita override manual).
@@ -390,12 +390,12 @@ if ($cliente_filter) {
     $cliente_nome = $stmt->fetchColumn();
 }
 ?>
-<h1 class="page-title">Assinaturas<?= $cliente_nome ? ' — ' . e($cliente_nome) : '' ?></h1>
+<h1 class="page-title"><?= e(t('Assinaturas')) ?><?= $cliente_nome ? ' — ' . e($cliente_nome) : '' ?></h1>
 <?php if ($flash): ?><div class="flash <?= e($flash[0]) ?>"><?= e($flash[1]) ?></div><?php endif; ?>
 
-<a class="btn btn-brand block" href="?acao=novo<?= $cliente_filter ? '&cliente_id=' . $cliente_filter : '' ?>">+ Nova assinatura</a>
+<a class="btn btn-brand block" href="?acao=novo<?= $cliente_filter ? '&cliente_id=' . $cliente_filter : '' ?>">+ <?= e(t('Nova assinatura')) ?></a>
 
-<div class="section-label mt-5">Total (<?= count($lista) ?>)</div>
+<div class="section-label mt-5"><?= e(t('Total')) ?> (<?= count($lista) ?>)</div>
 <?php foreach ($lista as $a): ?>
   <a class="list-card" href="?acao=editar&id=<?= (int)$a['id'] ?>">
     <div class="info">
@@ -404,7 +404,7 @@ if ($cliente_filter) {
         <?php if ($a['variante']==='ia'): ?><span class="status status-ia">IA</span><?php endif; ?>
         <span class="status status-<?= e($a['status']) ?>"><?= e($a['status']) ?></span>
       </div>
-      <div class="sub"><?= e($a['nome_empresa']) ?> · <?= e($a['funcionario_nome'] ?? 'sem responsável') ?> · <?= e($a['tipo']) ?></div>
+      <div class="sub"><?= e($a['nome_empresa']) ?> · <?= e($a['funcionario_nome'] ?? t('sem responsável')) ?> · <?= e($a['tipo']) ?></div>
     </div>
     <div class="right">
       <div class="money md"><?= e(money_fmt((float)$a['valor_cobrado'], $a['moeda'])) ?></div>
@@ -412,7 +412,7 @@ if ($cliente_filter) {
   </a>
 <?php endforeach; ?>
 <?php if (!$lista): ?>
-  <p class="muted center mt-5">Nenhuma assinatura. Clique em "+ Nova".</p>
+  <p class="muted center mt-5"><?= e(t('Nenhuma assinatura. Clique em "+ Nova".')) ?></p>
 <?php endif; ?>
 
 <?php require __DIR__ . '/includes/footer.php'; ?>

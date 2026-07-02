@@ -7,10 +7,10 @@ $erro = null;
 
 if ($token === '') {
     http_response_code(404);
-    $page = 'Convite inválido';
+    $page = t('Convite inválido');
     $hide_nav = true;
     require __DIR__ . '/includes/header.php';
-    echo '<div class="auth-wrap"><div class="card danger"><div class="title">Convite inválido</div><div class="desc">Link incorreto ou expirado.</div></div></div>';
+    echo '<div class="auth-wrap"><div class="card danger"><div class="title">' . e(t('Convite inválido')) . '</div><div class="desc">' . e(t('Link incorreto ou expirado.')) . '</div></div></div>';
     require __DIR__ . '/includes/footer.php';
     exit;
 }
@@ -21,10 +21,10 @@ $convite = $stmt->fetch();
 
 if (!$convite || $convite['usado_em'] !== null || strtotime($convite['expira_em']) < time()) {
     http_response_code(410);
-    $page = 'Convite expirado';
+    $page = t('Convite expirado');
     $hide_nav = true;
     require __DIR__ . '/includes/header.php';
-    echo '<div class="auth-wrap"><div class="card danger"><div class="title">Convite expirado</div><div class="desc">Este link não está mais ativo. Solicite um novo convite.</div></div></div>';
+    echo '<div class="auth-wrap"><div class="card danger"><div class="title">' . e(t('Convite expirado')) . '</div><div class="desc">' . e(t('Este link não está mais ativo. Solicite um novo convite.')) . '</div></div></div>';
     require __DIR__ . '/includes/footer.php';
     exit;
 }
@@ -39,11 +39,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $endereco = trim((string)($_POST['endereco'] ?? '')) ?: null;
 
     if ($nome === '' || $email === '' || $senha === '') {
-        $erro = 'Preencha todos os campos obrigatórios.';
+        $erro = t('Preencha todos os campos obrigatórios.');
     } elseif ($senha !== $senha2) {
-        $erro = 'As senhas não conferem.';
+        $erro = t('As senhas não conferem.');
     } elseif (strlen($senha) < 8) {
-        $erro = 'A senha precisa ter pelo menos 8 caracteres.';
+        $erro = t('A senha precisa ter pelo menos 8 caracteres.');
     } else {
         try {
             // Pré-check: email já em uso? (evita criar cliente órfão se INSERT
@@ -51,7 +51,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $db->prepare('SELECT id FROM usuarios WHERE email = ? LIMIT 1');
             $stmt->execute([$email]);
             if ($stmt->fetchColumn()) {
-                $erro = 'Já existe usuário com este email.';
+                $erro = t('Já existe usuário com este email.');
                 goto fim_convite;
             }
 
@@ -72,7 +72,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $cpf = trim((string)($_POST['cpf'] ?? '')) ?: null;
                 $wisetag = trim((string)($_POST['wisetag'] ?? ''));
                 if ($wisetag === '') {
-                    throw new RuntimeException('WiseTag é obrigatória para funcionários.');
+                    throw new RuntimeException(t('WiseTag é obrigatória para funcionários.'));
                 }
                 $stmt = $db->prepare("INSERT INTO usuarios (nome, email, senha_hash, role, cpf, wisetag, ativo) VALUES (?,?,?, 'funcionario', ?, ?, 1)");
                 $stmt->execute([$nome, $email, password_hash($senha, PASSWORD_DEFAULT), $cpf, $wisetag]);
@@ -90,7 +90,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         } catch (PDOException $e) {
             $db->rollBack();
-            $erro = ((int)$e->errorInfo[1] === 1062) ? 'Já existe usuário com este email.' : 'Erro ao salvar: ' . $e->getMessage();
+            $erro = ((int)$e->errorInfo[1] === 1062) ? t('Já existe usuário com este email.') : t('Erro ao salvar: ') . $e->getMessage();
         } catch (Throwable $e) {
             if ($db->inTransaction()) $db->rollBack();
             $erro = $e->getMessage();
@@ -99,7 +99,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$page = $convite['tipo'] === 'cliente' ? 'Cadastro de cliente' : 'Cadastro de funcionário';
+$page = $convite['tipo'] === 'cliente' ? t('Cadastro de cliente') : t('Cadastro de funcionário');
 $hide_nav = true;
 require __DIR__ . '/includes/header.php';
 ?>
@@ -108,39 +108,39 @@ require __DIR__ . '/includes/header.php';
     <img src="<?= e(APP_BASE_URL) ?>/assets/img/logo.png" alt="Dite Ads" onerror="this.style.display='none'">
   </div>
   <h1><?= e($page) ?></h1>
-  <p class="muted center mb-3">Preencha seus dados para criar sua conta.</p>
+  <p class="muted center mb-3"><?= e(t('Preencha seus dados para criar sua conta.')) ?></p>
   <?php if ($erro): ?><div class="flash err"><?= e($erro) ?></div><?php endif; ?>
   <form method="post">
     <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
 
     <?php if ($convite['tipo'] === 'cliente'): ?>
-      <div class="field"><label>Nome da empresa *</label><input name="nome_empresa" required value="<?= e($_POST['nome_empresa'] ?? '') ?>"></div>
-      <div class="field"><label>Seu nome (contato) *</label><input name="nome" required value="<?= e($_POST['nome'] ?? '') ?>"></div>
+      <div class="field"><label><?= e(t('Nome da empresa *')) ?></label><input name="nome_empresa" required value="<?= e($_POST['nome_empresa'] ?? '') ?>"></div>
+      <div class="field"><label><?= e(t('Seu nome (contato) *')) ?></label><input name="nome" required value="<?= e($_POST['nome'] ?? '') ?>"></div>
     <?php else: ?>
-      <div class="field"><label>Nome completo *</label><input name="nome" required value="<?= e($_POST['nome'] ?? '') ?>"></div>
-      <div class="field"><label>CPF (opcional)</label><input name="cpf" value="<?= e($_POST['cpf'] ?? '') ?>"></div>
-      <div class="field"><label>WiseTag *</label><input name="wisetag" required value="<?= e($_POST['wisetag'] ?? '') ?>" placeholder="@seuwisetag"><div class="hint">Você recebe pagamentos em USD via Wise.</div></div>
+      <div class="field"><label><?= e(t('Nome completo *')) ?></label><input name="nome" required value="<?= e($_POST['nome'] ?? '') ?>"></div>
+      <div class="field"><label><?= e(t('CPF (opcional)')) ?></label><input name="cpf" value="<?= e($_POST['cpf'] ?? '') ?>"></div>
+      <div class="field"><label><?= e(t('WiseTag *')) ?></label><input name="wisetag" required value="<?= e($_POST['wisetag'] ?? '') ?>" placeholder="@seuwisetag"><div class="hint"><?= e(t('Você recebe pagamentos em USD via Wise.')) ?></div></div>
     <?php endif; ?>
 
-    <div class="field"><label>Email (será seu login) *</label><input type="email" name="email" required value="<?= e($_POST['email'] ?? '') ?>" autocomplete="email"></div>
-    <div class="field"><label>Telefone (com DDI)</label><input name="telefone" value="<?= e($_POST['telefone'] ?? '') ?>" placeholder="+55 11 99999-9999"></div>
-    <div class="field"><label>Endereço</label><input name="endereco" value="<?= e($_POST['endereco'] ?? '') ?>"></div>
+    <div class="field"><label><?= e(t('Email (será seu login) *')) ?></label><input type="email" name="email" required value="<?= e($_POST['email'] ?? '') ?>" autocomplete="email"></div>
+    <div class="field"><label><?= e(t('Telefone (com DDI)')) ?></label><input name="telefone" value="<?= e($_POST['telefone'] ?? '') ?>" placeholder="+55 11 99999-9999"></div>
+    <div class="field"><label><?= e(t('Endereço')) ?></label><input name="endereco" value="<?= e($_POST['endereco'] ?? '') ?>"></div>
     <div class="field">
-      <label>Senha (mínimo 8 caracteres) *</label>
+      <label><?= e(t('Senha (mínimo 8 caracteres) *')) ?></label>
       <div class="field-password">
         <input type="password" name="senha" required autocomplete="new-password">
-        <button type="button" class="password-toggle" onclick="togglePassword(this)" aria-label="Mostrar senha">👁</button>
+        <button type="button" class="password-toggle" onclick="togglePassword(this)" aria-label="<?= e(t('Mostrar senha')) ?>">👁</button>
       </div>
     </div>
     <div class="field">
-      <label>Confirmar senha *</label>
+      <label><?= e(t('Confirmar senha *')) ?></label>
       <div class="field-password">
         <input type="password" name="senha2" required autocomplete="new-password">
-        <button type="button" class="password-toggle" onclick="togglePassword(this)" aria-label="Mostrar senha">👁</button>
+        <button type="button" class="password-toggle" onclick="togglePassword(this)" aria-label="<?= e(t('Mostrar senha')) ?>">👁</button>
       </div>
     </div>
 
-    <button class="btn block" type="submit">Criar minha conta</button>
+    <button class="btn block" type="submit"><?= e(t('Criar minha conta')) ?></button>
   </form>
 </div>
 <?php require __DIR__ . '/includes/footer.php'; ?>

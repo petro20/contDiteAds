@@ -53,7 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             echo "\nERRO: " . $e->getMessage() . "\n";
         }
         $saida = ob_get_clean();
-        $flash = ['ok', $dry_run ? 'Dry-run concluído (nenhum email enviado).' : 'Alerta enviado.'];
+        $flash = ['ok', $dry_run ? t('Dry-run concluído (nenhum email enviado).') : t('Alerta enviado.')];
     }
 }
 
@@ -63,13 +63,13 @@ try {
     $pendentes_agora = alertas_postagens_pendentes($db, new DateTimeImmutable('today'));
 } catch (Throwable $e) {}
 
-$page = 'Alertas operacionais';
+$page = t('Alertas operacionais');
 $show_back = true;
 $back_to = APP_BASE_URL . '/perfil.php';
 require __DIR__ . '/includes/header.php';
 ?>
-<h1 class="page-title">🔔 Alertas automáticos</h1>
-<p class="muted">Cron envia lembretes pros funcionários sobre tarefas pendentes da semana.</p>
+<h1 class="page-title">🔔 <?= e(t('Alertas automáticos')) ?></h1>
+<p class="muted"><?= e(t('Cron envia lembretes pros funcionários sobre tarefas pendentes da semana.')) ?></p>
 
 <?php if ($flash): ?><div class="flash <?= e($flash[0]) ?>"><?= e($flash[1]) ?></div><?php endif; ?>
 
@@ -78,34 +78,34 @@ require __DIR__ . '/includes/header.php';
 <?php endif; ?>
 
 <div class="card brand">
-  <div class="title">⏰ Postagens da semana</div>
-  <p>Detecta funcionários com assinaturas de POSTAGEM ativas que <strong>ainda não marcaram nenhuma entrega nesta semana</strong> (segunda → hoje).</p>
-  <p class="muted" style="font-size:13px;"><strong>Agendado:</strong> quarta e sexta às 09:00 (crons <code>0 9 * * 3</code> e <code>0 9 * * 5</code>).</p>
+  <div class="title">⏰ <?= e(t('Postagens da semana')) ?></div>
+  <p><?= e(t('Detecta funcionários com assinaturas de POSTAGEM ativas que')) ?> <strong><?= e(t('ainda não marcaram nenhuma entrega nesta semana')) ?></strong> <?= e(t('(segunda → hoje).')) ?></p>
+  <p class="muted" style="font-size:13px;"><strong><?= e(t('Agendado:')) ?></strong> <?= e(t('quarta e sexta às 09:00 (crons')) ?> <code>0 9 * * 3</code> <?= e(t('e')) ?> <code>0 9 * * 5</code>).</p>
 </div>
 
 <?php if ($pendentes_agora): ?>
   <div class="card attention">
-    <div class="title">⚠ <?= count($pendentes_agora) ?> funcionário(s) com pendência AGORA</div>
+    <div class="title">⚠ <?= count($pendentes_agora) ?> <?= e(t('funcionário(s) com pendência AGORA')) ?></div>
     <ul style="padding-left:20px;">
       <?php foreach ($pendentes_agora as $p): ?>
-        <li><strong><?= e($p['nome']) ?></strong> — <?= count($p['assinaturas']) ?> assinatura(s) sem marcação</li>
+        <li><strong><?= e($p['nome']) ?></strong> — <?= count($p['assinaturas']) ?> <?= e(t('assinatura(s) sem marcação')) ?></li>
       <?php endforeach; ?>
     </ul>
   </div>
 <?php else: ?>
   <div class="card success">
-    <div class="title">✓ Nenhuma pendência detectada agora</div>
-    <div class="desc">Todos os funcionários com POSTAGEM ativa já marcaram pelo menos 1 entrega esta semana.</div>
+    <div class="title">✓ <?= e(t('Nenhuma pendência detectada agora')) ?></div>
+    <div class="desc"><?= e(t('Todos os funcionários com POSTAGEM ativa já marcaram pelo menos 1 entrega esta semana.')) ?></div>
   </div>
 <?php endif; ?>
 
 <div class="card">
   <form method="post" style="display:flex; gap:8px; flex-wrap:wrap;">
     <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
-    <button type="submit" name="op" value="rodar_dry_run" class="btn btn-ghost" style="flex:1;">👀 Dry-run (só listar)</button>
-    <button type="submit" name="op" value="rodar_agora" class="btn" style="flex:1;" onclick="return confirm('Enviar emails de verdade pros funcionários pendentes?');">📧 Rodar e enviar emails</button>
+    <button type="submit" name="op" value="rodar_dry_run" class="btn btn-ghost" style="flex:1;">👀 <?= e(t('Dry-run (só listar)')) ?></button>
+    <button type="submit" name="op" value="rodar_agora" class="btn" style="flex:1;" onclick="return confirm('<?= e(t('Enviar emails de verdade pros funcionários pendentes?')) ?>');">📧 <?= e(t('Rodar e enviar emails')) ?></button>
   </form>
-  <div class="hint">Dry-run só lista quem seria notificado, sem enviar. "Rodar agora" envia os emails de verdade — útil pra forçar alerta fora dos horários agendados.</div>
+  <div class="hint"><?= e(t('Dry-run só lista quem seria notificado, sem enviar. "Rodar agora" envia os emails de verdade — útil pra forçar alerta fora dos horários agendados.')) ?></div>
 </div>
 
 <?php require __DIR__ . '/includes/footer.php'; ?>

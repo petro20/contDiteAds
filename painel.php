@@ -14,30 +14,30 @@ if (!preg_match('/^\d{4}-\d{2}$/', $competencia)) $competencia = date('Y-m');
 $mes_inicio = $competencia . '-01';
 $mes_fim    = date('Y-m-t', strtotime($mes_inicio));
 
-$page = 'Painel financeiro';
+$page = t('Painel financeiro');
 $nav_active = 'painel';
 require __DIR__ . '/includes/header.php';
 ?>
-<h1 class="page-title">Painel</h1>
+<h1 class="page-title"><?= e(t('Painel')) ?></h1>
 <details class="card" style="margin-bottom:var(--s-3);">
-  <summary class="muted" style="cursor:pointer; padding:8px 0; font-size:13px;">📊 Exportar planilhas (CSV)</summary>
+  <summary class="muted" style="cursor:pointer; padding:8px 0; font-size:13px;">📊 <?= e(t('Exportar planilhas (CSV)')) ?></summary>
   <div class="btn-pair" style="margin-top:8px; flex-wrap:wrap;">
-    <a class="btn btn-ghost small" href="<?= e(APP_BASE_URL) ?>/export.php?tipo=cobrancas&mes=<?= e($competencia) ?>">💳 Cobranças</a>
-    <a class="btn btn-ghost small" href="<?= e(APP_BASE_URL) ?>/export.php?tipo=distribuicao&mes=<?= e($competencia) ?>">💎 Distribuição</a>
-    <a class="btn btn-ghost small" href="<?= e(APP_BASE_URL) ?>/export.php?tipo=entregas&mes=<?= e($competencia) ?>">📅 Entregas</a>
-    <a class="btn btn-ghost small" href="<?= e(APP_BASE_URL) ?>/export.php?tipo=clientes">👥 Clientes</a>
-    <a class="btn btn-ghost small" href="<?= e(APP_BASE_URL) ?>/export.php?tipo=funcionarios">🧑‍💼 Funcionários</a>
+    <a class="btn btn-ghost small" href="<?= e(APP_BASE_URL) ?>/export.php?tipo=cobrancas&mes=<?= e($competencia) ?>">💳 <?= e(t('Cobranças')) ?></a>
+    <a class="btn btn-ghost small" href="<?= e(APP_BASE_URL) ?>/export.php?tipo=distribuicao&mes=<?= e($competencia) ?>">💎 <?= e(t('Distribuição')) ?></a>
+    <a class="btn btn-ghost small" href="<?= e(APP_BASE_URL) ?>/export.php?tipo=entregas&mes=<?= e($competencia) ?>">📅 <?= e(t('Entregas')) ?></a>
+    <a class="btn btn-ghost small" href="<?= e(APP_BASE_URL) ?>/export.php?tipo=clientes">👥 <?= e(t('Clientes')) ?></a>
+    <a class="btn btn-ghost small" href="<?= e(APP_BASE_URL) ?>/export.php?tipo=funcionarios">🧑‍💼 <?= e(t('Funcionários')) ?></a>
     <?php if (is_sadmin()): ?>
-      <a class="btn btn-ghost small" href="<?= e(APP_BASE_URL) ?>/export.php?tipo=despesas">💸 Despesas</a>
+      <a class="btn btn-ghost small" href="<?= e(APP_BASE_URL) ?>/export.php?tipo=despesas">💸 <?= e(t('Despesas')) ?></a>
     <?php endif; ?>
   </div>
-  <div class="hint" style="margin-top:6px;">Abre no Excel/Google Sheets com encoding UTF-8.</div>
+  <div class="hint" style="margin-top:6px;"><?= e(t('Abre no Excel/Google Sheets com encoding UTF-8.')) ?></div>
 </details>
 
 <nav class="tabs-bar">
-  <a class="<?= $aba==='agenda'?'active':'' ?>" href="?aba=agenda&mes=<?= e($competencia) ?>">Agenda</a>
-  <a class="<?= $aba==='clientes'?'active':'' ?>" href="?aba=clientes&mes=<?= e($competencia) ?>">Por cliente</a>
-  <a class="<?= $aba==='servicos'?'active':'' ?>" href="?aba=servicos&mes=<?= e($competencia) ?>">Por serviço</a>
+  <a class="<?= $aba==='agenda'?'active':'' ?>" href="?aba=agenda&mes=<?= e($competencia) ?>"><?= e(t('Agenda')) ?></a>
+  <a class="<?= $aba==='clientes'?'active':'' ?>" href="?aba=clientes&mes=<?= e($competencia) ?>"><?= e(t('Por cliente')) ?></a>
+  <a class="<?= $aba==='servicos'?'active':'' ?>" href="?aba=servicos&mes=<?= e($competencia) ?>"><?= e(t('Por serviço')) ?></a>
 </nav>
 
 <?php if ($aba === 'agenda'):
@@ -133,7 +133,7 @@ require __DIR__ . '/includes/header.php';
     $dt = DateTime::createFromFormat('Y-m', $competencia);
     $mes_ant = (clone $dt)->modify('-1 month')->format('Y-m');
     $mes_prox = (clone $dt)->modify('+1 month')->format('Y-m');
-    $nome_mes_pt = ['','janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'][(int)$dt->format('n')] . ' de ' . $dt->format('Y');
+    $nome_mes_pt = t(['','janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'][(int)$dt->format('n')]) . ' ' . t('de') . ' ' . $dt->format('Y');
 
     // Histórico para o gráfico — gera do primeiro mês com movimento até a competência atual.
     // O JS filtra por período (1m / 3m / 6m / 1a / tudo). Queries toleram tabelas ausentes.
@@ -171,7 +171,7 @@ require __DIR__ . '/includes/header.php';
         $mes = (clone $cur_dt)->modify("-{$i} months")->format('Y-m');
         $ini_m = $mes . '-01';
         $fim_m = date('Y-m-t', strtotime($ini_m));
-        $mn_pt = ['','jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'][(int)substr($mes,5,2)] . '/' . substr($mes,2,2);
+        $mn_pt = t(['','jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'][(int)substr($mes,5,2)]) . '/' . substr($mes,2,2);
         $h = ['mes'=>$mes,'label'=>$mn_pt];
         foreach (['BRL','USD','EUR'] as $cur) {
             $r = 0.0;
@@ -240,7 +240,7 @@ require __DIR__ . '/includes/header.php';
 
 <div class="card">
   <div class="spaced mb-3">
-    <strong>📈 Saúde financeira <span class="muted" style="font-weight:normal; font-size:12px;" id="chart-periodo-label">(últimos 6 meses)</span></strong>
+    <strong>📈 <?= e(t('Saúde financeira')) ?> <span class="muted" style="font-weight:normal; font-size:12px;" id="chart-periodo-label"><?= e(t('(últimos 6 meses)')) ?></span></strong>
     <div id="chart-moeda-tabs" class="btn-pair" style="gap:4px;">
       <button type="button" class="btn small btn-secondary" data-moeda="BRL" onclick="trocarMoedaGrafico('BRL')">R$</button>
       <button type="button" class="btn small btn-ghost" data-moeda="USD" onclick="trocarMoedaGrafico('USD')">$</button>
@@ -251,8 +251,8 @@ require __DIR__ . '/includes/header.php';
     <button type="button" class="btn small btn-ghost" data-periodo="1"  onclick="trocarPeriodoGrafico(1)">1m</button>
     <button type="button" class="btn small btn-ghost" data-periodo="3"  onclick="trocarPeriodoGrafico(3)">3m</button>
     <button type="button" class="btn small btn-secondary" data-periodo="6"  onclick="trocarPeriodoGrafico(6)">6m</button>
-    <button type="button" class="btn small btn-ghost" data-periodo="12" onclick="trocarPeriodoGrafico(12)">1a</button>
-    <button type="button" class="btn small btn-ghost" data-periodo="0"  onclick="trocarPeriodoGrafico(0)">Tudo</button>
+    <button type="button" class="btn small btn-ghost" data-periodo="12" onclick="trocarPeriodoGrafico(12)"><?= e(t('1a')) ?></button>
+    <button type="button" class="btn small btn-ghost" data-periodo="0"  onclick="trocarPeriodoGrafico(0)"><?= e(t('Tudo')) ?></button>
   </div>
   <div style="position:relative; height:240px;">
     <canvas id="chart_saude"></canvas>
@@ -267,7 +267,7 @@ let chart_saude = null;
 let moeda_atual = 'BRL';
 let periodo_atual = 6; // 0 = tudo
 
-const PERIODO_LABEL = {1:'(último mês)', 3:'(últimos 3 meses)', 6:'(últimos 6 meses)', 12:'(último ano)', 0:'(o tempo todo)'};
+const PERIODO_LABEL = {1:<?= json_encode(t('(último mês)'), JSON_UNESCAPED_UNICODE) ?>, 3:<?= json_encode(t('(últimos 3 meses)'), JSON_UNESCAPED_UNICODE) ?>, 6:<?= json_encode(t('(últimos 6 meses)'), JSON_UNESCAPED_UNICODE) ?>, 12:<?= json_encode(t('(último ano)'), JSON_UNESCAPED_UNICODE) ?>, 0:<?= json_encode(t('(o tempo todo)'), JSON_UNESCAPED_UNICODE) ?>};
 
 function trocarMoedaGrafico(m) {
   moeda_atual = m;
@@ -309,10 +309,10 @@ function renderChartSaude() {
     data: {
       labels: labels,
       datasets: [
-        { label: 'Receita',  data: receitas, backgroundColor: '#10B981', borderRadius: 4 },
-        { label: 'Despesa',  data: despesas, backgroundColor: '#DC2626', borderRadius: 4 },
-        { label: 'Pago sócios', data: socios, backgroundColor: '#A855F7', borderRadius: 4 },
-        { label: 'Lucro',    data: lucros,   backgroundColor: '#2563EB', borderRadius: 4, type: 'line', borderColor: '#3B82F6', borderWidth: 2, tension: 0.3, fill: false, pointBackgroundColor: '#3B82F6', pointRadius: 4 }
+        { label: <?= json_encode(t('Receita'), JSON_UNESCAPED_UNICODE) ?>,  data: receitas, backgroundColor: '#10B981', borderRadius: 4 },
+        { label: <?= json_encode(t('Despesa'), JSON_UNESCAPED_UNICODE) ?>,  data: despesas, backgroundColor: '#DC2626', borderRadius: 4 },
+        { label: <?= json_encode(t('Pago sócios'), JSON_UNESCAPED_UNICODE) ?>, data: socios, backgroundColor: '#A855F7', borderRadius: 4 },
+        { label: <?= json_encode(t('Lucro'), JSON_UNESCAPED_UNICODE) ?>,    data: lucros,   backgroundColor: '#2563EB', borderRadius: 4, type: 'line', borderColor: '#3B82F6', borderWidth: 2, tension: 0.3, fill: false, pointBackgroundColor: '#3B82F6', pointRadius: 4 }
       ]
     },
     options: {
@@ -343,37 +343,37 @@ renderChartSaude();
   <div class="card">
     <div class="title" style="font-size:18px;"><?= $m ?></div>
 
-    <div class="section-label" style="margin-top:var(--s-3);">Entradas</div>
+    <div class="section-label" style="margin-top:var(--s-3);"><?= e(t('Entradas')) ?></div>
     <?php if ($r > 0): ?>
-      <div class="info-pair"><span class="l">✅ Recebido</span><span class="v" style="color:var(--c-success);"><?= e(money_fmt($r, $m)) ?></span></div>
+      <div class="info-pair"><span class="l">✅ <?= e(t('Recebido')) ?></span><span class="v" style="color:var(--c-success);"><?= e(money_fmt($r, $m)) ?></span></div>
     <?php endif; ?>
     <?php if ($a > 0): ?>
-      <div class="info-pair"><span class="l">🟠 Em análise</span><span class="v" style="color:var(--c-orange);"><?= e(money_fmt($a, $m)) ?></span></div>
+      <div class="info-pair"><span class="l">🟠 <?= e(t('Em análise')) ?></span><span class="v" style="color:var(--c-orange);"><?= e(money_fmt($a, $m)) ?></span></div>
     <?php endif; ?>
     <?php if ($ar > 0): ?>
-      <div class="info-pair"><span class="l">⏳ A receber</span><span class="v"><?= e(money_fmt($ar, $m)) ?></span></div>
+      <div class="info-pair"><span class="l">⏳ <?= e(t('A receber')) ?></span><span class="v"><?= e(money_fmt($ar, $m)) ?></span></div>
     <?php endif; ?>
 
     <?php if ($d > 0 || $extra_func > 0): ?>
-      <div class="section-label" style="margin-top:var(--s-3);">Saídas</div>
+      <div class="section-label" style="margin-top:var(--s-3);"><?= e(t('Saídas')) ?></div>
       <?php if ($d > 0): ?>
-        <div class="info-pair"><span class="l">💸 Despesas</span><span class="v" style="color:var(--c-danger);">− <?= e(money_fmt($d, $m)) ?></span></div>
+        <div class="info-pair"><span class="l">💸 <?= e(t('Despesas')) ?></span><span class="v" style="color:var(--c-danger);">− <?= e(money_fmt($d, $m)) ?></span></div>
       <?php endif; ?>
       <?php if ($extra_func > 0): ?>
-        <div class="info-pair"><span class="l">💵 Pagos a funcionários</span><span class="v" style="color:var(--c-danger);">− <?= e(money_fmt($extra_func, $m)) ?></span></div>
+        <div class="info-pair"><span class="l">💵 <?= e(t('Pagos a funcionários')) ?></span><span class="v" style="color:var(--c-danger);">− <?= e(money_fmt($extra_func, $m)) ?></span></div>
       <?php endif; ?>
     <?php endif; ?>
 
     <div class="info-pair" style="border-top:2px solid var(--border); padding-top:var(--s-3); margin-top:var(--s-3);">
-      <strong style="font-size:15px;">💎 Lucro líquido <span class="muted" style="font-weight:normal; font-size:12px;">(antes de distribuir)</span></strong>
+      <strong style="font-size:15px;">💎 <?= e(t('Lucro líquido')) ?> <span class="muted" style="font-weight:normal; font-size:12px;"><?= e(t('(antes de distribuir)')) ?></span></strong>
       <strong style="font-size:18px; color:<?= $luc >= 0 ? 'var(--c-success)' : 'var(--c-danger)' ?>;"><?= e(money_fmt($luc, $m)) ?></strong>
     </div>
     <?php if ($qts > 0 && $luc != 0): ?>
-      <div class="info-pair muted" style="font-size:13px;"><span>Por quota (÷ <?= $qts ?>)</span><span><?= e(money_fmt($luc / $qts, $m)) ?></span></div>
+      <div class="info-pair muted" style="font-size:13px;"><span><?= e(t('Por quota')) ?> (÷ <?= $qts ?>)</span><span><?= e(money_fmt($luc / $qts, $m)) ?></span></div>
     <?php endif; ?>
 
     <?php if ($dist > 0): ?>
-      <div class="section-label" style="margin-top:var(--s-3);">Distribuição já paga</div>
+      <div class="section-label" style="margin-top:var(--s-3);"><?= e(t('Distribuição já paga')) ?></div>
       <?php foreach ($pag_socios_det[$m] as $ps): ?>
         <div class="info-pair" style="font-size:14px;">
           <span class="l">💼 <?= e($ps['nome']) ?></span>
@@ -381,11 +381,11 @@ renderChartSaude();
         </div>
       <?php endforeach; ?>
       <div class="info-pair muted" style="font-size:13px;">
-        <span>Total distribuído</span>
+        <span><?= e(t('Total distribuído')) ?></span>
         <span style="color:var(--c-danger);">− <?= e(money_fmt($dist, $m)) ?></span>
       </div>
       <div class="info-pair" style="border-top:1px solid var(--border); padding-top:var(--s-3); margin-top:var(--s-2);">
-        <strong style="font-size:15px;">💰 Saldo após distribuição</strong>
+        <strong style="font-size:15px;">💰 <?= e(t('Saldo após distribuição')) ?></strong>
         <strong style="font-size:18px; color:<?= $saldo >= 0 ? 'var(--c-success)' : 'var(--c-danger)' ?>;"><?= e(money_fmt($saldo, $m)) ?></strong>
       </div>
     <?php endif; ?>
@@ -396,16 +396,16 @@ renderChartSaude();
   $vazio_total = (array_sum($rec) + array_sum($analise) + array_sum($a_receber) + array_sum($desp_mes['totais']) + $pag_func_usd + array_sum($pag_socios)) == 0;
   if ($vazio_total):
 ?>
-  <p class="muted center mt-5">Sem movimentação financeira em <?= e($nome_mes_pt) ?>.</p>
+  <p class="muted center mt-5"><?= e(t('Sem movimentação financeira em')) ?> <?= e($nome_mes_pt) ?>.</p>
 <?php endif; ?>
 
 <?php if ($vencidas): ?>
-<div class="section-label">⚠️ Vencidas (<?= count($vencidas) ?>)</div>
+<div class="section-label">⚠️ <?= e(t('Vencidas')) ?> (<?= count($vencidas) ?>)</div>
 <?php foreach ($vencidas as $v): ?>
   <a class="list-card" href="<?= e(APP_BASE_URL) ?>/cobrancas.php?id=<?= (int)$v['id'] ?>" style="border-color:var(--c-danger);">
     <div class="info">
       <div class="nome"><?= e($v['nome_empresa']) ?></div>
-      <div class="sub">venc <?= e(date('d/m/Y', strtotime($v['vencimento']))) ?></div>
+      <div class="sub"><?= e(t('venc')) ?> <?= e(date('d/m/Y', strtotime($v['vencimento']))) ?></div>
     </div>
     <div class="right"><div class="money md"><?= e(money_fmt((float)$v['valor_total'], $v['moeda'])) ?></div></div>
   </a>
@@ -413,12 +413,12 @@ renderChartSaude();
 <?php endif; ?>
 
 <?php if ($proximas): ?>
-<div class="section-label">📅 Vencendo nos próximos 7 dias</div>
+<div class="section-label">📅 <?= e(t('Vencendo nos próximos 7 dias')) ?></div>
 <?php foreach ($proximas as $p): ?>
   <a class="list-card" href="<?= e(APP_BASE_URL) ?>/cobrancas.php?id=<?= (int)$p['id'] ?>">
     <div class="info">
       <div class="nome"><?= e($p['nome_empresa']) ?></div>
-      <div class="sub">venc <?= e(date('d/m/Y', strtotime($p['vencimento']))) ?></div>
+      <div class="sub"><?= e(t('venc')) ?> <?= e(date('d/m/Y', strtotime($p['vencimento']))) ?></div>
     </div>
     <div class="right"><div class="money md"><?= e(money_fmt((float)$p['valor_total'], $p['moeda'])) ?></div></div>
   </a>
@@ -426,7 +426,7 @@ renderChartSaude();
 <?php endif; ?>
 
 <?php if (!$vencidas && !$proximas): ?>
-  <p class="muted center mt-5">Nenhuma cobrança vencida ou vencendo nos próximos 7 dias.</p>
+  <p class="muted center mt-5"><?= e(t('Nenhuma cobrança vencida ou vencendo nos próximos 7 dias.')) ?></p>
 <?php endif; ?>
 
 <?php elseif ($aba === 'clientes'):
@@ -443,20 +443,20 @@ renderChartSaude();
     $stmt->execute();
     $clis = $stmt->fetchAll();
 ?>
-<div class="section-label">Por cliente (<?= count($clis) ?>)</div>
+<div class="section-label"><?= e(t('Por cliente')) ?> (<?= count($clis) ?>)</div>
 <?php foreach ($clis as $c): ?>
   <a class="list-card" href="<?= e(APP_BASE_URL) ?>/clientes.php?acao=editar&id=<?= (int)$c['id'] ?>">
     <div class="info">
       <div class="nome"><?= e($c['nome_empresa']) ?> <span class="muted">(<?= $c['moeda'] ?>)</span></div>
       <div class="sub">
-        <?= (int)$c['qtd_assin'] ?> assin. ativas ·
-        cobrado <?= e(money_fmt((float)$c['total_cobrado'], $c['moeda'])) ?> ·
-        pago <?= e(money_fmt((float)$c['total_pago'], $c['moeda'])) ?>
+        <?= (int)$c['qtd_assin'] ?> <?= e(t('assin. ativas')) ?> ·
+        <?= e(t('cobrado')) ?> <?= e(money_fmt((float)$c['total_cobrado'], $c['moeda'])) ?> ·
+        <?= e(t('pago')) ?> <?= e(money_fmt((float)$c['total_pago'], $c['moeda'])) ?>
       </div>
     </div>
     <div class="right">
       <div class="money md"><?= e(money_fmt((float)$c['em_aberto'], $c['moeda'])) ?></div>
-      <div class="muted" style="font-size:11px;">em aberto</div>
+      <div class="muted" style="font-size:11px;"><?= e(t('em aberto')) ?></div>
     </div>
   </a>
 <?php endforeach; ?>
@@ -474,19 +474,19 @@ renderChartSaude();
     $stmt->execute();
     $items = $stmt->fetchAll();
 ?>
-<div class="section-label">Por serviço (<?= count($items) ?>)</div>
+<div class="section-label"><?= e(t('Por serviço')) ?> (<?= count($items) ?>)</div>
 <?php foreach ($items as $it): ?>
   <a class="list-card" href="<?= e(APP_BASE_URL) ?>/catalogo.php?acao=editar&id=<?= (int)$it['id'] ?>">
     <div class="info">
       <div class="nome">
         <?= e($it['nome']) ?>
-        <?php if ($it['e_pacote']): ?><span class="status status-ia">pacote</span><?php endif; ?>
+        <?php if ($it['e_pacote']): ?><span class="status status-ia"><?= e(t('pacote')) ?></span><?php endif; ?>
       </div>
       <div class="sub"><?= e($it['tipo']) ?></div>
     </div>
     <div class="right">
       <div class="money md"><?= (int)$it['qtd_clientes'] ?></div>
-      <div class="muted" style="font-size:11px;">clientes</div>
+      <div class="muted" style="font-size:11px;"><?= e(t('clientes')) ?></div>
     </div>
   </a>
 <?php endforeach; ?>

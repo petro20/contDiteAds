@@ -7,10 +7,10 @@ $erro = null; $ok = false;
 
 if ($token === '') {
     http_response_code(404);
-    $page = 'Token inválido';
+    $page = t('Token inválido');
     $hide_nav = true;
     require __DIR__ . '/includes/header.php';
-    echo '<div class="auth-wrap"><div class="card danger"><div class="title">Link inválido</div><div class="desc">Solicite um novo link de redefinição.</div></div></div>';
+    echo '<div class="auth-wrap"><div class="card danger"><div class="title">' . e(t('Link inválido')) . '</div><div class="desc">' . e(t('Solicite um novo link de redefinição.')) . '</div></div></div>';
     require __DIR__ . '/includes/footer.php';
     exit;
 }
@@ -21,10 +21,10 @@ $reset = $stmt->fetch();
 
 if (!$reset || $reset['usado_em'] !== null || strtotime($reset['expira_em']) < time()) {
     http_response_code(410);
-    $page = 'Link expirado';
+    $page = t('Link expirado');
     $hide_nav = true;
     require __DIR__ . '/includes/header.php';
-    echo '<div class="auth-wrap"><div class="card danger"><div class="title">Link expirado</div><div class="desc">Solicite um novo link de redefinição.</div></div></div>';
+    echo '<div class="auth-wrap"><div class="card danger"><div class="title">' . e(t('Link expirado')) . '</div><div class="desc">' . e(t('Solicite um novo link de redefinição.')) . '</div></div></div>';
     require __DIR__ . '/includes/footer.php';
     exit;
 }
@@ -34,9 +34,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $senha = (string)($_POST['senha'] ?? '');
     $senha2 = (string)($_POST['senha2'] ?? '');
     if (strlen($senha) < 8) {
-        $erro = 'Senha precisa ter pelo menos 8 caracteres.';
+        $erro = t('Senha precisa ter pelo menos 8 caracteres.');
     } elseif ($senha !== $senha2) {
-        $erro = 'As senhas não conferem.';
+        $erro = t('As senhas não conferem.');
     } else {
         $db->beginTransaction();
         $stmt = $db->prepare('UPDATE usuarios SET senha_hash = ? WHERE id = ?');
@@ -59,7 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$page = 'Redefinir senha';
+$page = t('Redefinir senha');
 $hide_nav = true;
 require __DIR__ . '/includes/header.php';
 ?>
@@ -67,29 +67,29 @@ require __DIR__ . '/includes/header.php';
   <div class="logo-wrap">
     <img src="<?= e(APP_BASE_URL) ?>/assets/img/logo.png" alt="Dite Ads" onerror="this.style.display='none'">
   </div>
-  <h1>Nova senha</h1>
+  <h1><?= e(t('Nova senha')) ?></h1>
   <?php if ($ok): ?>
-    <div class="flash ok">Senha redefinida. Agora você pode entrar.</div>
-    <a class="btn block" href="<?= e(APP_BASE_URL) ?>/login.php">Ir para o login</a>
+    <div class="flash ok"><?= e(t('Senha redefinida. Agora você pode entrar.')) ?></div>
+    <a class="btn block" href="<?= e(APP_BASE_URL) ?>/login.php"><?= e(t('Ir para o login')) ?></a>
   <?php else: ?>
     <?php if ($erro): ?><div class="flash err"><?= e($erro) ?></div><?php endif; ?>
     <form method="post">
       <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
       <div class="field">
-        <label>Nova senha (mín. 8)</label>
+        <label><?= e(t('Nova senha (mín. 8)')) ?></label>
         <div class="field-password">
           <input type="password" name="senha" required autofocus autocomplete="new-password">
-          <button type="button" class="password-toggle" onclick="togglePassword(this)" aria-label="Mostrar senha">👁</button>
+          <button type="button" class="password-toggle" onclick="togglePassword(this)" aria-label="<?= e(t('Mostrar senha')) ?>">👁</button>
         </div>
       </div>
       <div class="field">
-        <label>Confirmar senha</label>
+        <label><?= e(t('Confirmar senha')) ?></label>
         <div class="field-password">
           <input type="password" name="senha2" required autocomplete="new-password">
-          <button type="button" class="password-toggle" onclick="togglePassword(this)" aria-label="Mostrar senha">👁</button>
+          <button type="button" class="password-toggle" onclick="togglePassword(this)" aria-label="<?= e(t('Mostrar senha')) ?>">👁</button>
         </div>
       </div>
-      <button class="btn block" type="submit">Redefinir</button>
+      <button class="btn block" type="submit"><?= e(t('Redefinir')) ?></button>
     </form>
   <?php endif; ?>
 </div>
