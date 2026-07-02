@@ -38,7 +38,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $iniciada  = $_POST['iniciada_em'] ?? date('Y-m-d');
         $status    = $_POST['status'] ?? 'ativa';
         $fixo_mensal = isset($_POST['cobrar_fixo_mensal']) ? 1 : 0;
-        $tem_col_fixo = db_coluna_existe($db, 'assinaturas', 'cobrar_fixo_mensal');
+        $desconto = max(0.0, min(100.0, (float)str_replace(',', '.', (string)($_POST['desconto_pct'] ?? '0'))));
+        // Colunas que dependem de migration — só entram no SQL se existirem no banco.
+        $cols_opc = [];
+        if (db_coluna_existe($db, 'assinaturas', 'cobrar_fixo_mensal')) $cols_opc['cobrar_fixo_mensal'] = $fixo_mensal;
+        if (db_coluna_existe($db, 'assinaturas', 'desconto_pct'))       $cols_opc['desconto_pct']       = $desconto;
         $forcar_atribuicao = isset($_POST['forcar_func_lotado']);
         if (!in_array($status, ['ativa','pausada','cancelada'], true)) $status = 'ativa';
 
@@ -50,7 +54,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $f = $stmt->fetch();
                 if ($f && (int)$f['aceitando_clientes'] === 0) {
                     $flash = ['err', '🔴 ' . htmlspecialchars($f['nome']) . ' está marcado como NÃO aceitando novos clientes. Se for proposital, marque o checkbox de força abaixo e salve de novo.'];
-                    $a = ['id'=>$pid,'cliente_id'=>$cliente,'item_id'=>$item,'funcionario_id'=>$func,'variante'=>$variante,'valor_cobrado'=>$valor,'status'=>$status,'iniciada_em'=>$iniciada];
+                    $a = ['id'=>$pid,'cliente_id'=>$cliente,'item_id'=>$item,'funcionario_id'=>$func,'variante'=>$variante,'valor_cobrado'=>$valor,'status'=>$status,'iniciada_em'=>$iniciada,'cobrar_fixo_mensal'=>$fixo_mensal,'desconto_pct'=>$desconto];
                     $acao = $pid ? 'editar' : 'novo'; $id = $pid;
                     $mostrar_forcar = true;
                     goto fim_save_assinatura;
@@ -64,24 +68,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             try {
                 if ($pid) {
-                    if ($tem_col_fixo) {
-                        $stmt = $db->prepare('UPDATE assinaturas SET item_id=?, funcionario_id=?, variante=?, valor_cobrado=?, status=?, iniciada_em=?, cobrar_fixo_mensal=? WHERE id=?');
-                        $stmt->execute([$item, $func, $variante, $valor, $status, $iniciada, $fixo_mensal, $pid]);
-                    } else {
-                        $stmt = $db->prepare('UPDATE assinaturas SET item_id=?, funcionario_id=?, variante=?, valor_cobrado=?, status=?, iniciada_em=? WHERE id=?');
-                        $stmt->execute([$item, $func, $variante, $valor, $status, $iniciada, $pid]);
-                    }
+                    $set  = 'item_id=?, funcionario_id=?, variante=?, valor_cobrado=?, status=?, iniciada_em=?';
+                    $args = [$item, $func, $variante, $valor, $status, $iniciada];
+                    foreach ($cols_opc as $c => $v) { $set .= ", $c=?"; $args[] = $v; }
+                    $args[] = $pid;
+                    $stmt = $db->prepare("UPDATE assinaturas SET $set WHERE id=?");
+                    $stmt->execute($args);
                     audit_log('assinatura.editada', 'assinaturas', $pid);
                     header('Location: ' . APP_BASE_URL . '/assinaturas.php?id=' . $pid . '&ok=upd'); exit;
                 } else {
                     $db->beginTransaction();
-                    if ($tem_col_fixo) {
-                        $stmt = $db->prepare('INSERT INTO assinaturas (cliente_id, item_id, funcionario_id, variante, valor_cobrado, status, iniciada_em, cobrar_fixo_mensal) VALUES (?,?,?,?,?,?,?,?)');
-                        $stmt->execute([$cliente, $item, $func, $variante, $valor, $status, $iniciada, $fixo_mensal]);
-                    } else {
-                        $stmt = $db->prepare('INSERT INTO assinaturas (cliente_id, item_id, funcionario_id, variante, valor_cobrado, status, iniciada_em) VALUES (?,?,?,?,?,?,?)');
-                        $stmt->execute([$cliente, $item, $func, $variante, $valor, $status, $iniciada]);
-                    }
+                    $cols = ['cliente_id','item_id','funcionario_id','variante','valor_cobrado','status','iniciada_em'];
+                    $args = [$cliente, $item, $func, $variante, $valor, $status, $iniciada];
+                    foreach ($cols_opc as $c => $v) { $cols[] = $c; $args[] = $v; }
+                    $ph = implode(',', array_fill(0, count($cols), '?'));
+                    $stmt = $db->prepare('INSERT INTO assinaturas (' . implode(',', $cols) . ") VALUES ($ph)");
+                    $stmt->execute($args);
                     $newId = (int)$db->lastInsertId();
                     ensure_dia_cobranca($db, $cliente, $iniciada);
                     $db->commit();
@@ -127,7 +129,7 @@ if ($acao === 'novo' || $acao === 'editar') {
     $show_back = true;
     $back_to = APP_BASE_URL . '/assinaturas.php' . ($cliente_filter ? '?cliente_id=' . $cliente_filter : '');
 
-    $a = ['id'=>0,'cliente_id'=>$cliente_filter,'item_id'=>0,'funcionario_id'=>0,'variante'=>'normal','valor_cobrado'=>'','status'=>'ativa','iniciada_em'=>date('Y-m-d'),'cobrar_fixo_mensal'=>0];
+    $a = ['id'=>0,'cliente_id'=>$cliente_filter,'item_id'=>0,'funcionario_id'=>0,'variante'=>'normal','valor_cobrado'=>'','status'=>'ativa','iniciada_em'=>date('Y-m-d'),'cobrar_fixo_mensal'=>0,'desconto_pct'=>0];
     if ($acao === 'editar' && $id) {
         $stmt = $db->prepare('SELECT * FROM assinaturas WHERE id = ?');
         $stmt->execute([$id]);
@@ -215,9 +217,15 @@ if ($acao === 'novo' || $acao === 'editar') {
         </div>
 
         <div class="field">
+          <label>Desconto (%)</label>
+          <input type="number" step="0.01" min="0" max="100" name="desconto_pct" id="desconto_pct" value="<?= e(number_format((float)($a['desconto_pct'] ?? 0), 2, '.', '')) ?>" oninput="aplicaDesconto()">
+          <div class="hint">Opcional. Ex: <strong>10</strong> = 10% off. O "Valor cobrado" abaixo é recalculado a partir do preço de tabela.</div>
+        </div>
+
+        <div class="field">
           <label>Valor cobrado *</label>
           <input type="number" step="0.01" min="0.01" name="valor_cobrado" id="valor_cobrado" required value="<?= $a['valor_cobrado']!==''?e(number_format((float)$a['valor_cobrado'],2,'.','')):'' ?>">
-          <div class="hint">Preenchido com preço da tabela; pode sobrescrever (override por cliente).</div>
+          <div class="hint" id="preco_hint">Preenchido com preço da tabela; pode sobrescrever (override por cliente).</div>
         </div>
 
         <div class="field">
@@ -285,30 +293,62 @@ if ($acao === 'novo' || $acao === 'editar') {
     <script>
     const ITENS = <?= json_encode($jsItens, JSON_UNESCAPED_UNICODE) ?>;
     const CLIENTES = <?= json_encode($jsClientes, JSON_UNESCAPED_UNICODE) ?>;
-    function atualizaPreco() {
+    function _fmtNum(v){ return isNaN(v) ? '—' : v.toFixed(2); }
+    function precoTabela() {
       const itemId = document.getElementById('item_id').value;
       const cliId  = document.getElementById('cliente_id').value;
-      if (!itemId || !cliId) return;
-      const it = ITENS[itemId]; const cli = CLIENTES[cliId];
-      if (!it || !cli) return;
+      if (!itemId || !cliId) return null;
+      const it = ITENS[itemId], cli = CLIENTES[cliId];
+      if (!it || !cli) return null;
       const varianteIA = document.getElementById('variante').value === 'ia';
-      const key = cli.moeda + (varianteIA ? '_ia' : '');
-      const v = it[key];
+      const v = it[cli.moeda + (varianteIA ? '_ia' : '')];
+      return (v !== null && v !== undefined) ? parseFloat(v) : null;
+    }
+    function _descPct() {
+      let d = parseFloat(String(document.getElementById('desconto_pct').value || '0').replace(',', '.'));
+      if (isNaN(d)) d = 0;
+      return Math.max(0, Math.min(100, d));
+    }
+    function _moeda() {
+      const cli = CLIENTES[document.getElementById('cliente_id').value];
+      return cli ? cli.moeda.toUpperCase() : '';
+    }
+    function _hint(base, desc, finalv) {
+      const h = document.getElementById('preco_hint'); if (!h) return;
+      if (base === null) { h.textContent = 'Preenchido com preço da tabela; pode sobrescrever.'; return; }
+      const m = _moeda();
+      if (desc > 0) h.innerHTML = 'Tabela: <strong>' + m + ' ' + _fmtNum(base) + '</strong> → com <strong>' + desc + '%</strong> off → <strong>' + m + ' ' + _fmtNum(finalv) + '</strong>';
+      else h.textContent = 'Preço de tabela: ' + m + ' ' + _fmtNum(base) + '. Pode sobrescrever.';
+    }
+    // Item/cliente/variante mudou: recomputa (respeita override manual).
+    function atualizaPreco() {
+      const itemId = document.getElementById('item_id').value;
+      const it = itemId ? ITENS[itemId] : null;
       const fv = document.getElementById('field_variante');
-      fv.style.display = it.tem_variante_ia ? '' : 'none';
+      if (fv && it) fv.style.display = it.tem_variante_ia ? '' : 'none';
+      const base = precoTabela(), desc = _descPct();
       const input = document.getElementById('valor_cobrado');
-      if (v !== null && v !== undefined && !input.dataset.touched) {
-        input.value = parseFloat(v).toFixed(2);
-      }
+      const finalv = base !== null ? +(base * (1 - desc/100)).toFixed(2) : null;
+      if (base !== null && !input.dataset.touched) input.value = finalv.toFixed(2);
+      _hint(base, desc, finalv);
+    }
+    // Desconto mudou: passa a mandar no valor (recalcula do preço de tabela).
+    function aplicaDesconto() {
+      const base = precoTabela(), desc = _descPct();
+      const input = document.getElementById('valor_cobrado');
+      if (base === null) { _hint(null, desc, null); return; }
+      const finalv = +(base * (1 - desc/100)).toFixed(2);
+      input.value = finalv.toFixed(2);
+      input.dataset.touched = '';   // recalculado pelo desconto, não é mais override manual
+      _hint(base, desc, finalv);
     }
     document.getElementById('item_id')?.addEventListener('change', atualizaPreco);
     document.getElementById('cliente_id')?.addEventListener('change', atualizaPreco);
     document.getElementById('variante')?.addEventListener('change', atualizaPreco);
     document.getElementById('valor_cobrado')?.addEventListener('input', function(){ this.dataset.touched = '1'; });
 
-    // Bug fix: se já existe valor (modo edição), marca como "tocado" antes de
-    // chamar atualizaPreco(). Senão, o autopreencher sobrescreveria o override
-    // que o admin gravou pra esse cliente.
+    // Modo edição: se já tem valor salvo, marca como "tocado" pra não sobrescrever
+    // o override gravado. O hint ainda mostra tabela/desconto.
     const _vci = document.getElementById('valor_cobrado');
     if (_vci && _vci.value !== '') _vci.dataset.touched = '1';
     atualizaPreco();
