@@ -9,8 +9,12 @@ $show_back    = $show_back    ?? !$is_dashboard;
 $back_to      = $back_to      ?? null;
 $hide_nav     = $hide_nav     ?? false;
 $nav_active   = $nav_active   ?? '';
+// Páginas dinâmicas nunca devem ser cacheadas pelo servidor/CDN/navegador —
+// senão trocar de idioma (ou qualquer dado) fica "congelado" numa versão velha.
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
 ?><!doctype html>
-<html lang="pt-br">
+<html lang="<?= e(idioma_atual() === 'pt' ? 'pt-br' : idioma_atual()) ?>">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
