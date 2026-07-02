@@ -28,5 +28,13 @@ return [
     'Salvar'   => 'Save',
     'Cancelar' => 'Cancel',
     'Voltar'   => 'Back',
-    'Início'   => 'Home',
+
+    // Login
+    'Entrar'                  => 'Sign in',
+    'Email'                   => 'Email',
+    'Senha'                   => 'Password',
+    'Mostrar senha'           => 'Show password',
+    'Esqueci minha senha'     => 'Forgot my password',
+    'Informe email e senha.'  => 'Enter your email and password.',
+    'Credenciais inválidas.'  => 'Invalid credentials.',
 ];

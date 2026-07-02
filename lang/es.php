@@ -28,4 +28,13 @@ return [
     'Salvar'   => 'Guardar',
     'Cancelar' => 'Cancelar',
     'Voltar'   => 'Volver',
+
+    // Login
+    'Entrar'                  => 'Iniciar sesión',
+    'Email'                   => 'Correo',
+    'Senha'                   => 'Contraseña',
+    'Mostrar senha'           => 'Mostrar contraseña',
+    'Esqueci minha senha'     => 'Olvidé mi contraseña',
+    'Informe email e senha.'  => 'Ingrese correo y contraseña.',
+    'Credenciais inválidas.'  => 'Credenciales inválidas.',
 ];

@@ -8,12 +8,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = trim((string)($_POST['email'] ?? ''));
     $senha = (string)($_POST['senha'] ?? '');
     if ($email === '' || $senha === '') {
-        $erro = 'Informe email e senha.';
+        $erro = t('Informe email e senha.');
     } elseif (login($email, $senha)) {
         header('Location: ' . APP_BASE_URL . '/dashboard.php');
         exit;
     } else {
-        $erro = 'Credenciais inválidas.';
+        $erro = t('Credenciais inválidas.');
     }
 }
 
@@ -22,7 +22,7 @@ if (current_user()) {
     exit;
 }
 
-$page = 'Entrar';
+$page = t('Entrar');
 $hide_nav = true;
 require __DIR__ . '/includes/header.php';
 ?>
@@ -31,23 +31,23 @@ require __DIR__ . '/includes/header.php';
     <img src="<?= e(APP_BASE_URL) ?>/assets/img/logo.png" alt="Dite Ads" onerror="this.style.display='none'">
   </div>
 
-  <h1>Entrar</h1>
+  <h1><?= e(t('Entrar')) ?></h1>
   <?php if ($erro): ?><div class="flash err"><?= e($erro) ?></div><?php endif; ?>
   <form method="post">
     <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
     <div class="field">
-      <label>Email</label>
+      <label><?= e(t('Email')) ?></label>
       <input type="email" name="email" required autofocus value="<?= e($_POST['email'] ?? '') ?>" autocomplete="email">
     </div>
     <div class="field">
-      <label>Senha</label>
+      <label><?= e(t('Senha')) ?></label>
       <div class="field-password">
         <input type="password" name="senha" required autocomplete="current-password">
-        <button type="button" class="password-toggle" onclick="togglePassword(this)" aria-label="Mostrar senha">👁</button>
+        <button type="button" class="password-toggle" onclick="togglePassword(this)" aria-label="<?= e(t('Mostrar senha')) ?>">👁</button>
       </div>
     </div>
-    <button class="btn block" type="submit">Entrar</button>
-    <p class="center mt-5"><a href="<?= e(APP_BASE_URL) ?>/esqueci.php" class="muted">Esqueci minha senha</a></p>
+    <button class="btn block" type="submit"><?= e(t('Entrar')) ?></button>
+    <p class="center mt-5"><a href="<?= e(APP_BASE_URL) ?>/esqueci.php" class="muted"><?= e(t('Esqueci minha senha')) ?></a></p>
   </form>
 </div>
 <?php require __DIR__ . '/includes/footer.php'; ?>
