@@ -39,10 +39,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $status    = $_POST['status'] ?? 'ativa';
         $fixo_mensal = isset($_POST['cobrar_fixo_mensal']) ? 1 : 0;
         $desconto = max(0.0, min(100.0, (float)str_replace(',', '.', (string)($_POST['desconto_pct'] ?? '0'))));
+        $desconto_meses = max(0, (int)($_POST['desconto_meses'] ?? 0));
         // Colunas que dependem de migration — só entram no SQL se existirem no banco.
         $cols_opc = [];
         if (db_coluna_existe($db, 'assinaturas', 'cobrar_fixo_mensal')) $cols_opc['cobrar_fixo_mensal'] = $fixo_mensal;
         if (db_coluna_existe($db, 'assinaturas', 'desconto_pct'))       $cols_opc['desconto_pct']       = $desconto;
+        if (db_coluna_existe($db, 'assinaturas', 'desconto_meses'))     $cols_opc['desconto_meses']     = $desconto_meses;
         $forcar_atribuicao = isset($_POST['forcar_func_lotado']);
         if (!in_array($status, ['ativa','pausada','cancelada'], true)) $status = 'ativa';
 
@@ -54,7 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $f = $stmt->fetch();
                 if ($f && (int)$f['aceitando_clientes'] === 0) {
                     $flash = ['err', '🔴 ' . htmlspecialchars($f['nome']) . ' está marcado como NÃO aceitando novos clientes. Se for proposital, marque o checkbox de força abaixo e salve de novo.'];
-                    $a = ['id'=>$pid,'cliente_id'=>$cliente,'item_id'=>$item,'funcionario_id'=>$func,'variante'=>$variante,'valor_cobrado'=>$valor,'status'=>$status,'iniciada_em'=>$iniciada,'cobrar_fixo_mensal'=>$fixo_mensal,'desconto_pct'=>$desconto];
+                    $a = ['id'=>$pid,'cliente_id'=>$cliente,'item_id'=>$item,'funcionario_id'=>$func,'variante'=>$variante,'valor_cobrado'=>$valor,'status'=>$status,'iniciada_em'=>$iniciada,'cobrar_fixo_mensal'=>$fixo_mensal,'desconto_pct'=>$desconto,'desconto_meses'=>$desconto_meses];
                     $acao = $pid ? 'editar' : 'novo'; $id = $pid;
                     $mostrar_forcar = true;
                     goto fim_save_assinatura;
@@ -129,7 +131,7 @@ if ($acao === 'novo' || $acao === 'editar') {
     $show_back = true;
     $back_to = APP_BASE_URL . '/assinaturas.php' . ($cliente_filter ? '?cliente_id=' . $cliente_filter : '');
 
-    $a = ['id'=>0,'cliente_id'=>$cliente_filter,'item_id'=>0,'funcionario_id'=>0,'variante'=>'normal','valor_cobrado'=>'','status'=>'ativa','iniciada_em'=>date('Y-m-d'),'cobrar_fixo_mensal'=>0,'desconto_pct'=>0];
+    $a = ['id'=>0,'cliente_id'=>$cliente_filter,'item_id'=>0,'funcionario_id'=>0,'variante'=>'normal','valor_cobrado'=>'','status'=>'ativa','iniciada_em'=>date('Y-m-d'),'cobrar_fixo_mensal'=>0,'desconto_pct'=>0,'desconto_meses'=>0];
     if ($acao === 'editar' && $id) {
         $stmt = $db->prepare('SELECT * FROM assinaturas WHERE id = ?');
         $stmt->execute([$id]);
@@ -217,16 +219,24 @@ if ($acao === 'novo' || $acao === 'editar') {
         </div>
 
         <div class="field">
-          <label>Desconto (%)</label>
-          <input type="number" step="0.01" min="0" max="100" name="desconto_pct" id="desconto_pct" value="<?= e(number_format((float)($a['desconto_pct'] ?? 0), 2, '.', '')) ?>" oninput="aplicaDesconto()">
-          <div class="hint">Opcional. Ex: <strong>10</strong> = 10% off. O "Valor cobrado" abaixo é recalculado a partir do preço de tabela.</div>
+          <label>Valor cobrado * <span class="muted" style="font-weight:normal;">(preço cheio)</span></label>
+          <input type="number" step="0.01" min="0.01" name="valor_cobrado" id="valor_cobrado" required value="<?= $a['valor_cobrado']!==''?e(number_format((float)$a['valor_cobrado'],2,'.','')):'' ?>">
+          <div class="hint">Preço normal do serviço (vem da tabela; pode sobrescrever). O desconto abaixo é aplicado nas cobranças, não aqui.</div>
         </div>
 
-        <div class="field">
-          <label>Valor cobrado *</label>
-          <input type="number" step="0.01" min="0.01" name="valor_cobrado" id="valor_cobrado" required value="<?= $a['valor_cobrado']!==''?e(number_format((float)$a['valor_cobrado'],2,'.','')):'' ?>">
-          <div class="hint" id="preco_hint">Preenchido com preço da tabela; pode sobrescrever (override por cliente).</div>
+        <div class="grid-2">
+          <div class="field">
+            <label>Desconto (%)</label>
+            <input type="number" step="0.01" min="0" max="100" name="desconto_pct" id="desconto_pct" value="<?= e(number_format((float)($a['desconto_pct'] ?? 0), 2, '.', '')) ?>" oninput="previewDesconto()">
+            <div class="hint">Ex: <strong>10</strong> = 10% off</div>
+          </div>
+          <div class="field">
+            <label>Desconto dura (meses)</label>
+            <input type="number" step="1" min="0" name="desconto_meses" id="desconto_meses" value="<?= (int)($a['desconto_meses'] ?? 0) ?>" oninput="previewDesconto()">
+            <div class="hint"><strong>0</strong> = pra sempre</div>
+          </div>
         </div>
+        <div class="hint" id="preco_hint" style="margin:-4px 0 var(--s-4);"></div>
 
         <div class="field">
           <label class="check">
@@ -304,51 +314,48 @@ if ($acao === 'novo' || $acao === 'editar') {
       const v = it[cli.moeda + (varianteIA ? '_ia' : '')];
       return (v !== null && v !== undefined) ? parseFloat(v) : null;
     }
-    function _descPct() {
-      let d = parseFloat(String(document.getElementById('desconto_pct').value || '0').replace(',', '.'));
-      if (isNaN(d)) d = 0;
-      return Math.max(0, Math.min(100, d));
+    function _num(id) {
+      const el = document.getElementById(id);
+      let d = parseFloat(String((el && el.value) || '0').replace(',', '.'));
+      return isNaN(d) ? 0 : d;
     }
     function _moeda() {
       const cli = CLIENTES[document.getElementById('cliente_id').value];
       return cli ? cli.moeda.toUpperCase() : '';
     }
-    function _hint(base, desc, finalv) {
+    // Mostra o EFEITO do desconto — não altera o "Valor cobrado" (que é o preço cheio).
+    function previewDesconto() {
       const h = document.getElementById('preco_hint'); if (!h) return;
-      if (base === null) { h.textContent = 'Preenchido com preço da tabela; pode sobrescrever.'; return; }
+      const cheio = _num('valor_cobrado');
+      const desc  = Math.max(0, Math.min(100, _num('desconto_pct')));
+      const meses = Math.max(0, Math.round(_num('desconto_meses')));
       const m = _moeda();
-      if (desc > 0) h.innerHTML = 'Tabela: <strong>' + m + ' ' + _fmtNum(base) + '</strong> → com <strong>' + desc + '%</strong> off → <strong>' + m + ' ' + _fmtNum(finalv) + '</strong>';
-      else h.textContent = 'Preço de tabela: ' + m + ' ' + _fmtNum(base) + '. Pode sobrescrever.';
+      if (!cheio || desc <= 0) { h.textContent = ''; return; }
+      const comDesc = +(cheio * (1 - desc/100)).toFixed(2);
+      if (meses > 0) {
+        h.innerHTML = '🏷️ Primeiros <strong>' + meses + ' mês(es)</strong>: <strong>' + m + ' ' + _fmtNum(comDesc) + '</strong> (' + desc + '% off)'
+                    + ' · depois volta pra <strong>' + m + ' ' + _fmtNum(cheio) + '</strong>.';
+      } else {
+        h.innerHTML = '🏷️ Desconto <strong>permanente</strong> de ' + desc + '%: <strong>' + m + ' ' + _fmtNum(comDesc) + '</strong> por mês.';
+      }
     }
-    // Item/cliente/variante mudou: recomputa (respeita override manual).
+    // Item/cliente/variante mudou: preenche o PREÇO CHEIO (respeita override manual).
     function atualizaPreco() {
       const itemId = document.getElementById('item_id').value;
       const it = itemId ? ITENS[itemId] : null;
       const fv = document.getElementById('field_variante');
       if (fv && it) fv.style.display = it.tem_variante_ia ? '' : 'none';
-      const base = precoTabela(), desc = _descPct();
+      const base = precoTabela();
       const input = document.getElementById('valor_cobrado');
-      const finalv = base !== null ? +(base * (1 - desc/100)).toFixed(2) : null;
-      if (base !== null && !input.dataset.touched) input.value = finalv.toFixed(2);
-      _hint(base, desc, finalv);
-    }
-    // Desconto mudou: passa a mandar no valor (recalcula do preço de tabela).
-    function aplicaDesconto() {
-      const base = precoTabela(), desc = _descPct();
-      const input = document.getElementById('valor_cobrado');
-      if (base === null) { _hint(null, desc, null); return; }
-      const finalv = +(base * (1 - desc/100)).toFixed(2);
-      input.value = finalv.toFixed(2);
-      input.dataset.touched = '';   // recalculado pelo desconto, não é mais override manual
-      _hint(base, desc, finalv);
+      if (base !== null && !input.dataset.touched) input.value = base.toFixed(2);
+      previewDesconto();
     }
     document.getElementById('item_id')?.addEventListener('change', atualizaPreco);
     document.getElementById('cliente_id')?.addEventListener('change', atualizaPreco);
     document.getElementById('variante')?.addEventListener('change', atualizaPreco);
-    document.getElementById('valor_cobrado')?.addEventListener('input', function(){ this.dataset.touched = '1'; });
+    document.getElementById('valor_cobrado')?.addEventListener('input', function(){ this.dataset.touched = '1'; previewDesconto(); });
 
-    // Modo edição: se já tem valor salvo, marca como "tocado" pra não sobrescrever
-    // o override gravado. O hint ainda mostra tabela/desconto.
+    // Modo edição: se já tem valor salvo, marca como "tocado" pra não sobrescrever o override.
     const _vci = document.getElementById('valor_cobrado');
     if (_vci && _vci.value !== '') _vci.dataset.touched = '1';
     atualizaPreco();

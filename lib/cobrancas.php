@@ -177,7 +177,10 @@ function gerar_cobranca_mensal(PDO $db, int $cliente_id, string $competencia, ?s
     // aplicada), usa 0 e o comportamento antigo continua valendo.
     $sel_fixo = db_coluna_existe($db, 'assinaturas', 'cobrar_fixo_mensal')
         ? 'a.cobrar_fixo_mensal' : '0 AS cobrar_fixo_mensal';
-    $sql = 'SELECT a.id, a.item_id, a.valor_cobrado, ' . $sel_fixo . ', i.nome AS item_nome, i.tipo
+    // Desconto por tempo (migrations 020/021). Blindado: 0 se a coluna não existe.
+    $sel_dpct = db_coluna_existe($db, 'assinaturas', 'desconto_pct')   ? 'a.desconto_pct'   : '0 AS desconto_pct';
+    $sel_dmes = db_coluna_existe($db, 'assinaturas', 'desconto_meses') ? 'a.desconto_meses' : '0 AS desconto_meses';
+    $sql = 'SELECT a.id, a.item_id, a.valor_cobrado, a.iniciada_em, ' . $sel_fixo . ', ' . $sel_dpct . ', ' . $sel_dmes . ', i.nome AS item_nome, i.tipo
             FROM assinaturas a
             JOIN itens_catalogo i ON i.id = a.item_id
             WHERE a.cliente_id = ?
@@ -196,13 +199,36 @@ function gerar_cobranca_mensal(PDO $db, int $cliente_id, string $competencia, ?s
     $linhas = [];
     foreach ($assinaturas as $a) {
         $valor = (float)$a['valor_cobrado'];
+
+        // Desconto por tempo: aplica nas primeiras N cobranças (ou permanente se meses=0).
+        $dpct = (float)($a['desconto_pct'] ?? 0);
+        $dmes = (int)($a['desconto_meses'] ?? 0);
+        $desc_suffix = '';
+        if ($dpct > 0) {
+            $aplica_desc = true;
+            if ($dmes > 0) {
+                $ini = DateTime::createFromFormat('Y-m-d', substr((string)$a['iniciada_em'], 0, 7) . '-01');
+                $cmp = DateTime::createFromFormat('Y-m-d', $competencia . '-01');
+                if ($ini && $cmp) {
+                    $elapsed = ((int)$cmp->format('Y') - (int)$ini->format('Y')) * 12
+                             + ((int)$cmp->format('n') - (int)$ini->format('n'));
+                    $aplica_desc = ($elapsed >= 0 && $elapsed < $dmes);
+                }
+            }
+            if ($aplica_desc) {
+                $valor = round($valor * (1 - $dpct / 100), 2);
+                $pct_txt = rtrim(rtrim(number_format($dpct, 2, '.', ''), '0'), '.');
+                $desc_suffix = ' (−' . $pct_txt . '% promo)';
+            }
+        }
+
         $fixo_mensal = (int)($a['cobrar_fixo_mensal'] ?? 0) === 1;
         if ($a['tipo'] === 'mensal' || $fixo_mensal) {
             // Mensal normal OU por_unidade marcado como "cobrar fixo mensal":
             // entra com valor cheio, sem depender de entregas.
             $linhas[] = [
                 'assinatura_id' => (int)$a['id'],
-                'descricao'     => $a['item_nome'],
+                'descricao'     => $a['item_nome'] . $desc_suffix,
                 'quantidade'    => 1,
                 'valor_unitario'=> $valor,
                 'subtotal'      => $valor,
@@ -214,7 +240,7 @@ function gerar_cobranca_mensal(PDO $db, int $cliente_id, string $competencia, ?s
             if ($qtd > 0) {
                 $linhas[] = [
                     'assinatura_id' => (int)$a['id'],
-                    'descricao'     => $a['item_nome'] . ' (' . $qtd . ' un. de ' . $mes_anterior . ')',
+                    'descricao'     => $a['item_nome'] . ' (' . $qtd . ' un. de ' . $mes_anterior . ')' . $desc_suffix,
                     'quantidade'    => $qtd,
                     'valor_unitario'=> $valor,
                     'subtotal'      => $qtd * $valor,
