@@ -1,5 +1,19 @@
 # Planejamento — Sistema interno Dite Ads
 
+> ⚠️ **DOCUMENTO HISTÓRICO (design/backlog original).** As features N1–N15 abaixo **já foram
+> implementadas** e estão em produção. Mantido como registro da intenção e do racional de
+> design. Para o **estado atual**, ver `README.md`, `PRD.md` e `SPRINT_LOG.md`.
+>
+> Decisões deste documento que **mudaram** na implementação:
+> - **Idioma**: NÃO é mais "100% PT-BR". O sistema é **multilíngue PT/EN/ES** (motor `t()`,
+>   cookie `idioma`). A seção "Idioma" e o "Design system → idioma" abaixo estão superados.
+> - **Domínio**: ficou em `cont.diteads.com` (o texto menciona `bus.diteads.com`).
+> - **Moeda**: USD virou **moeda-mestre**; BRL/EUR são **derivados por cotação diária** (o texto
+>   diz "nunca converte"). Cada cliente continua cobrado na sua moeda, mas há conversão para
+>   precificação do catálogo e para o consolidado em US$ da distribuição de lucro.
+> - **Papel novo**: `sadmin` acima de admin. Módulos novos (despesas, distribuição de lucro,
+>   simulador de preço com IA, duplas, PWA/push, busca, export, backups) não estavam previstos aqui.
+
 Documento de trabalho: você edita, eu leio e codifico.
 
 **Como usar**:

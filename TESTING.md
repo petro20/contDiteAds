@@ -16,7 +16,9 @@ Login com sua conta sadmin e prepare o terreno:
 - [ ] **Templates de mensagem** estão lá (cobranca_nova, lembrete_vencendo, pagamento_confirmado, etc.) — vai em `/templates.php`
 - [ ] **Régua de cobrança** está configurada (4 etapas: 0, 3, 7, 15 dias) — vai em `/regua.php`
 - [ ] Editou pelo menos **1 template** e salvou (ex: mudou uma frase)
-- [ ] **Cron jobs** estão configurados no hPanel (gerar_cobrancas 5h + regua_executar 6h)
+- [ ] **Cron jobs** configurados no hPanel (gerar_cobrancas 5h, regua_executar 6h, backup_db 4h, alerta_postagens Qua/Sex 9h, limpeza_mensal dia 1 3h)
+- [ ] **Cotação USD**: em `/config_pagamento.php` clicou "Atualizar cotação" → BRL/EUR do catálogo recalculam
+- [ ] **Idioma**: trocou PT → EN → ES no seletor do header e a interface mudou (cookie `idioma` persiste)
 
 ## 🧪 Fase 2 — Onboarding (sadmin/admin)
 
@@ -78,6 +80,20 @@ Login com sua conta sadmin e prepare o terreno:
   - Lucro líquido por moeda
   - Quota por sócio = lucro_líquido / (N sócios + 1 empresa)
 - [ ] A "Empresa" aparece como uma quota separada
+
+## 🧪 Fase 7.5 — Integrações de pagamento
+
+- [ ] **Dite Gateway (cartão)**: com `DITE_API_KEY`/`DITE_WEBHOOK_SECRET` no `.env`, abriu uma
+  cobrança → botão de pagar com cartão → redirecionou pro gateway → após pagar, o webhook
+  `/webhooks/dite` marcou a cobrança como **paga** automaticamente (conferir em `/wise_eventos.php`/log)
+- [ ] `/api/plans` retorna JSON com os itens mensais do catálogo (formato `{ data: [...] }`)
+- [ ] **Wise webhook**: colou a chave pública RSA em `/wise_eventos.php`; crédito recebido
+  aparece como pagamento **pendente** para o admin confirmar
+- [ ] **Wise CSV**: em `/wise_sync.php` subiu um CSV exportado da Wise → casou pagamentos por moeda+valor
+- [ ] **Simulador de preço com IA**: em `/simulador_preco.php` gerou sugestão via IA (precisa da
+  chave Anthropic em `configuracoes`) e converteu numa simulação salva
+- [ ] **Backup**: em `/backups.php` clicou "Gerar backup agora" → baixou o `.sql.gz`
+- [ ] **Export**: em `/export.php` baixou CSV de cobranças e de distribuição (abre no Excel com acento correto)
 
 ## 🧪 Fase 8 — Segurança
 

@@ -2,6 +2,20 @@
 
 Spec técnica do que precisa ser construído, derivado do `PLANEJAMENTO.md`.
 
+> ⚠️ **DOCUMENTO HISTÓRICO — já implementado.** Todo o plano abaixo (Sprints 0–6) foi
+> construído e está em produção; o projeto seguiu evoluindo além dele. Para o **estado atual**,
+> ver `README.md`, `PRD.md` e `SPRINT_LOG.md`. Principais desvios em relação a este plano:
+> - **Idioma**: virou **multilíngue PT/EN/ES** (não "100% PT-BR").
+> - **Moeda**: USD é a **moeda-mestre** e BRL/EUR são **derivados por cotação diária** (o plano
+>   dizia "nunca converter"; a conversão existe para precificação e para o consolidado em US$,
+>   mas cada cliente ainda é cobrado na sua moeda).
+> - **Papéis**: surgiu **sadmin** acima de admin.
+> - **Pagamento do cliente**: além de manual, há **cartão via Dite Gateway** (webhook) e
+>   **conciliação Wise** (webhook + CSV).
+> - **Novos módulos** não previstos aqui: despesas, distribuição de lucro entre sócios,
+>   simulador de preço com IA, duplas, PWA + push, busca global, export CSV, backups.
+> - O schema real chegou à **migration_021** (o plano previa `migration_002`).
+
 > Esta versão substitui completamente o MVP atual (cobrancas/pagamentos
 > simples). O esquema atual em produção foi um stub — vai ser refeito
 > com migration destrutiva no banco vazio.

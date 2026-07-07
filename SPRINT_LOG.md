@@ -188,7 +188,7 @@ Acompanhamento da execução do `BUILD_PLAN.md`.
 
 **Migration pendente**: `db/migration_003_2fa.sql` precisa ser aplicada pra 2FA funcionar. Site continua operando normalmente sem ela (login funciona, todas as outras telas funcionam). Só `seguranca.php` falhará até aplicar.
 
-## Status final do projeto
+## Sprints 0–6 (roadmap original) · ✅ CONCLUÍDOS
 
 ✅ Sprint 0 — Foundation (schema, design system, helpers)
 ✅ Sprint 1 — Catálogo + Onboarding + Reset senha
@@ -196,6 +196,65 @@ Acompanhamento da execução do `BUILD_PLAN.md`.
 ✅ Sprint 3 — Entregas + Painel financeiro
 ✅ Sprint 4 — Pagamentos (comprovante, fila funcionários, recibo USD)
 ✅ Sprint 5 — WhatsApp + Régua + Recibos
-✅ Sprint 6 — Capacidade + Audit + Notificações + 2FA (migration_003 pendente)
+✅ Sprint 6 — Capacidade + Audit + Notificações + 2FA
 
-**Sistema entregue conforme BUILD_PLAN.md**. Roadmap original 100% atendido.
+**Roadmap original do `BUILD_PLAN.md` 100% atendido.** A partir daqui o projeto seguiu em
+evolução contínua (fora do BUILD_PLAN original), resumida abaixo por tema. Detalhes finos no
+`git log`; migrations em `db/migration_004..021`.
+
+---
+
+## Pós-roadmap — evolução contínua
+
+### Papéis & segurança
+- **sadmin** separado de admin (`migration_004`): só sadmin gerencia catálogo, régua/templates,
+  despesas, distribuição, auditoria, backups, convites.
+- 2FA virou **meio de recuperação** (não é exigido no login); **backup codes** (`migration_016`);
+  **session nonce** (`migration_017`) — reset de senha derruba sessões em outros dispositivos.
+- Várias rodadas de auditoria de segurança (webhook, race conditions, uploads, reset/convite/cron).
+
+### Moeda & precificação
+- **Cotação USD diária** (`lib/cotacao.php`): USD é a moeda-mestre; BRL/EUR derivados por
+  `ceil`, via AwesomeAPI com fallback Frankfurter (cURL — Hostinger bloqueia allow_url_fopen).
+- Mudar a moeda do cliente recalcula `valor_cobrado` das assinaturas.
+- **Simulador de preço** com IA (Claude/Anthropic): custos por linha, margem, responsabilidades;
+  simulações persistidas (`migration_011/012`) que viram item do catálogo.
+
+### Cobrança & assinatura
+- Cobrança **avulsa** (`migration_006`) e status **`em_analise`** com `pendente` (`migration_007`).
+- Assinatura: **cobrança fixa mensal** para por-unidade (`migration_018`), **desconto %**
+  (`migration_020`) por **N meses** (`migration_021`), **período mínimo** (`migration_010`).
+- Cobrança zerada é **deletada** (não vira mais "cancelada"); geração usa janela de 7 dias (catch-up).
+
+### Recebimento
+- Formas de pagamento **Zelle + Wise + QR** nas cobranças; instruções passo a passo.
+- **Wise**: conciliação por **CSV** e por **webhook em tempo real** (`migration_014`, `wise_*.php`).
+- **Dite Gateway** (`migration_019`): pagamento por **cartão** confirmado por webhook
+  `/webhooks/dite`; endpoint público `/api/plans` lista itens mensais como planos.
+
+### Finanças
+- **Despesas** (`migration_005`) e **distribuição de lucro** entre sócios + quota "Empresa"
+  (`migration_008`), por moeda e consolidado em US$.
+
+### Operação
+- **Duplas** de funcionário (`migration_013`); **acompanhamento geral** (`agenda_geral.php`);
+  **alerta de POSTAGEM** não marcada (cron Qua/Sex); marcar entrega via AJAX (sem reload).
+- Funcionário edita própria capacidade e disponibilidade no perfil.
+
+### Plataforma
+- **PWA** instalável + **push OneSignal**; **busca global** (Ctrl+K); **centro de notificações**;
+  **export CSV**; **backup automático** (rotação 14 dias) e **limpeza mensal**; botão "voltar" global.
+- Nav agrupada em "Equipe / Finanças / Minha conta"; refresh visual "premium".
+
+### i18n (PT/EN/ES)
+- Motor `t()` + seletor + cookie `idioma`; sistema inteiro traduzido em mutirão (telas, libs,
+  relatórios/PDFs). **Substitui a decisão anterior de "100% PT-BR"** do planejamento.
+
+---
+
+## Pendências conhecidas
+
+- **`schema.sql` defasado**: faltam as colunas de `assinaturas` das migrations 018/020/021
+  (`cobrar_fixo_mensal`, `desconto_pct`, `desconto_meses`). Instalação do zero deve rodar as
+  migrations em ordem, ou o `schema.sql` precisa ser atualizado.
+- Sem testes automatizados — validação é manual (`TESTING.md`).
