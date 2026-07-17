@@ -63,7 +63,8 @@ Helpers de autorização em `includes/auth.php`: `current_user()`, `require_logi
   Wise por **webhook em tempo real** e por **upload de CSV**.
 - **Folha da equipe** (`pagamentos_funcionarios.php`): fila em USD por funcionário, valor por
   par (funcionário × item), comprovante e email ao pagar via Wise. Funcionário vê em
-  `meus_pagamentos.php`.
+  `meus_pagamentos.php`. Itens **avulsos** (sem assinatura) também podem ter funcionário
+  responsável + valor USD próprio, entrando na mesma fila (migration 022).
 - **Distribuição de lucro** (`distribuicao.php`): lucro = receita − despesas − pagamentos à
   equipe, dividido em quotas (N sócios + 1 quota "Empresa"). Por moeda + consolidado em US$.
 - **Despesas** (`despesas.php`): categorizadas, recorrência única/mensal/anual.
@@ -123,7 +124,7 @@ Helpers de autorização em `includes/auth.php`: `current_user()`, `require_logi
 
 ## Banco de dados
 
-Schema canônico em `db/schema.sql`; evolução em `db/migration_001..021`. Principais tabelas:
+Schema canônico em `db/schema.sql`; evolução em `db/migration_001..022`. Principais tabelas:
 `usuarios`, `clientes`, `convites`, `itens_catalogo` (+ `itens_pacote_composicao`),
 `assinaturas`, `cobrancas` (+ `cobranca_itens`), `pagamentos_cliente`,
 `func_servico_pagamento`, `pagamentos_funcionario` (+ `_itens`), `pagamentos_socio`,
@@ -133,7 +134,8 @@ Schema canônico em `db/schema.sql`; evolução em `db/migration_001..021`. Prin
 
 > ⚠️ **`schema.sql` está levemente defasado**: não inclui as colunas de `assinaturas`
 > adicionadas nas migrations 018/020/021 (`cobrar_fixo_mensal`, `desconto_pct`,
-> `desconto_meses`). Para instalação do zero, rode as migrations em ordem, ou atualize o
+> `desconto_meses`) nem as de `cobranca_itens` da 022 (`funcionario_id`, `pagamento_func_usd`).
+> Para instalação do zero, rode as migrations em ordem, ou atualize o
 > `schema.sql`. Migration destrutiva: **`002_dite_full`** (recriou todo o schema a partir do MVP antigo).
 
 Seeds: `seed.sql` (admin inicial), `seed_catalogo.sql` (catálogo real + templates + régua de

@@ -225,6 +225,8 @@ evolução contínua (fora do BUILD_PLAN original), resumida abaixo por tema. De
 - Assinatura: **cobrança fixa mensal** para por-unidade (`migration_018`), **desconto %**
   (`migration_020`) por **N meses** (`migration_021`), **período mínimo** (`migration_010`).
 - Cobrança zerada é **deletada** (não vira mais "cancelada"); geração usa janela de 7 dias (catch-up).
+- Item **avulso** (sem assinatura) pode ter **funcionário responsável + valor USD** próprio
+  (`migration_022`) — entra na fila de pagamento da equipe igual aos itens de assinatura.
 
 ### Recebimento
 - Formas de pagamento **Zelle + Wise + QR** nas cobranças; instruções passo a passo.

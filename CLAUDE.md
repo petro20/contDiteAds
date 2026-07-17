@@ -36,6 +36,7 @@ comunicação com o cliente. Produção: https://cont.diteads.com
 ## Deploy (importante)
 1. Editar → commit → **push no `master`**.
 2. **Auto-deploy ligado**: um webhook do GitHub → Hostinger publica sozinho em segundos. Não precisa mais clicar "Implantar".
+   ⚠️ **O repo PRECISA ficar PÚBLICO** — a Hostinger puxa por HTTPS sem autenticação. Se virar privado, o deploy quebra silenciosamente (painel diz "sucesso" mas nada sobe). Não há segredo no repo, então público é seguro.
 3. **Migrations NÃO são automáticas**: ao subir uma `db/migration_*.sql`, rode o `.sql` manualmente no phpMyAdmin.
 4. Service worker NÃO cacheia `.php` — se uma página "não mudou", o suspeito é deploy/migration, não cache.
 
@@ -47,5 +48,7 @@ pagamento ficam na tabela `configuracoes`, não no `.env`.
 ## Estado atual
 Em produção desde 2026-05. Implementado: todo o fluxo comercial/financeiro, entregas, régua,
 2FA-recuperação, backups, auditoria, PWA+push, integração Dite Gateway (cartão) e Wise (webhook+CSV),
-e **i18n completo PT/EN/ES** (interface + relatórios/PDFs). `schema.sql` está levemente defasado das
-migrations 018/020/021 — para instalar do zero, rode as migrations em ordem.
+e **i18n completo PT/EN/ES** (interface + relatórios/PDFs). Item **avulso** de cobrança pode ter
+**funcionário responsável + valor USD** próprio, entrando na fila de pagamento da equipe igual às
+assinaturas (migration 022). `schema.sql` está levemente defasado das migrations 018/020/021/022 —
+para instalar do zero, rode as migrations em ordem.
