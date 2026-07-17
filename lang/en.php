@@ -1857,4 +1857,8 @@ Confirm?',
     '💡 Use o botão <strong>🔍</strong> em cada linha pra pesquisar o preço atual da ferramenta no mercado.' => '💡 Use the <strong>🔍</strong> button on each row to look up the tool\'s current market price.',
     '🔔 Ativar notificações neste aparelho' => '🔔 Enable notifications on this device',
     '🔔 Notificações' => '🔔 Notifications',
+    'Atribuir funcionário' => 'Assign employee',
+    'Editar funcionário/pagamento' => 'Edit employee/payment',
+    'Pagamento ao funcionário (USD, por unidade)' => 'Employee payment (USD, per unit)',
+    'à equipe' => 'to the team',
 ];

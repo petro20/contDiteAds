@@ -1857,4 +1857,8 @@ Los ítems volverán a la cola como pendientes.
     '💡 Use o botão <strong>🔍</strong> em cada linha pra pesquisar o preço atual da ferramenta no mercado.' => '💡 Usa el botón <strong>🔍</strong> en cada fila para buscar el precio actual de la herramienta en el mercado.',
     '🔔 Ativar notificações neste aparelho' => '🔔 Activar notificaciones en este dispositivo',
     '🔔 Notificações' => '🔔 Notificaciones',
+    'Atribuir funcionário' => 'Asignar empleado',
+    'Editar funcionário/pagamento' => 'Editar empleado/pago',
+    'Pagamento ao funcionário (USD, por unidade)' => 'Pago al empleado (USD, por unidad)',
+    'à equipe' => 'al equipo',
 ];

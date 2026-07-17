@@ -116,6 +116,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $descricoes = $_POST['descricao'] ?? [];
         $quantidades = $_POST['quantidade'] ?? [];
         $valores = $_POST['valor'] ?? [];
+        $func_ids = $_POST['funcionario_id'] ?? [];
+        $pagamentos_func = $_POST['pagamento_func_usd'] ?? [];
 
         // Valida vencimento: precisa ser data válida e não pode ser no passado
         // (evita admin digitar ano errado e disparar régua em cascata).
@@ -140,7 +142,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $qtd = max(1, (int)($quantidades[$i] ?? 1));
                 $val = (float)str_replace(',', '.', (string)($valores[$i] ?? '0'));
                 if ($desc === '' || $val <= 0) continue;
-                $linhas[] = ['descricao'=>$desc, 'quantidade'=>$qtd, 'valor_unitario'=>$val, 'subtotal'=>$qtd * $val];
+                $fid = (int)($func_ids[$i] ?? 0) ?: null;
+                $pgf = (float)str_replace(',', '.', (string)($pagamentos_func[$i] ?? '0'));
+                if ($pgf < 0) $pgf = 0;
+                $linhas[] = ['descricao'=>$desc, 'quantidade'=>$qtd, 'valor_unitario'=>$val, 'subtotal'=>$qtd * $val,
+                             'funcionario_id'=>$fid, 'pagamento_func_usd'=>$fid ? $pgf : null];
                 $total += $qtd * $val;
             }
             if (!$linhas) {
@@ -151,9 +157,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $stmt = $db->prepare('INSERT INTO cobrancas (cliente_id, competencia_mes, valor_total, moeda, vencimento, status) VALUES (?,?,?,?,?,"aberta")');
                     $stmt->execute([$cliente_id, $competencia, $total, $moeda, $vencimento]);
                     $newId = (int)$db->lastInsertId();
-                    $ins = $db->prepare('INSERT INTO cobranca_itens (cobranca_id, assinatura_id, descricao, quantidade, valor_unitario, subtotal) VALUES (?, NULL, ?, ?, ?, ?)');
-                    foreach ($linhas as $l) {
-                        $ins->execute([$newId, $l['descricao'], $l['quantidade'], $l['valor_unitario'], $l['subtotal']]);
+                    if (db_coluna_existe($db, 'cobranca_itens', 'funcionario_id')) {
+                        $ins = $db->prepare('INSERT INTO cobranca_itens (cobranca_id, assinatura_id, funcionario_id, pagamento_func_usd, descricao, quantidade, valor_unitario, subtotal) VALUES (?, NULL, ?, ?, ?, ?, ?, ?)');
+                        foreach ($linhas as $l) {
+                            $ins->execute([$newId, $l['funcionario_id'], $l['pagamento_func_usd'], $l['descricao'], $l['quantidade'], $l['valor_unitario'], $l['subtotal']]);
+                        }
+                    } else {
+                        $ins = $db->prepare('INSERT INTO cobranca_itens (cobranca_id, assinatura_id, descricao, quantidade, valor_unitario, subtotal) VALUES (?, NULL, ?, ?, ?, ?)');
+                        foreach ($linhas as $l) {
+                            $ins->execute([$newId, $l['descricao'], $l['quantidade'], $l['valor_unitario'], $l['subtotal']]);
+                        }
                     }
                     $db->commit();
                     audit_log('cobranca.avulsa_criada', 'cobrancas', $newId);
@@ -171,13 +184,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $desc = trim((string)($_POST['descricao'] ?? ''));
         $qtd  = max(1, (int)($_POST['quantidade'] ?? 1));
         $val  = (float)str_replace(',', '.', (string)($_POST['valor'] ?? '0'));
+        $func = (int)($_POST['funcionario_id'] ?? 0) ?: null;
+        $pg   = (float)str_replace(',', '.', (string)($_POST['pagamento_func_usd'] ?? '0'));
+        if ($pg < 0) $pg = 0;
         if ($desc && $val > 0) {
             $sub = $qtd * $val;
-            $stmt = $db->prepare('INSERT INTO cobranca_itens (cobranca_id, assinatura_id, descricao, quantidade, valor_unitario, subtotal) VALUES (?, NULL, ?, ?, ?, ?)');
-            $stmt->execute([$cid, $desc, $qtd, $val, $sub]);
+            if (db_coluna_existe($db, 'cobranca_itens', 'funcionario_id')) {
+                $stmt = $db->prepare('INSERT INTO cobranca_itens (cobranca_id, assinatura_id, funcionario_id, pagamento_func_usd, descricao, quantidade, valor_unitario, subtotal) VALUES (?, NULL, ?, ?, ?, ?, ?, ?)');
+                $stmt->execute([$cid, $func, $func ? $pg : null, $desc, $qtd, $val, $sub]);
+            } else {
+                $stmt = $db->prepare('INSERT INTO cobranca_itens (cobranca_id, assinatura_id, descricao, quantidade, valor_unitario, subtotal) VALUES (?, NULL, ?, ?, ?, ?)');
+                $stmt->execute([$cid, $desc, $qtd, $val, $sub]);
+            }
             $stmt = $db->prepare('UPDATE cobrancas SET valor_total = valor_total + ? WHERE id = ?');
             $stmt->execute([$sub, $cid]);
             audit_log('cobranca.item_adicionado', 'cobranca_itens', (int)$db->lastInsertId());
+        }
+        header('Location: ' . APP_BASE_URL . '/cobrancas.php?id=' . $cid); exit;
+    }
+
+    if ($op === 'atribuir_func_item' && is_admin()) {
+        $cid  = (int)($_POST['id'] ?? 0);
+        $iid  = (int)($_POST['item_id'] ?? 0);
+        $func = (int)($_POST['funcionario_id'] ?? 0) ?: null;
+        $pg   = (float)str_replace(',', '.', (string)($_POST['pagamento_func_usd'] ?? '0'));
+        if ($pg < 0) $pg = 0;
+        if ($iid && db_coluna_existe($db, 'cobranca_itens', 'funcionario_id')) {
+            // Só itens avulsos (sem assinatura): os de assinatura herdam o funcionário dela.
+            $stmt = $db->prepare('UPDATE cobranca_itens SET funcionario_id = ?, pagamento_func_usd = ? WHERE id = ? AND cobranca_id = ? AND assinatura_id IS NULL');
+            $stmt->execute([$func, $func ? $pg : null, $iid, $cid]);
+            audit_log('cobranca.item_func_atribuido', 'cobranca_itens', $iid);
         }
         header('Location: ' . APP_BASE_URL . '/cobrancas.php?id=' . $cid); exit;
     }
@@ -436,14 +472,22 @@ if ($id) {
         require __DIR__ . '/includes/footer.php';
         exit;
     }
-    $stmt = $db->prepare('SELECT ci.*, a.funcionario_id, a.variante, u.nome AS func_nome, i.tipo AS item_tipo, i.e_pacote
+    $has_ci_func = db_coluna_existe($db, 'cobranca_itens', 'funcionario_id');
+    $col_extra = $has_ci_func ? '' : ', NULL AS funcionario_id, NULL AS pagamento_func_usd';
+    $efunc = $has_ci_func ? 'COALESCE(a.funcionario_id, ci.funcionario_id)' : 'a.funcionario_id';
+    $stmt = $db->prepare("SELECT ci.*, a.funcionario_id AS assin_func_id, a.variante,
+                                 uf.nome AS func_nome, i.tipo AS item_tipo, i.e_pacote$col_extra
                           FROM cobranca_itens ci
                           LEFT JOIN assinaturas a ON a.id = ci.assinatura_id
                           LEFT JOIN itens_catalogo i ON i.id = a.item_id
-                          LEFT JOIN usuarios u ON u.id = a.funcionario_id
-                          WHERE ci.cobranca_id = ? ORDER BY ci.id');
+                          LEFT JOIN usuarios uf ON uf.id = $efunc
+                          WHERE ci.cobranca_id = ? ORDER BY ci.id");
     $stmt->execute([$id]);
     $itens = $stmt->fetchAll();
+    // Funcionários ativos — pra atribuir/editar em itens avulsos
+    $funcs_avulso = is_admin()
+        ? $db->query("SELECT id, nome, aceitando_clientes FROM usuarios WHERE ativo=1 AND role IN ('admin','funcionario') ORDER BY nome")->fetchAll()
+        : [];
 
     // Pra cada item, conta entregas no mês (se aplicável)
     foreach ($itens as &$it) {
@@ -507,6 +551,17 @@ if ($id) {
             <div class="field"><label><?= e(t('Quantidade')) ?></label><input type="number" min="1" name="quantidade" value="1" required></div>
             <div class="field"><label><?= e(t('Valor unitário')) ?> (<?= e($cob['moeda']) ?>)</label><input type="number" step="0.01" min="0.01" name="valor" required></div>
           </div>
+          <div class="grid-2">
+            <div class="field"><label><?= e(t('Funcionário responsável')) ?></label>
+              <select name="funcionario_id" required>
+                <option value="">— <?= e(t('selecione')) ?> —</option>
+                <?php foreach ($funcs_avulso as $f): ?>
+                  <option value="<?= (int)$f['id'] ?>"><?= e($f['nome']) ?></option>
+                <?php endforeach; ?>
+              </select>
+            </div>
+            <div class="field"><label><?= e(t('Pagamento ao funcionário (USD, por unidade)')) ?></label><input type="number" step="0.01" min="0" name="pagamento_func_usd" required></div>
+          </div>
           <button class="btn block" type="submit"><?= e(t('Adicionar à cobrança')) ?></button>
         </form>
       </details>
@@ -535,6 +590,33 @@ if ($id) {
         </div>
         <?php if (is_admin() && !empty($it['assinatura_id'])): ?>
           <a class="btn btn-ghost small mt-3" href="<?= e(APP_BASE_URL) ?>/assinaturas.php?acao=editar&id=<?= (int)$it['assinatura_id'] ?>" style="display:inline-block;">✏ <?= e(t('Editar assinatura')) ?></a>
+        <?php elseif (is_admin()): ?>
+          <?php if (!empty($it['funcionario_id'])): ?>
+            <div class="sub muted" style="margin-top:4px;">👤 <?= e($it['func_nome']) ?> · $<?= e(number_format((float)($it['pagamento_func_usd'] ?? 0) * (int)$it['quantidade'], 2, '.', ',')) ?> <?= e(t('à equipe')) ?></div>
+          <?php endif; ?>
+          <details class="mt-3">
+            <summary class="muted small" style="cursor:pointer;"><?= !empty($it['funcionario_id']) ? '✏ ' . e(t('Editar funcionário/pagamento')) : '➕ ' . e(t('Atribuir funcionário')) ?></summary>
+            <form method="post" class="mt-3">
+              <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
+              <input type="hidden" name="op" value="atribuir_func_item">
+              <input type="hidden" name="id" value="<?= (int)$cob['id'] ?>">
+              <input type="hidden" name="item_id" value="<?= (int)$it['id'] ?>">
+              <div class="field">
+                <label><?= e(t('Funcionário responsável')) ?></label>
+                <select name="funcionario_id" required>
+                  <option value="">— <?= e(t('selecione')) ?> —</option>
+                  <?php foreach ($funcs_avulso as $f): ?>
+                    <option value="<?= (int)$f['id'] ?>" <?= (int)($it['funcionario_id'] ?? 0) === (int)$f['id'] ? 'selected' : '' ?>><?= e($f['nome']) ?></option>
+                  <?php endforeach; ?>
+                </select>
+              </div>
+              <div class="field">
+                <label><?= e(t('Pagamento ao funcionário (USD, por unidade)')) ?></label>
+                <input type="number" step="0.01" min="0" name="pagamento_func_usd" value="<?= isset($it['pagamento_func_usd']) && $it['pagamento_func_usd'] !== null ? e(number_format((float)$it['pagamento_func_usd'], 2, '.', '')) : '' ?>" required>
+              </div>
+              <button class="btn small" type="submit"><?= e(t('Salvar')) ?></button>
+            </form>
+          </details>
         <?php endif; ?>
       </div>
     <?php endforeach; ?>
@@ -843,6 +925,10 @@ $stmt = $db->prepare($sql);
 $stmt->execute($params);
 $cobr = $stmt->fetchAll();
 $cls = is_admin() ? $db->query('SELECT id, nome_empresa FROM clientes WHERE ativo=1 ORDER BY nome_empresa')->fetchAll() : [];
+$funcs_lista = is_admin() ? $db->query("SELECT id, nome FROM usuarios WHERE ativo=1 AND role IN ('admin','funcionario') ORDER BY nome")->fetchAll() : [];
+// Options reutilizadas na 1ª linha (servidor) e no template JS de novas linhas.
+$func_opts_html = '<option value="">— ' . e(t('selecione')) . ' —</option>';
+foreach ($funcs_lista as $f) { $func_opts_html .= '<option value="' . (int)$f['id'] . '">' . e($f['nome']) . '</option>'; }
 ?>
 <h1 class="page-title"><?= e(t('Cobranças')) ?></h1>
 <?php if ($flash): ?><div class="flash <?= e($flash[0]) ?>"><?= e($flash[1]) ?></div><?php endif; ?>
@@ -875,6 +961,10 @@ $cls = is_admin() ? $db->query('SELECT id, nome_empresa FROM clientes WHERE ativ
             <div class="field"><label><?= e(t('Quantidade')) ?></label><input type="number" min="1" name="quantidade[]" value="1" required></div>
             <div class="field"><label><?= e(t('Valor unitário')) ?></label><input type="number" step="0.01" min="0.01" name="valor[]" required></div>
           </div>
+          <div class="grid-2">
+            <div class="field"><label><?= e(t('Funcionário responsável')) ?></label><select name="funcionario_id[]" required><?= $func_opts_html ?></select></div>
+            <div class="field"><label><?= e(t('Pagamento ao funcionário (USD, por unidade)')) ?></label><input type="number" step="0.01" min="0" name="pagamento_func_usd[]" required></div>
+          </div>
         </div>
       </div>
       <button type="button" class="btn btn-ghost block" onclick="adicionarLinhaItem()">+ <?= e(t('Adicionar item')) ?></button>
@@ -893,6 +983,10 @@ $cls = is_admin() ? $db->query('SELECT id, nome_empresa FROM clientes WHERE ativ
         <div class="grid-2">
           <div class="field"><label><?= e(t('Quantidade')) ?></label><input type="number" min="1" name="quantidade[]" value="1" required></div>
           <div class="field"><label><?= e(t('Valor unitário')) ?></label><input type="number" step="0.01" min="0.01" name="valor[]" required></div>
+        </div>
+        <div class="grid-2">
+          <div class="field"><label><?= e(t('Funcionário responsável')) ?></label><select name="funcionario_id[]" required><?= $func_opts_html ?></select></div>
+          <div class="field"><label><?= e(t('Pagamento ao funcionário (USD, por unidade)')) ?></label><input type="number" step="0.01" min="0" name="pagamento_func_usd[]" required></div>
         </div>`;
       lista.appendChild(linha);
     }

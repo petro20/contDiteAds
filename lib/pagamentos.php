@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../includes/db.php';
+require_once __DIR__ . '/cobrancas.php'; // db_coluna_existe()
 
 /**
  * Lógica de pagamentos (Sprint 4).
@@ -134,27 +135,32 @@ function registrar_pagamento_cliente(
  * [{funcionario_id, nome, wisetag, total_usd, itens_count}]
  */
 function fila_pagamentos_funcionarios(PDO $db): array {
-    $sql = '
+    // Funcionário efetivo e valor unitário vêm da assinatura (+func_servico_pagamento)
+    // OU, para itens avulsos, direto do próprio cobranca_item (migration 022).
+    $has   = db_coluna_existe($db, 'cobranca_itens', 'funcionario_id');
+    $vu    = $has ? '(CASE WHEN ci.assinatura_id IS NOT NULL THEN fsp.valor_usd ELSE ci.pagamento_func_usd END)' : 'fsp.valor_usd';
+    $efunc = $has ? 'COALESCE(a.funcionario_id, ci.funcionario_id)' : 'a.funcionario_id';
+    $sql = "
       SELECT
         u.id AS funcionario_id,
         u.nome,
         u.wisetag,
         COUNT(*) AS itens_count,
-        COALESCE(SUM(ci.quantidade * COALESCE(fsp.valor_usd, 0)), 0) AS total_usd,
-        SUM(CASE WHEN fsp.valor_usd IS NULL THEN 1 ELSE 0 END) AS sem_valor_def
+        COALESCE(SUM(ci.quantidade * COALESCE($vu, 0)), 0) AS total_usd,
+        SUM(CASE WHEN $vu IS NULL THEN 1 ELSE 0 END) AS sem_valor_def
       FROM cobranca_itens ci
       JOIN cobrancas c       ON c.id = ci.cobranca_id
-      JOIN assinaturas a     ON a.id = ci.assinatura_id
-      JOIN usuarios u        ON u.id = a.funcionario_id
+      LEFT JOIN assinaturas a ON a.id = ci.assinatura_id
+      JOIN usuarios u        ON u.id = $efunc
       LEFT JOIN func_servico_pagamento fsp
               ON fsp.funcionario_id = a.funcionario_id AND fsp.item_id = a.item_id
       LEFT JOIN pagamento_funcionario_itens pfi ON pfi.cobranca_item_id = ci.id
-      WHERE c.status = "paga"
-        AND a.funcionario_id IS NOT NULL
+      WHERE c.status = 'paga'
+        AND $efunc IS NOT NULL
         AND pfi.id IS NULL
       GROUP BY u.id, u.nome, u.wisetag
       HAVING itens_count > 0
-      ORDER BY total_usd DESC, u.nome';
+      ORDER BY total_usd DESC, u.nome";
     return $db->query($sql)->fetchAll();
 }
 
@@ -162,28 +168,31 @@ function fila_pagamentos_funcionarios(PDO $db): array {
  * Itens pendentes de pagamento para um funcionário específico.
  */
 function itens_pendentes_funcionario(PDO $db, int $funcionario_id): array {
-    $sql = '
+    $has   = db_coluna_existe($db, 'cobranca_itens', 'funcionario_id');
+    $vu    = $has ? '(CASE WHEN ci.assinatura_id IS NOT NULL THEN fsp.valor_usd ELSE ci.pagamento_func_usd END)' : 'fsp.valor_usd';
+    $efunc = $has ? 'COALESCE(a.funcionario_id, ci.funcionario_id)' : 'a.funcionario_id';
+    $sql = "
       SELECT
         ci.id, ci.descricao, ci.quantidade,
         c.competencia_mes,
         cl.nome_empresa,
-        i.nome AS item_nome,
+        COALESCE(i.nome, ci.descricao) AS item_nome,
         i.tipo,
-        COALESCE(fsp.valor_usd, 0) AS valor_unitario_usd,
-        (ci.quantidade * COALESCE(fsp.valor_usd, 0)) AS subtotal_usd,
-        (fsp.valor_usd IS NULL) AS sem_valor
+        COALESCE($vu, 0) AS valor_unitario_usd,
+        (ci.quantidade * COALESCE($vu, 0)) AS subtotal_usd,
+        ($vu IS NULL) AS sem_valor
       FROM cobranca_itens ci
       JOIN cobrancas c    ON c.id = ci.cobranca_id
       JOIN clientes cl    ON cl.id = c.cliente_id
-      JOIN assinaturas a  ON a.id = ci.assinatura_id
-      JOIN itens_catalogo i ON i.id = a.item_id
+      LEFT JOIN assinaturas a  ON a.id = ci.assinatura_id
+      LEFT JOIN itens_catalogo i ON i.id = a.item_id
       LEFT JOIN func_servico_pagamento fsp
               ON fsp.funcionario_id = a.funcionario_id AND fsp.item_id = a.item_id
       LEFT JOIN pagamento_funcionario_itens pfi ON pfi.cobranca_item_id = ci.id
-      WHERE c.status = "paga"
-        AND a.funcionario_id = ?
+      WHERE c.status = 'paga'
+        AND $efunc = ?
         AND pfi.id IS NULL
-      ORDER BY c.competencia_mes DESC, cl.nome_empresa, i.nome';
+      ORDER BY c.competencia_mes DESC, cl.nome_empresa, item_nome";
     $stmt = $db->prepare($sql);
     $stmt->execute([$funcionario_id]);
     return $stmt->fetchAll();
@@ -247,17 +256,20 @@ function criar_pagamento_funcionario(
         throw new RuntimeException(t('Nenhum item selecionado.'));
     }
     // Carrega cada item + valor USD do funcionário
+    $has   = db_coluna_existe($db, 'cobranca_itens', 'funcionario_id');
+    $vu    = $has ? '(CASE WHEN ci.assinatura_id IS NOT NULL THEN fsp.valor_usd ELSE ci.pagamento_func_usd END)' : 'fsp.valor_usd';
+    $efunc = $has ? 'COALESCE(a.funcionario_id, ci.funcionario_id)' : 'a.funcionario_id';
     $place = implode(',', array_fill(0, count($cobranca_item_ids), '?'));
     $sql = "SELECT ci.id, ci.descricao, ci.quantidade,
-                   COALESCE(fsp.valor_usd, 0) AS valor_unitario_usd,
-                   (ci.quantidade * COALESCE(fsp.valor_usd, 0)) AS subtotal_usd
+                   COALESCE($vu, 0) AS valor_unitario_usd,
+                   (ci.quantidade * COALESCE($vu, 0)) AS subtotal_usd
             FROM cobranca_itens ci
-            JOIN assinaturas a ON a.id = ci.assinatura_id
+            LEFT JOIN assinaturas a ON a.id = ci.assinatura_id
             LEFT JOIN func_servico_pagamento fsp
               ON fsp.funcionario_id = a.funcionario_id AND fsp.item_id = a.item_id
             LEFT JOIN pagamento_funcionario_itens pfi ON pfi.cobranca_item_id = ci.id
             WHERE ci.id IN ($place)
-              AND a.funcionario_id = ?
+              AND $efunc = ?
               AND pfi.id IS NULL";
     $stmt = $db->prepare($sql);
     $params = $cobranca_item_ids; $params[] = $funcionario_id;
