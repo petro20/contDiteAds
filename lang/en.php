@@ -1861,4 +1861,8 @@ Confirm?',
     'Editar funcionário/pagamento' => 'Edit employee/payment',
     'Pagamento ao funcionário (USD, por unidade)' => 'Employee payment (USD, per unit)',
     'à equipe' => 'to the team',
+    'Sobra = recebido − o que já foi pago à equipe por esta cobrança. As despesas do mês entram no cálculo geral acima.' => 'Left over = received − what has already been paid to the team for this invoice. Monthly expenses are in the overall calculation above.',
+    'Recebido do cliente' => 'Received from client',
+    'equipe' => 'team',
+    'sobra' => 'left over',
 ];

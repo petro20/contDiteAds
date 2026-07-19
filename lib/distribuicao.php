@@ -55,7 +55,12 @@ function receita_mes(PDO $db, ?string $competencia = null): array {
 function cobrancas_pagas_recentes(PDO $db, int $limit = 30): array {
     $sql = "SELECT c.id, c.valor_total, c.moeda, c.competencia_mes,
                    cl.nome_empresa,
-                   (SELECT MAX(p.data_pagamento) FROM pagamentos_cliente p WHERE p.cobranca_id = c.id) AS data_quitacao
+                   (SELECT MAX(p.data_pagamento) FROM pagamentos_cliente p WHERE p.cobranca_id = c.id) AS data_quitacao,
+                   -- Quanto já foi pago à equipe pelos itens DESTA cobrança (sempre em USD)
+                   (SELECT COALESCE(SUM(pfi.subtotal_usd), 0)
+                      FROM pagamento_funcionario_itens pfi
+                      JOIN cobranca_itens ci2 ON ci2.id = pfi.cobranca_item_id
+                     WHERE ci2.cobranca_id = c.id) AS pago_equipe_usd
             FROM cobrancas c
             JOIN clientes cl ON cl.id = c.cliente_id
             WHERE c.status = 'paga'

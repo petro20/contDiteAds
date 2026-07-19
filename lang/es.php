@@ -1861,4 +1861,8 @@ Los ítems volverán a la cola como pendientes.
     'Editar funcionário/pagamento' => 'Editar empleado/pago',
     'Pagamento ao funcionário (USD, por unidade)' => 'Pago al empleado (USD, por unidad)',
     'à equipe' => 'al equipo',
+    'Sobra = recebido − o que já foi pago à equipe por esta cobrança. As despesas do mês entram no cálculo geral acima.' => 'Sobra = recibido − lo que ya se pagó al equipo por este cobro. Los gastos del mes entran en el cálculo general de arriba.',
+    'Recebido do cliente' => 'Recibido del cliente',
+    'equipe' => 'equipo',
+    'sobra' => 'sobra',
 ];
