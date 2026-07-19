@@ -101,6 +101,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
+    if ($op === 'dite_gerar_link' && is_admin()) {
+        // Gera o link de checkout do gateway e GUARDA na cobrança, pro admin
+        // copiar e mandar pro cliente (WhatsApp/email). Não redireciona.
+        $cid = (int)($_POST['id'] ?? 0);
+        $base_back = APP_BASE_URL . '/cobrancas.php?id=' . $cid;
+        if (!dite_habilitado()) { header('Location: ' . $base_back . '&err=dite_off'); exit; }
+        if (!db_coluna_existe($db, 'cobrancas', 'dite_pay_url')) {
+            header('Location: ' . $base_back . '&err=dite_migration'); exit;
+        }
+        $stmt = $db->prepare('SELECT * FROM cobrancas WHERE id = ?');
+        $stmt->execute([$cid]);
+        $cob_l = $stmt->fetch();
+        if (!$cob_l) { http_response_code(404); exit(t('Cobrança não encontrada.')); }
+        $stmt = $db->prepare('SELECT COALESCE(SUM(valor_pago),0) FROM pagamentos_cliente WHERE cobranca_id = ?');
+        $stmt->execute([$cid]);
+        $saldo_l = max((float)$cob_l['valor_total'] - (float)$stmt->fetchColumn(), 0);
+        if ($saldo_l <= 0) { header('Location: ' . $base_back . '&err=dite_paga'); exit; }
+        $stmt = $db->prepare('SELECT nome_empresa, email FROM clientes WHERE id = ?');
+        $stmt->execute([(int)$cob_l['cliente_id']]);
+        $cli_l = $stmt->fetch() ?: ['nome_empresa' => 'Cliente', 'email' => ''];
+        try {
+            $r = dite_criar_pagamento(
+                $saldo_l, (string)$cob_l['moeda'],
+                'Cobrança #' . $cid . ' · ' . (string)$cli_l['nome_empresa'],
+                ['name' => (string)$cli_l['nome_empresa'], 'email' => (string)($cli_l['email'] ?? '')],
+                'cob_' . $cid,
+                $base_back . '&ok=dite',
+                $base_back . '&err=dite_cancel',
+                // Idempotente por (cobrança + valor): clicar de novo devolve o MESMO
+                // pagamento; se o saldo mudar, a chave muda e nasce um link novo.
+                'coblink_' . $cid . '_' . number_format($saldo_l, 2, '', '')
+            );
+            if (!empty($r['pay_url'])) {
+                $up = $db->prepare('UPDATE cobrancas SET dite_pay_url = ?, dite_payment_id = ?, dite_link_valor = ?, dite_link_em = NOW() WHERE id = ?');
+                $up->execute([(string)$r['pay_url'], (string)($r['payment_id'] ?? ''), $saldo_l, $cid]);
+                audit_log('cobranca.dite_link_gerado', 'cobrancas', $cid);
+                header('Location: ' . $base_back . '&ok=dite_link'); exit;
+            }
+            header('Location: ' . $base_back . '&err=dite_erro'); exit;
+        } catch (Throwable $e) {
+            error_log('Dite gerar link: ' . $e->getMessage());
+            header('Location: ' . $base_back . '&err=dite_erro'); exit;
+        }
+    }
+
     if ($op === 'rodar_cron_geracao' && is_admin()) {
         // Roda EXATAMENTE o que o cron das 05:00 faz: varre todos os clientes
         // com dia_cobranca, gera quem está na janela de 7 dias do vencimento.
@@ -426,7 +471,8 @@ if (isset($_GET['ok'])) {
     $msgs = ['comp' => t('Comprovante enviado. Admin vai conferir e confirmar.'),
              'pag'  => t('Pagamento registrado.'),
              'del'  => t('Cobrança removida.'),
-             'dite' => t('Pagamento por cartão iniciado. Assim que o gateway confirmar, a cobrança é baixada automaticamente — não precisa enviar comprovante.')];
+             'dite' => t('Pagamento por cartão iniciado. Assim que o gateway confirmar, a cobrança é baixada automaticamente — não precisa enviar comprovante.'),
+             'dite_link' => t('Link de pagamento gerado. Copie e envie ao cliente.')];
     $flash = ['ok', $msgs[$_GET['ok']] ?? t('OK.')];
 }
 if (isset($_GET['err'])) {
@@ -434,7 +480,8 @@ if (isset($_GET['err'])) {
              'dite_off'    => t('Pagamento por cartão ainda não está configurado neste site.'),
              'dite_paga'   => t('Esta cobrança já está paga.'),
              'dite_cancel' => t('Pagamento por cartão cancelado. Você pode tentar de novo quando quiser.'),
-             'dite_erro'   => t('Não foi possível iniciar o pagamento por cartão agora. Tente novamente em instantes.')];
+             'dite_erro'   => t('Não foi possível iniciar o pagamento por cartão agora. Tente novamente em instantes.'),
+             'dite_migration' => t('Rode a migration 023 no banco pra poder guardar o link de pagamento.')];
     $flash = ['err', $errs[$_GET['err']] ?? t('Erro.')];
 }
 
@@ -708,6 +755,55 @@ if ($id) {
           <button class="btn btn-brand block" type="submit">💳 <?= e(t('Pagar')) ?> <?= e(money_fmt((float)$saldo, $cob['moeda'])) ?> <?= e(t('agora')) ?></button>
         </form>
       </div>
+      <?php endif; ?>
+
+      <?php
+      // Link de checkout copiável (só admin): gera no gateway e guarda na cobrança,
+      // pra mandar pro cliente por WhatsApp/email. Guardado por db_coluna_existe.
+      if (dite_habilitado() && is_admin()):
+          $tem_col_link  = db_coluna_existe($db, 'cobrancas', 'dite_pay_url');
+          $link_salvo    = $tem_col_link ? (string)($cob['dite_pay_url'] ?? '') : '';
+          $link_valor    = $tem_col_link ? (float)($cob['dite_link_valor'] ?? 0) : 0.0;
+          $link_defasado = $link_salvo !== '' && abs($link_valor - (float)$saldo) > 0.01;
+      ?>
+      <h2 class="mt-5">🔗 <?= e(t('Link de pagamento (cartão)')) ?></h2>
+      <div class="card">
+        <p class="muted" style="font-size:13px;"><?= e(t('Gere um link do gateway com o valor desta cobrança já preenchido e envie ao cliente. A baixa é automática quando ele pagar.')) ?></p>
+        <?php if ($link_salvo !== ''): ?>
+          <div class="field">
+            <input type="text" id="dite_link" value="<?= e($link_salvo) ?>" readonly onclick="this.select();">
+            <div class="hint"><?= e(t('Gerado para')) ?> <?= e(money_fmt($link_valor, $cob['moeda'])) ?><?php if (!empty($cob['dite_link_em'])): ?> · <?= e(date('d/m/Y H:i', strtotime((string)$cob['dite_link_em']))) ?><?php endif; ?></div>
+          </div>
+          <?php if ($link_defasado): ?>
+            <div class="flash err" style="font-size:12px;"><?= e(t('O saldo mudou desde que o link foi gerado — gere um link novo.')) ?></div>
+          <?php endif; ?>
+          <button type="button" class="btn btn-secondary block" onclick="copiarDiteLink(this)">📋 <?= e(t('Copiar link')) ?></button>
+          <a class="btn btn-ghost block mt-2" href="<?= e($link_salvo) ?>" target="_blank" rel="noopener">↗ <?= e(t('Abrir link')) ?></a>
+        <?php endif; ?>
+        <form method="post" class="mt-2">
+          <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
+          <input type="hidden" name="op" value="dite_gerar_link">
+          <input type="hidden" name="id" value="<?= (int)$cob['id'] ?>">
+          <button class="btn <?= $link_salvo === '' ? 'btn-brand' : 'btn-ghost' ?> block" type="submit"><?= $link_salvo === '' ? '🔗 ' . e(t('Gerar link de pagamento')) : '♻ ' . e(t('Gerar link novo')) ?></button>
+        </form>
+        <?php if (!$tem_col_link): ?>
+          <div class="hint" style="color:var(--c-attention);"><?= e(t('Rode a migration 023 pra guardar o link na cobrança.')) ?></div>
+        <?php endif; ?>
+      </div>
+      <script>
+      function copiarDiteLink(btn) {
+        var i = document.getElementById('dite_link');
+        if (!i) return;
+        i.select(); i.setSelectionRange(0, 99999);
+        var done = function () {
+          var txt = btn.textContent;
+          btn.textContent = '✅ <?= e(t('Copiado!')) ?>';
+          setTimeout(function () { btn.textContent = txt; }, 1500);
+        };
+        if (navigator.clipboard) { navigator.clipboard.writeText(i.value).then(done, done); }
+        else { document.execCommand('copy'); done(); }
+      }
+      </script>
       <?php endif; ?>
       <?php if ($tem_metodo): ?>
       <h2 class="mt-5">💳 <?= e(t('Outras formas de pagamento')) ?></h2>
