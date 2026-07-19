@@ -410,32 +410,72 @@ require __DIR__ . '/includes/header.php';
 
 <h2><?= e(t('Cobranças pagas recentes')) ?></h2>
 <p class="muted" style="font-size:12px;"><?= e(t('Sobra = recebido − o que já foi pago à equipe por esta cobrança. As despesas do mês entram no cálculo geral acima.')) ?></p>
-<?php foreach ($historico as $h):
-    $moeda_h  = $h['moeda'];
-    $recebido = (float)$h['valor_total'];
-    $pago_usd = (float)($h['pago_equipe_usd'] ?? 0);
-    // Pagamento à equipe é sempre em USD; converte pra moeda da cobrança
-    // pra a conta fechar toda na mesma moeda (US$ 1 = $cot[moeda]).
-    $taxa       = $moeda_h === 'USD' ? 1.0 : (float)($cot[$moeda_h] ?? 0);
-    $pago_moeda = $taxa > 0 ? $pago_usd * $taxa : 0.0;
-    $sobra      = $recebido - $pago_moeda;
-    $parte      = $total_quotas > 0 ? $sobra / $total_quotas : 0;
+<?php
+  // Agrupa por MÊS DO PAGAMENTO (data_quitacao) — mesmo critério que a página usa
+  // pra apurar receita (receita_por_moeda filtra por p.data_pagamento).
+  $por_mes = [];
+  foreach ($historico as $h) {
+      $k = $h['data_quitacao'] ? substr((string)$h['data_quitacao'], 0, 7) : '0000-00';
+      $por_mes[$k][] = $h;
+  }
+  krsort($por_mes); // mês mais recente primeiro
+  $meses_ext = ['','janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+  $primeiro_grupo = true;
 ?>
-  <a class="list-card" href="<?= e(APP_BASE_URL) ?>/cobrancas.php?id=<?= (int)$h['id'] ?>">
-    <div class="info">
-      <div class="nome"><?= e($h['nome_empresa']) ?></div>
-      <div class="sub"><?= e($h['competencia_mes']) ?> · <?= e(t('pago')) ?> <?= $h['data_quitacao'] ? e(date('d/m/Y', strtotime($h['data_quitacao']))) : '—' ?></div>
+<?php foreach ($por_mes as $mes_k => $linhas):
+    // Subtotais do mês consolidados em US$ (um mês pode misturar moedas).
+    $t_rec_usd = 0.0; $t_pago_usd = 0.0;
+    foreach ($linhas as $h) {
+        $t_rec_usd  += para_usd($db, (float)$h['valor_total'], $h['moeda']);
+        $t_pago_usd += (float)($h['pago_equipe_usd'] ?? 0);
+    }
+    $t_sobra_usd = $t_rec_usd - $t_pago_usd;
+    if ($mes_k === '0000-00') {
+        $rot_mes = t('sem data de pagamento');
+    } else {
+        $rot_mes = t($meses_ext[(int)substr($mes_k, 5, 2)]) . ' ' . substr($mes_k, 0, 4);
+    }
+?>
+  <details class="card" <?= $primeiro_grupo ? 'open' : '' ?>>
+    <summary style="cursor:pointer;">
+      <strong><?= e($rot_mes) ?></strong>
+      <div class="muted" style="font-size:12px; margin-top:4px;">
+        <?= count($linhas) ?> <?= e(count($linhas) === 1 ? t('cobrança') : t('cobranças')) ?>
+        · <?= e(t('recebido')) ?> <?= e(money_fmt($t_rec_usd, 'USD')) ?>
+        <?php if ($t_pago_usd > 0): ?> · <?= e(t('equipe')) ?> − <?= e(money_fmt($t_pago_usd, 'USD')) ?><?php endif; ?>
+        · <?= e(t('sobra')) ?> <strong style="color:var(--c-success);"><?= e(money_fmt($t_sobra_usd, 'USD')) ?></strong>
+      </div>
+    </summary>
+    <div class="mt-3">
+      <?php foreach ($linhas as $h):
+          $moeda_h  = $h['moeda'];
+          $recebido = (float)$h['valor_total'];
+          $pago_usd = (float)($h['pago_equipe_usd'] ?? 0);
+          // Pagamento à equipe é sempre em USD; converte pra moeda da cobrança
+          // pra a conta fechar toda na mesma moeda (US$ 1 = $cot[moeda]).
+          $taxa       = $moeda_h === 'USD' ? 1.0 : (float)($cot[$moeda_h] ?? 0);
+          $pago_moeda = $taxa > 0 ? $pago_usd * $taxa : 0.0;
+          $sobra      = $recebido - $pago_moeda;
+          $parte      = $total_quotas > 0 ? $sobra / $total_quotas : 0;
+      ?>
+        <a class="list-card" href="<?= e(APP_BASE_URL) ?>/cobrancas.php?id=<?= (int)$h['id'] ?>">
+          <div class="info">
+            <div class="nome"><?= e($h['nome_empresa']) ?></div>
+            <div class="sub"><?= e($h['competencia_mes']) ?> · <?= e(t('pago')) ?> <?= $h['data_quitacao'] ? e(date('d/m/Y', strtotime($h['data_quitacao']))) : '—' ?></div>
+          </div>
+          <div class="right">
+            <div class="money md" title="<?= e(t('Recebido do cliente')) ?>"><?= e(money_fmt($recebido, $moeda_h)) ?></div>
+            <?php if ($pago_moeda > 0): ?>
+              <div style="font-size:11px; color:var(--c-danger);"><?= e(t('equipe')) ?> − <?= e(money_fmt($pago_moeda, $moeda_h)) ?></div>
+            <?php endif; ?>
+            <div style="font-size:11px; color:var(--c-success);"><?= e(t('sobra')) ?> <?= e(money_fmt($sobra, $moeda_h)) ?></div>
+            <div class="muted" style="font-size:11px;"><?= e(t('quota:')) ?> <?= e(money_fmt($parte, $moeda_h)) ?></div>
+          </div>
+        </a>
+      <?php endforeach; ?>
     </div>
-    <div class="right">
-      <div class="money md" title="<?= e(t('Recebido do cliente')) ?>"><?= e(money_fmt($recebido, $moeda_h)) ?></div>
-      <?php if ($pago_moeda > 0): ?>
-        <div style="font-size:11px; color:var(--c-danger);"><?= e(t('equipe')) ?> − <?= e(money_fmt($pago_moeda, $moeda_h)) ?></div>
-      <?php endif; ?>
-      <div style="font-size:11px; color:var(--c-success);"><?= e(t('sobra')) ?> <?= e(money_fmt($sobra, $moeda_h)) ?></div>
-      <div class="muted" style="font-size:11px;"><?= e(t('quota:')) ?> <?= e(money_fmt($parte, $moeda_h)) ?></div>
-    </div>
-  </a>
-<?php endforeach; ?>
+  </details>
+<?php $primeiro_grupo = false; endforeach; ?>
 <?php if (!$historico): ?>
   <p class="muted center mt-5"><?= e(t('Nenhuma cobrança paga ainda.')) ?></p>
 <?php endif; ?>

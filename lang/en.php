@@ -1865,4 +1865,7 @@ Confirm?',
     'Recebido do cliente' => 'Received from client',
     'equipe' => 'team',
     'sobra' => 'left over',
+    'sem data de pagamento' => 'no payment date',
+    'cobranças' => 'invoices',
+    'recebido' => 'received',
 ];

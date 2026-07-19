@@ -1865,4 +1865,7 @@ Los ítems volverán a la cola como pendientes.
     'Recebido do cliente' => 'Recibido del cliente',
     'equipe' => 'equipo',
     'sobra' => 'sobra',
+    'sem data de pagamento' => 'sin fecha de pago',
+    'cobranças' => 'cobros',
+    'recebido' => 'recibido',
 ];
