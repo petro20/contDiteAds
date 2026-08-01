@@ -1879,4 +1879,6 @@ Los ítems volverán a la cola como pendientes.
     'Link de pagamento gerado. Copie e envie ao cliente.' => 'Enlace de pago generado. Cópialo y envíalo al cliente.',
     'Rode a migration 023 no banco pra poder guardar o link de pagamento.' => 'Ejecuta la migración 023 en la base de datos para guardar el enlace de pago.',
     'ativas:' => 'activas:',
+    'Total das assinaturas ativas' => 'Total de las suscripciones activas',
+    'convertido para dólar pela cotação do dia' => 'convertido a dólares con la cotización del día',
 ];

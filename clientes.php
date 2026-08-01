@@ -270,6 +270,20 @@ if (is_admin()) {
         $assin_por_cliente[$cid]['total'] += $vef;
     }
 }
+
+// Total geral das assinaturas ativas, tudo convertido pra US$ (moedas somadas
+// pela cotação do dia). Só admin.
+$total_geral_usd = 0.0;
+$assin_ativas_qtd = 0;
+if (is_admin()) {
+    require_once __DIR__ . '/lib/cotacao.php';
+    foreach ($clientes as $cl) {
+        $ac = $assin_por_cliente[(int)$cl['id']] ?? null;
+        if (!$ac || $ac['qtd'] === 0) continue;
+        $assin_ativas_qtd += $ac['qtd'];
+        $total_geral_usd  += para_usd($db, (float)$ac['total'], (string)$cl['moeda']);
+    }
+}
 ?>
 <h1 class="page-title"><?= $func_view_only ? e(t('Meus clientes')) : e(t('Clientes')) ?></h1>
 <?php if ($flash): ?><div class="flash <?= e($flash[0]) ?>"><?= e($flash[1]) ?></div><?php endif; ?>
@@ -278,6 +292,17 @@ if (is_admin()) {
   <a href="?acao=novo" class="btn btn-brand">+ <?= e(t('Novo')) ?></a>
   <a href="<?= e(APP_BASE_URL) ?>/convites.php" class="btn btn-secondary">✉️ <?= e(t('Convidar')) ?></a>
 </div>
+<?php endif; ?>
+<?php if (is_admin() && $total_geral_usd > 0): ?>
+  <div class="card brand mt-3">
+    <div class="spaced">
+      <div>
+        <div class="title">🌎 <?= e(t('Total das assinaturas ativas')) ?></div>
+        <div class="muted" style="font-size:12px;"><?= $assin_ativas_qtd ?> <?= $assin_ativas_qtd == 1 ? e(t('assinatura')) : e(t('assinaturas')) ?> · <?= e(t('convertido para dólar pela cotação do dia')) ?></div>
+      </div>
+      <div class="money lg" style="color:var(--c-success);"><?= e(money_fmt($total_geral_usd, 'USD')) ?></div>
+    </div>
+  </div>
 <?php endif; ?>
 <div class="section-label mt-5"><?= $func_view_only ? e(t('Que você atende')) : e(t('Cadastrados')) ?> (<?= count($clientes) ?>)</div>
 <?php foreach ($clientes as $cl): ?>

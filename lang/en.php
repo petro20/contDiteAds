@@ -1879,4 +1879,6 @@ Confirm?',
     'Link de pagamento gerado. Copie e envie ao cliente.' => 'Payment link generated. Copy it and send to the client.',
     'Rode a migration 023 no banco pra poder guardar o link de pagamento.' => 'Run migration 023 in the database to store the payment link.',
     'ativas:' => 'active:',
+    'Total das assinaturas ativas' => 'Total of active subscriptions',
+    'convertido para dólar pela cotação do dia' => 'converted to dollars at today\'s rate',
 ];
