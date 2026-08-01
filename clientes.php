@@ -2,6 +2,7 @@
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/lib/audit.php';
 require_once __DIR__ . '/lib/hard_delete.php';
+require_once __DIR__ . '/lib/cobrancas.php'; // db_coluna_existe, assinatura_desconto_aplicado, money_fmt
 $me = require_login();
 if ($me['role'] === 'cliente') { header('Location: ' . APP_BASE_URL . '/dashboard.php'); exit; }
 $func_view_only = $me['role'] === 'funcionario'; // funcionário vê só seus clientes, read-only
@@ -253,6 +254,22 @@ if ($func_view_only) {
         FROM clientes cl ORDER BY cl.nome_empresa, cl.nome
     ')->fetchAll();
 }
+
+// Assinaturas ATIVAS por cliente: quantidade + total (já com desconto do mês
+// corrente, via mesmo helper da cobrança/tela de assinaturas — não diverge).
+$assin_por_cliente = [];
+if (is_admin()) {
+    $sel_desc = db_coluna_existe($db, 'assinaturas', 'desconto_pct')
+        ? 'desconto_pct, desconto_meses' : '0 AS desconto_pct, 0 AS desconto_meses';
+    $mes_ref = date('Y-m');
+    foreach ($db->query("SELECT cliente_id, valor_cobrado, iniciada_em, $sel_desc FROM assinaturas WHERE status='ativa'")->fetchAll() as $r) {
+        $cid = (int)$r['cliente_id'];
+        if (!isset($assin_por_cliente[$cid])) $assin_por_cliente[$cid] = ['qtd' => 0, 'total' => 0.0];
+        [$vef, ] = assinatura_desconto_aplicado((float)$r['valor_cobrado'], (float)$r['desconto_pct'], (int)$r['desconto_meses'], (string)($r['iniciada_em'] ?? ''), $mes_ref);
+        $assin_por_cliente[$cid]['qtd']++;
+        $assin_por_cliente[$cid]['total'] += $vef;
+    }
+}
 ?>
 <h1 class="page-title"><?= $func_view_only ? e(t('Meus clientes')) : e(t('Clientes')) ?></h1>
 <?php if ($flash): ?><div class="flash <?= e($flash[0]) ?>"><?= e($flash[1]) ?></div><?php endif; ?>
@@ -272,6 +289,7 @@ if ($func_view_only) {
       </div>
     </a>
   <?php else: ?>
+    <?php $ac = $assin_por_cliente[(int)$cl['id']] ?? ['qtd' => 0, 'total' => 0.0]; ?>
     <a class="list-card" href="?acao=editar&id=<?= (int)$cl['id'] ?>">
       <div class="info">
         <div class="nome">
@@ -280,9 +298,13 @@ if ($func_view_only) {
         </div>
         <div class="sub">
           <?= e($cl['nome_contato'] ?? '—') ?> · <?= e($cl['moeda']) ?>
+          · <?= (int)$ac['qtd'] ?> <?= $ac['qtd'] == 1 ? e(t('assinatura')) : e(t('assinaturas')) ?>
           <?php if ($cl['tem_login']): ?> · <span class="status status-paga"><?= e(t('login')) ?></span><?php endif; ?>
         </div>
       </div>
+      <?php if ($ac['qtd'] > 0): ?>
+        <div class="right"><div class="money md"><?= e(money_fmt($ac['total'], $cl['moeda'])) ?></div></div>
+      <?php endif; ?>
     </a>
   <?php endif; ?>
 <?php endforeach; ?>
