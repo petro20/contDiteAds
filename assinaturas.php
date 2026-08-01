@@ -369,7 +369,10 @@ if ($acao === 'novo' || $acao === 'editar') {
 require __DIR__ . '/includes/header.php';
 $where = ['1=1']; $params = [];
 if ($cliente_filter) { $where[] = 'a.cliente_id = ?'; $params[] = $cliente_filter; }
-$sql = 'SELECT a.id, a.valor_cobrado, a.variante, a.status, a.iniciada_em,
+$sel_desc = db_coluna_existe($db, 'assinaturas', 'desconto_pct')
+    ? 'a.desconto_pct, a.desconto_meses,'
+    : '0 AS desconto_pct, 0 AS desconto_meses,';
+$sql = 'SELECT a.id, a.valor_cobrado, a.variante, a.status, a.iniciada_em, ' . $sel_desc . '
                cl.id AS cliente_id, cl.nome_empresa, cl.moeda,
                i.nome AS item_nome, i.tipo,
                u.nome AS funcionario_nome
@@ -405,13 +408,20 @@ if ($cliente_filter) {
     $cli_nome  = $linhas[0]['nome_empresa'];
     $cli_moeda = $linhas[0]['moeda'];
     $cli_total = 0.0;
-    foreach ($linhas as $a) if ($a['status'] === 'ativa') $cli_total += (float)$a['valor_cobrado'];
+    // Total das ativas JÁ com desconto aplicado (mês corrente como referência).
+    foreach ($linhas as $a) {
+        if ($a['status'] !== 'ativa') continue;
+        [$vef, ] = assinatura_desconto_aplicado((float)$a['valor_cobrado'], (float)($a['desconto_pct'] ?? 0), (int)($a['desconto_meses'] ?? 0), (string)($a['iniciada_em'] ?? ''), date('Y-m'));
+        $cli_total += $vef;
+    }
 ?>
   <div class="section-label mt-5" style="display:flex; justify-content:space-between; align-items:baseline; gap:12px;">
     <span><?= e($cli_nome) ?> <span class="muted" style="font-weight:400;">(<?= count($linhas) ?>)</span></span>
     <span class="muted" style="font-weight:400;"><?= e(t('ativas:')) ?> <?= e(money_fmt($cli_total, $cli_moeda)) ?></span>
   </div>
-  <?php foreach ($linhas as $a): ?>
+  <?php foreach ($linhas as $a):
+      [$vef_i, $aplicou_i] = assinatura_desconto_aplicado((float)$a['valor_cobrado'], (float)($a['desconto_pct'] ?? 0), (int)($a['desconto_meses'] ?? 0), (string)($a['iniciada_em'] ?? ''), date('Y-m'));
+  ?>
     <a class="list-card" href="?acao=editar&id=<?= (int)$a['id'] ?>">
       <div class="info">
         <div class="nome">
@@ -423,6 +433,9 @@ if ($cliente_filter) {
       </div>
       <div class="right">
         <div class="money md"><?= e(money_fmt((float)$a['valor_cobrado'], $a['moeda'])) ?></div>
+        <?php if ($aplicou_i): ?>
+          <div style="font-size:11px; color:var(--c-success);">−<?= e(rtrim(rtrim(number_format((float)$a['desconto_pct'], 2, '.', ''), '0'), '.')) ?>% → <?= e(money_fmt($vef_i, $a['moeda'])) ?></div>
+        <?php endif; ?>
       </div>
     </a>
   <?php endforeach; ?>

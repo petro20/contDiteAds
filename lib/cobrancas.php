@@ -149,6 +149,31 @@ function gerar_cobranca_avulsa_unico(PDO $db, int $assinatura_id, int $criado_po
 }
 
 /**
+ * Aplica o desconto da assinatura pra uma dada competência.
+ * Retorna [valor_final, aplicou?]. Regras:
+ *  - dpct <= 0            -> sem desconto
+ *  - dpct > 0, dmes = 0   -> desconto permanente
+ *  - dpct > 0, dmes = N   -> só nas primeiras N competências desde iniciada_em
+ * Fonte única de verdade: usado tanto na geração de cobrança quanto na
+ * exibição do total "ativas" em assinaturas.php (pra baterem sempre).
+ */
+function assinatura_desconto_aplicado(float $valor, float $dpct, int $dmes, ?string $iniciada_em, string $competencia): array {
+    if ($dpct <= 0) return [$valor, false];
+    $aplica = true;
+    if ($dmes > 0) {
+        $ini = $iniciada_em ? DateTime::createFromFormat('Y-m-d', substr($iniciada_em, 0, 7) . '-01') : null;
+        $cmp = DateTime::createFromFormat('Y-m-d', $competencia . '-01');
+        if ($ini && $cmp) {
+            $elapsed = ((int)$cmp->format('Y') - (int)$ini->format('Y')) * 12
+                     + ((int)$cmp->format('n') - (int)$ini->format('n'));
+            $aplica = ($elapsed >= 0 && $elapsed < $dmes);
+        }
+    }
+    if (!$aplica) return [$valor, false];
+    return [round($valor * (1 - $dpct / 100), 2), true];
+}
+
+/**
  * Gera (ou regera) a cobrança consolidada de um cliente para um mês.
  * Idempotente: se já existe cobrança no mês, NÃO regera. Retorna ['cobranca_id' => N, 'status' => 'created|exists|empty'].
  */
@@ -203,23 +228,11 @@ function gerar_cobranca_mensal(PDO $db, int $cliente_id, string $competencia, ?s
         // Desconto por tempo: aplica nas primeiras N cobranças (ou permanente se meses=0).
         $dpct = (float)($a['desconto_pct'] ?? 0);
         $dmes = (int)($a['desconto_meses'] ?? 0);
+        [$valor, $aplicou_desc] = assinatura_desconto_aplicado($valor, $dpct, $dmes, (string)($a['iniciada_em'] ?? ''), $competencia);
         $desc_suffix = '';
-        if ($dpct > 0) {
-            $aplica_desc = true;
-            if ($dmes > 0) {
-                $ini = DateTime::createFromFormat('Y-m-d', substr((string)$a['iniciada_em'], 0, 7) . '-01');
-                $cmp = DateTime::createFromFormat('Y-m-d', $competencia . '-01');
-                if ($ini && $cmp) {
-                    $elapsed = ((int)$cmp->format('Y') - (int)$ini->format('Y')) * 12
-                             + ((int)$cmp->format('n') - (int)$ini->format('n'));
-                    $aplica_desc = ($elapsed >= 0 && $elapsed < $dmes);
-                }
-            }
-            if ($aplica_desc) {
-                $valor = round($valor * (1 - $dpct / 100), 2);
-                $pct_txt = rtrim(rtrim(number_format($dpct, 2, '.', ''), '0'), '.');
-                $desc_suffix = ' (−' . $pct_txt . '% ' . t('promo') . ')';
-            }
+        if ($aplicou_desc) {
+            $pct_txt = rtrim(rtrim(number_format($dpct, 2, '.', ''), '0'), '.');
+            $desc_suffix = ' (−' . $pct_txt . '% ' . t('promo') . ')';
         }
 
         $fixo_mensal = (int)($a['cobrar_fixo_mensal'] ?? 0) === 1;
