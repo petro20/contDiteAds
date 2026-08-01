@@ -378,7 +378,7 @@ $sql = 'SELECT a.id, a.valor_cobrado, a.variante, a.status, a.iniciada_em,
         JOIN itens_catalogo i ON i.id = a.item_id
         LEFT JOIN usuarios u ON u.id = a.funcionario_id
         WHERE ' . implode(' AND ', $where) . '
-        ORDER BY a.status, cl.nome_empresa, i.nome';
+        ORDER BY cl.nome_empresa, a.status, i.nome';
 $stmt = $db->prepare($sql);
 $stmt->execute($params);
 $lista = $stmt->fetchAll();
@@ -396,20 +396,36 @@ if ($cliente_filter) {
 <a class="btn btn-brand block" href="?acao=novo<?= $cliente_filter ? '&cliente_id=' . $cliente_filter : '' ?>">+ <?= e(t('Nova assinatura')) ?></a>
 
 <div class="section-label mt-5"><?= e(t('Total')) ?> (<?= count($lista) ?>)</div>
-<?php foreach ($lista as $a): ?>
-  <a class="list-card" href="?acao=editar&id=<?= (int)$a['id'] ?>">
-    <div class="info">
-      <div class="nome">
-        <?= e($a['item_nome']) ?>
-        <?php if ($a['variante']==='ia'): ?><span class="status status-ia">IA</span><?php endif; ?>
-        <span class="status status-<?= e($a['status']) ?>"><?= e($a['status']) ?></span>
+<?php
+  // Agrupa por cliente (a query já vem ordenada por nome_empresa → ordem alfabética).
+  $grupos = [];
+  foreach ($lista as $a) $grupos[(int)$a['cliente_id']][] = $a;
+?>
+<?php foreach ($grupos as $linhas):
+    $cli_nome  = $linhas[0]['nome_empresa'];
+    $cli_moeda = $linhas[0]['moeda'];
+    $cli_total = 0.0;
+    foreach ($linhas as $a) if ($a['status'] === 'ativa') $cli_total += (float)$a['valor_cobrado'];
+?>
+  <div class="section-label mt-5" style="display:flex; justify-content:space-between; align-items:baseline; gap:12px;">
+    <span><?= e($cli_nome) ?> <span class="muted" style="font-weight:400;">(<?= count($linhas) ?>)</span></span>
+    <span class="muted" style="font-weight:400;"><?= e(t('ativas:')) ?> <?= e(money_fmt($cli_total, $cli_moeda)) ?></span>
+  </div>
+  <?php foreach ($linhas as $a): ?>
+    <a class="list-card" href="?acao=editar&id=<?= (int)$a['id'] ?>">
+      <div class="info">
+        <div class="nome">
+          <?= e($a['item_nome']) ?>
+          <?php if ($a['variante']==='ia'): ?><span class="status status-ia">IA</span><?php endif; ?>
+          <span class="status status-<?= e($a['status']) ?>"><?= e($a['status']) ?></span>
+        </div>
+        <div class="sub"><?= e($a['funcionario_nome'] ?? t('sem responsável')) ?> · <?= e($a['tipo']) ?></div>
       </div>
-      <div class="sub"><?= e($a['nome_empresa']) ?> · <?= e($a['funcionario_nome'] ?? t('sem responsável')) ?> · <?= e($a['tipo']) ?></div>
-    </div>
-    <div class="right">
-      <div class="money md"><?= e(money_fmt((float)$a['valor_cobrado'], $a['moeda'])) ?></div>
-    </div>
-  </a>
+      <div class="right">
+        <div class="money md"><?= e(money_fmt((float)$a['valor_cobrado'], $a['moeda'])) ?></div>
+      </div>
+    </a>
+  <?php endforeach; ?>
 <?php endforeach; ?>
 <?php if (!$lista): ?>
   <p class="muted center mt-5"><?= e(t('Nenhuma assinatura. Clique em "+ Nova".')) ?></p>

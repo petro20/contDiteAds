@@ -1878,4 +1878,5 @@ Confirm?',
     'Rode a migration 023 pra guardar o link na cobrança.' => 'Run migration 023 to store the link on the invoice.',
     'Link de pagamento gerado. Copie e envie ao cliente.' => 'Payment link generated. Copy it and send to the client.',
     'Rode a migration 023 no banco pra poder guardar o link de pagamento.' => 'Run migration 023 in the database to store the payment link.',
+    'ativas:' => 'active:',
 ];
