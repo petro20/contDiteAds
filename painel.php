@@ -7,7 +7,7 @@ require_admin();
 $db = db();
 
 $aba = $_GET['aba'] ?? 'agenda';
-if (!in_array($aba, ['agenda','clientes','servicos'], true)) $aba = 'agenda';
+if (!in_array($aba, ['agenda','clientes','servicos','caixa'], true)) $aba = 'agenda';
 
 $competencia = $_GET['mes'] ?? date('Y-m');
 if (!preg_match('/^\d{4}-\d{2}$/', $competencia)) $competencia = date('Y-m');
@@ -38,6 +38,7 @@ require __DIR__ . '/includes/header.php';
   <a class="<?= $aba==='agenda'?'active':'' ?>" href="?aba=agenda&mes=<?= e($competencia) ?>"><?= e(t('Agenda')) ?></a>
   <a class="<?= $aba==='clientes'?'active':'' ?>" href="?aba=clientes&mes=<?= e($competencia) ?>"><?= e(t('Por cliente')) ?></a>
   <a class="<?= $aba==='servicos'?'active':'' ?>" href="?aba=servicos&mes=<?= e($competencia) ?>"><?= e(t('Por serviço')) ?></a>
+  <a class="<?= $aba==='caixa'?'active':'' ?>" href="?aba=caixa&mes=<?= e($competencia) ?>">💵 <?= e(t('Caixa')) ?></a>
 </nav>
 
 <?php if ($aba === 'agenda'):
@@ -461,7 +462,7 @@ renderChartSaude();
   </a>
 <?php endforeach; ?>
 
-<?php else: /* servicos */
+<?php elseif ($aba === 'servicos'): /* servicos */
     $stmt = $db->prepare("
         SELECT i.id, i.nome, i.tipo, i.e_pacote,
                (SELECT COUNT(DISTINCT cliente_id) FROM assinaturas WHERE item_id = i.id AND status = 'ativa') AS qtd_clientes,
@@ -490,6 +491,139 @@ renderChartSaude();
     </div>
   </a>
 <?php endforeach; ?>
+
+<?php elseif ($aba === 'caixa'):
+    require_once __DIR__ . '/lib/cotacao.php';
+    $mes_ant  = date('Y-m', strtotime($competencia . '-01 -1 month'));
+    $mes_prox = date('Y-m', strtotime($competencia . '-01 +1 month'));
+    $meses_nm = ['','janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+    $nome_mes_cx = t($meses_nm[(int)substr($competencia,5,2)]) . ' ' . substr($competencia,0,4);
+
+    // ENTROU: recebimentos de clientes confirmados no mês (pela data do pagamento)
+    $stmt = $db->prepare("SELECT p.valor_pago, p.data_pagamento, p.metodo, c.moeda, cl.nome_empresa
+                          FROM pagamentos_cliente p
+                          JOIN cobrancas c ON c.id = p.cobranca_id
+                          JOIN clientes cl ON cl.id = c.cliente_id
+                          WHERE p.data_pagamento BETWEEN ? AND ? AND COALESCE(p.pendente,0)=0
+                          ORDER BY p.data_pagamento, cl.nome_empresa");
+    $stmt->execute([$mes_inicio, $mes_fim]);
+    $cx_entradas = $stmt->fetchAll();
+    $cx_tot_ent = ['BRL'=>0.0,'USD'=>0.0,'EUR'=>0.0];
+    foreach ($cx_entradas as $e) $cx_tot_ent[$e['moeda']] += (float)$e['valor_pago'];
+
+    // SAIU 1: despesas que se aplicam ao mês
+    $cx_desp = despesas_do_mes($db, $competencia);
+    $cx_tot_desp = $cx_desp['totais'];
+
+    // SAIU 2: pagamentos à equipe (USD) pela data do pagamento
+    $stmt = $db->prepare("SELECT pf.valor_usd, pf.data_pagamento, u.nome
+                          FROM pagamentos_funcionario pf JOIN usuarios u ON u.id = pf.funcionario_id
+                          WHERE pf.data_pagamento BETWEEN ? AND ? ORDER BY pf.data_pagamento");
+    $stmt->execute([$mes_inicio, $mes_fim]);
+    $cx_equipe = $stmt->fetchAll();
+    $cx_tot_equipe_usd = (float)array_sum(array_column($cx_equipe, 'valor_usd'));
+
+    // SAIU 3: distribuição aos sócios/empresa (pela data do pagamento)
+    $cx_socios = [];
+    try {
+        $stmt = $db->prepare("SELECT ps.valor, ps.moeda, ps.data_pagamento, ps.socio_id, u.nome
+                              FROM pagamentos_socio ps LEFT JOIN usuarios u ON u.id = ps.socio_id
+                              WHERE ps.data_pagamento BETWEEN ? AND ? ORDER BY ps.data_pagamento");
+        $stmt->execute([$mes_inicio, $mes_fim]);
+        $cx_socios = $stmt->fetchAll();
+    } catch (PDOException $e) {}
+    $cx_tot_soc = ['BRL'=>0.0,'USD'=>0.0,'EUR'=>0.0];
+    foreach ($cx_socios as $s) $cx_tot_soc[$s['moeda']] += (float)$s['valor'];
+
+    // Consolidado em US$ (a conta do lucro)
+    $cx_rec_usd = 0.0; $cx_desp_usd = 0.0; $cx_soc_usd = 0.0;
+    foreach (['BRL','USD','EUR'] as $m) {
+        $cx_rec_usd  += para_usd($db, $cx_tot_ent[$m], $m);
+        $cx_desp_usd += para_usd($db, $cx_tot_desp[$m] ?? 0, $m);
+        $cx_soc_usd  += para_usd($db, $cx_tot_soc[$m], $m);
+    }
+    $cx_lucro_usd = $cx_rec_usd - $cx_desp_usd - $cx_tot_equipe_usd;
+    $cx_falta = $cx_lucro_usd - $cx_soc_usd;
+    $fmt_multi = function(array $t) { $p=[]; foreach(['BRL','USD','EUR'] as $m) if(($t[$m]??0)>0.001)$p[]=money_fmt($t[$m],$m); return $p ? implode(' · ',$p) : '—'; };
+?>
+  <div class="spaced mb-3">
+    <a class="btn btn-ghost small" href="?aba=caixa&mes=<?= e($mes_ant) ?>">← <?= e($mes_ant) ?></a>
+    <strong><?= e($nome_mes_cx) ?></strong>
+    <a class="btn btn-ghost small" href="?aba=caixa&mes=<?= e($mes_prox) ?>"><?= e($mes_prox) ?> →</a>
+  </div>
+
+  <div class="card brand">
+    <div class="title">🧮 <?= e(t('Conta do lucro (em US$)')) ?></div>
+    <div class="spaced" style="padding:6px 0;"><span><?= e(t('Entrou (recebido de clientes)')) ?></span><strong style="color:var(--c-success);"><?= e(money_fmt($cx_rec_usd,'USD')) ?></strong></div>
+    <?php if ($cx_desp_usd > 0): ?><div class="spaced" style="padding:6px 0;"><span>− <?= e(t('Despesas')) ?></span><strong style="color:var(--c-danger);"><?= e(money_fmt($cx_desp_usd,'USD')) ?></strong></div><?php endif; ?>
+    <?php if ($cx_tot_equipe_usd > 0): ?><div class="spaced" style="padding:6px 0;"><span>− <?= e(t('Pagamentos à equipe')) ?></span><strong style="color:var(--c-danger);"><?= e(money_fmt($cx_tot_equipe_usd,'USD')) ?></strong></div><?php endif; ?>
+    <div class="spaced" style="padding:8px 0; border-top:1px solid var(--border);">
+      <strong><?= e(t('= Lucro líquido')) ?></strong>
+      <strong style="font-size:18px; color:<?= $cx_lucro_usd>=0?'var(--c-success)':'var(--c-danger)' ?>;"><?= e(money_fmt($cx_lucro_usd,'USD')) ?></strong>
+    </div>
+    <div class="muted" style="font-size:11px; margin-top:6px; border-top:1px dashed var(--border); padding-top:8px;">
+      🏦 <?= e(t('A distribuição aos sócios/empresa NÃO é custo — ela sai DO lucro acima.')) ?>
+    </div>
+    <div class="spaced" style="padding:6px 0;"><span><?= e(t('Distribuído no mês')) ?></span><strong style="color:var(--c-primary-2);"><?= e(money_fmt($cx_soc_usd,'USD')) ?></strong></div>
+    <div class="spaced" style="padding:6px 0;">
+      <span><?= $cx_falta>=0 ? e(t('Ainda a distribuir')) : '⚠ '.e(t('Distribuído a MAIS que o lucro')) ?></span>
+      <strong style="color:<?= $cx_falta>=0?'var(--txt-1)':'var(--c-danger)' ?>;"><?= e(money_fmt(abs($cx_falta),'USD')) ?></strong>
+    </div>
+  </div>
+
+  <h2 class="mt-5">📥 <?= e(t('Entrou')) ?> <span class="muted" style="font-size:13px; font-weight:normal;">(<?= e($fmt_multi($cx_tot_ent)) ?>)</span></h2>
+  <?php if (!$cx_entradas): ?>
+    <p class="muted"><?= e(t('Nenhum recebimento neste mês.')) ?></p>
+  <?php else: foreach ($cx_entradas as $e): ?>
+    <div class="list-card">
+      <div class="info">
+        <div class="nome"><?= e($e['nome_empresa']) ?></div>
+        <div class="sub"><?= e(date('d/m/Y', strtotime($e['data_pagamento']))) ?><?php if ($e['metodo']): ?> · <?= e($e['metodo']) ?><?php endif; ?></div>
+      </div>
+      <div class="right"><div class="money md" style="color:var(--c-success);"><?= e(money_fmt((float)$e['valor_pago'], $e['moeda'])) ?></div></div>
+    </div>
+  <?php endforeach; endif; ?>
+
+  <h2 class="mt-5">📤 <?= e(t('Saiu')) ?></h2>
+
+  <div class="section-label"><?= e(t('Despesas')) ?> <span class="muted" style="font-weight:normal;">(<?= e($fmt_multi($cx_tot_desp)) ?>)</span></div>
+  <?php if (empty($cx_desp['detalhes'])): ?>
+    <p class="muted"><?= e(t('Nenhuma despesa neste mês.')) ?></p>
+  <?php else: foreach ($cx_desp['detalhes'] as $d): ?>
+    <div class="list-card">
+      <div class="info">
+        <div class="nome"><?= e($d['descricao']) ?></div>
+        <div class="sub"><?= e($d['categoria'] ?? '—') ?> · <?= e($d['recorrencia']) ?></div>
+      </div>
+      <div class="right"><div class="money md" style="color:var(--c-danger);"><?= e(money_fmt((float)$d['valor'], $d['moeda'])) ?></div></div>
+    </div>
+  <?php endforeach; endif; ?>
+
+  <div class="section-label mt-3"><?= e(t('Pagamentos à equipe')) ?> <span class="muted" style="font-weight:normal;">(<?= e($cx_tot_equipe_usd>0 ? money_fmt($cx_tot_equipe_usd,'USD') : '—') ?>)</span></div>
+  <?php if (!$cx_equipe): ?>
+    <p class="muted"><?= e(t('Nenhum pagamento à equipe neste mês.')) ?></p>
+  <?php else: foreach ($cx_equipe as $pf): ?>
+    <div class="list-card">
+      <div class="info">
+        <div class="nome"><?= e($pf['nome']) ?></div>
+        <div class="sub"><?= e(date('d/m/Y', strtotime($pf['data_pagamento']))) ?></div>
+      </div>
+      <div class="right"><div class="money md" style="color:var(--c-danger);"><?= e(money_fmt((float)$pf['valor_usd'], 'USD')) ?></div></div>
+    </div>
+  <?php endforeach; endif; ?>
+
+  <div class="section-label mt-3">🏦 <?= e(t('Distribuição aos sócios/empresa')) ?> <span class="muted" style="font-weight:normal;">(<?= e($fmt_multi($cx_tot_soc)) ?>)</span></div>
+  <?php if (!$cx_socios): ?>
+    <p class="muted"><?= e(t('Nenhuma distribuição neste mês.')) ?></p>
+  <?php else: foreach ($cx_socios as $s): ?>
+    <div class="list-card">
+      <div class="info">
+        <div class="nome"><?= $s['socio_id'] === null ? '🏢 ' . e(t('Empresa (reserva)')) : e($s['nome']) ?></div>
+        <div class="sub"><?= e(date('d/m/Y', strtotime($s['data_pagamento']))) ?></div>
+      </div>
+      <div class="right"><div class="money md" style="color:var(--c-primary-2);"><?= e(money_fmt((float)$s['valor'], $s['moeda'])) ?></div></div>
+    </div>
+  <?php endforeach; endif; ?>
 
 <?php endif; ?>
 
