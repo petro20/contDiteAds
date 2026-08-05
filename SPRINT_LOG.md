@@ -240,10 +240,22 @@ evolução contínua (fora do BUILD_PLAN original), resumida abaixo por tema. De
 - **Despesas** (`migration_005`) e **distribuição de lucro** entre sócios + quota "Empresa"
   (`migration_008`), por moeda e consolidado em US$.
 - **Aba Caixa** no Painel: a conta do lucro do mês aberta (entrou × despesas × equipe ×
-  distribuição), com itens detalhados e alerta se distribuiu mais que o lucro — pra auditar.
+  distribuição), por moeda **e** consolidado em US$, com itens detalhados — pra auditar.
 - **Distribuição**: cobranças pagas agrupadas em cards recolhíveis por mês, cada uma mostrando
   recebido × pago à equipe × sobra. **Assinaturas** agrupadas por cliente com total (com desconto);
   **Clientes** mostra qtd/total de assinaturas, dia de cobrança e alerta visual de vencido.
+
+**Modelo de distribuição de lucro (refinado 2026-08, tudo em lib/distribuicao.php):**
+- **Despesas viram custo em USD** (moeda-mestre): gastos em real/euro são convertidos e descontam
+  só do lado USD, junto com a equipe. Receita em real/euro entra cheia — não fica negativa por despesa.
+- **Saldo acumulado não distribuído** (`saldo_distribuicao_mes_anterior`): a base a distribuir de um
+  mês = lucro do mês **+** (lucro acumulado até o mês anterior − distribuído até o mês anterior),
+  COM SINAL (negativo desconta). Acumulado, não só 1 mês, pra o saldo rolar certo. **Piso em maio/2026**
+  (início da operação; abril e antes = 0). `saldo_distribuicao_por_mes` abre o saldo mês a mês.
+- **"Falta distribuir"** = a distribuir − já distribuído neste mês (competência atual). Assim o que já
+  foi pago (ex.: o euro do mês) some do pendente. A trava de pagamento usa a mesma base.
+- Distribuição/Caixa contam sócios por **competência** (não data de pagamento). Removido o simulador
+  "Dividir lucro" (duplicava os blocos dos sócios). `.env`/config: nada novo.
 
 ### Operação
 - **Duplas** de funcionário (`migration_013`); **acompanhamento geral** (`agenda_geral.php`);

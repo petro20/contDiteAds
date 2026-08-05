@@ -52,5 +52,8 @@ e **i18n completo PT/EN/ES** (interface + relatórios/PDFs). Item **avulso** de 
 **funcionário responsável + valor USD** próprio, entrando na fila de pagamento da equipe igual às
 assinaturas (migration 022). O Dite Gateway gera **link de pagamento por cobrança** (copiável pelo
 admin, migration 023). O **Painel** tem aba **Caixa** — a conta do lucro do mês aberta (entrou × saiu),
-pra auditar o lucro. `schema.sql` está levemente defasado das migrations 018/020/021/022/023 —
+por moeda e em US$. A **distribuição de lucro** (`lib/distribuicao.php`) usa **saldo acumulado** não
+distribuído de meses anteriores (com sinal, piso maio/2026), trata **despesas como custo em USD**
+(gastos em real/euro convertidos, descontam só do lado USD) e mostra **"falta distribuir"** (tira o já
+pago no mês). `schema.sql` está levemente defasado das migrations 018/020/021/022/023 —
 para instalar do zero, rode as migrations em ordem.

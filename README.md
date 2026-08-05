@@ -68,6 +68,9 @@ Helpers de autorização em `includes/auth.php`: `current_user()`, `require_logi
   responsável + valor USD próprio, entrando na mesma fila (migration 022).
 - **Distribuição de lucro** (`distribuicao.php`): lucro = receita − despesas − pagamentos à
   equipe, dividido em quotas (N sócios + 1 quota "Empresa"). Por moeda + consolidado em US$.
+  **Despesas viram custo em USD** (gastos em real/euro convertidos, descontam só do lado USD);
+  base a distribuir carrega o **saldo acumulado** não distribuído de meses anteriores (com sinal,
+  piso maio/2026); mostra **"falta distribuir"** = a distribuir − já pago no mês.
 - **Despesas** (`despesas.php`): categorizadas, recorrência única/mensal/anual.
 - **Painel financeiro** (`painel.php`): abas **Agenda** (vencidas/próximas + KPIs por moeda),
   **Por cliente**, **Por serviço** e **Caixa** — a conta do lucro do mês aberta (o que entrou ×
