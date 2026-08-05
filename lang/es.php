@@ -1909,4 +1909,5 @@ Los ítems volverán a la cola como pendientes.
     'De meses anteriores foi distribuído a mais:' => 'De meses anteriores se distribuyó de más:',
     'descontado do total abaixo.' => 'descontado del total de abajo.',
     'Por moeda' => 'Por moneda',
+    'a distribuir' => 'a distribuir',
 ];

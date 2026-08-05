@@ -333,7 +333,7 @@ require __DIR__ . '/includes/header.php';
     <?php foreach (['BRL','USD','EUR'] as $m): ?>
       <label class="check" style="display:inline-flex; align-items:center; gap:6px; cursor:pointer;">
         <input type="checkbox" class="moeda-div" value="<?= $m ?>" checked onchange="recalcDivisao()">
-        <strong><?= $m ?></strong> <span class="muted" style="font-size:12px;">(<?= e(t('lucro')) ?> <?= e(money_fmt($liq_mes[$m], $m)) ?>)</span>
+        <strong><?= $m ?></strong> <span class="muted" style="font-size:12px;">(<?= e(t('a distribuir')) ?> <?= e(money_fmt($liq_dist[$m], $m)) ?>)</span>
       </label>
     <?php endforeach; ?>
   </div>

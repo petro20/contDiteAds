@@ -1909,4 +1909,5 @@ Confirm?',
     'De meses anteriores foi distribuído a mais:' => 'From previous months, over-distributed by:',
     'descontado do total abaixo.' => 'deducted from the total below.',
     'Por moeda' => 'By currency',
+    'a distribuir' => 'to distribute',
 ];
