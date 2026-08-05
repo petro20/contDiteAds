@@ -1908,4 +1908,5 @@ Confirm?',
     'ainda a distribuir — já somado ao total abaixo.' => 'still to distribute — already added to the total below.',
     'De meses anteriores foi distribuído a mais:' => 'From previous months, over-distributed by:',
     'descontado do total abaixo.' => 'deducted from the total below.',
+    'Por moeda' => 'By currency',
 ];

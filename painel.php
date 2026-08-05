@@ -573,6 +573,29 @@ renderChartSaude();
     </div>
   </div>
 
+  <div class="section-label mt-3"><?= e(t('Por moeda')) ?></div>
+  <?php foreach (['BRL','USD','EUR'] as $mc):
+      $c_ent   = $cx_tot_ent[$mc];
+      $c_desp  = $cx_tot_desp[$mc] ?? 0;
+      $c_eq    = ($mc === 'USD') ? $cx_tot_equipe_usd : 0.0; // equipe é paga em USD
+      $c_lucro = $c_ent - $c_desp - $c_eq;
+      $c_soc   = $cx_tot_soc[$mc];
+      $c_falta = $c_lucro - $c_soc;
+      if ($c_ent == 0 && $c_desp == 0 && $c_eq == 0 && $c_soc == 0) continue;
+  ?>
+    <div class="card">
+      <div class="title"><?= $mc ?></div>
+      <div class="spaced" style="padding:5px 0;"><span><?= e(t('Entrou')) ?></span><strong style="color:var(--c-success);"><?= e(money_fmt($c_ent, $mc)) ?></strong></div>
+      <?php if ($c_desp > 0): ?><div class="spaced" style="padding:5px 0;"><span>− <?= e(t('Despesas')) ?></span><strong style="color:var(--c-danger);"><?= e(money_fmt($c_desp, $mc)) ?></strong></div><?php endif; ?>
+      <?php if ($c_eq > 0): ?><div class="spaced" style="padding:5px 0;"><span>− <?= e(t('Pagamentos à equipe')) ?></span><strong style="color:var(--c-danger);"><?= e(money_fmt($c_eq, $mc)) ?></strong></div><?php endif; ?>
+      <div class="spaced" style="padding:6px 0; border-top:1px solid var(--border);"><strong><?= e(t('= Lucro líquido')) ?></strong><strong style="color:<?= $c_lucro>=0?'var(--c-success)':'var(--c-danger)' ?>;"><?= e(money_fmt($c_lucro, $mc)) ?></strong></div>
+      <?php if (abs($c_soc) >= 0.01 || abs($c_falta) >= 0.01): ?>
+        <div class="spaced" style="padding:5px 0;"><span><?= e(t('Distribuído no mês')) ?></span><strong style="color:var(--c-primary-2);"><?= e(money_fmt($c_soc, $mc)) ?></strong></div>
+        <div class="spaced" style="padding:5px 0;"><span><?= $c_falta>=0 ? e(t('Ainda a distribuir')) : '⚠ '.e(t('Distribuído a MAIS que o lucro')) ?></span><strong style="color:<?= $c_falta>=0?'var(--txt-1)':'var(--c-danger)' ?>;"><?= e(money_fmt(abs($c_falta), $mc)) ?></strong></div>
+      <?php endif; ?>
+    </div>
+  <?php endforeach; ?>
+
   <h2 class="mt-5">📥 <?= e(t('Entrou')) ?> <span class="muted" style="font-size:13px; font-weight:normal;">(<?= e($fmt_multi($cx_tot_ent)) ?>)</span></h2>
   <?php if (!$cx_entradas): ?>
     <p class="muted"><?= e(t('Nenhum recebimento neste mês.')) ?></p>
