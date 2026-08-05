@@ -523,13 +523,15 @@ renderChartSaude();
     $cx_equipe = $stmt->fetchAll();
     $cx_tot_equipe_usd = (float)array_sum(array_column($cx_equipe, 'valor_usd'));
 
-    // SAIU 3: distribuição aos sócios/empresa (pela data do pagamento)
+    // SAIU 3: distribuição aos sócios/empresa DESTE mês — por COMPETÊNCIA
+    // (não por data de pagamento). Assim bate com a tela de Distribuição e o
+    // gráfico; e não mistura meses distintos pagos no mesmo dia.
     $cx_socios = [];
     try {
         $stmt = $db->prepare("SELECT ps.valor, ps.moeda, ps.data_pagamento, ps.socio_id, u.nome
                               FROM pagamentos_socio ps LEFT JOIN usuarios u ON u.id = ps.socio_id
-                              WHERE ps.data_pagamento BETWEEN ? AND ? ORDER BY ps.data_pagamento");
-        $stmt->execute([$mes_inicio, $mes_fim]);
+                              WHERE ps.competencia_mes = ? ORDER BY ps.data_pagamento");
+        $stmt->execute([$competencia]);
         $cx_socios = $stmt->fetchAll();
     } catch (PDOException $e) {}
     $cx_tot_soc = ['BRL'=>0.0,'USD'=>0.0,'EUR'=>0.0];
