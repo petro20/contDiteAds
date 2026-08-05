@@ -1900,4 +1900,5 @@ Los ítems volverán a la cola como pendientes.
     'vence dia' => 'vence el día',
     'sem dia de cobrança' => 'sin día de cobro',
     'venc.' => 'vence',
+    'vencido' => 'vencido',
 ];

@@ -1900,4 +1900,5 @@ Confirm?',
     'vence dia' => 'due on day',
     'sem dia de cobrança' => 'no billing day',
     'venc.' => 'due',
+    'vencido' => 'overdue',
 ];

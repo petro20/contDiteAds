@@ -284,7 +284,20 @@ if (is_admin()) {
         $total_geral_usd  += para_usd($db, (float)$ac['total'], (string)$cl['moeda']);
     }
 }
+
+// Clientes com cobrança ABERTA já vencida (pra pulsar o alerta no card).
+// Guarda a data de vencimento mais antiga em aberto de cada cliente.
+$cli_vencido = [];
+if (is_admin()) {
+    $stmt = $db->prepare("SELECT cliente_id, MIN(vencimento) AS venc FROM cobrancas WHERE status='aberta' AND vencimento < ? GROUP BY cliente_id");
+    $stmt->execute([date('Y-m-d')]);
+    foreach ($stmt->fetchAll() as $r) $cli_vencido[(int)$r['cliente_id']] = $r['venc'];
+}
 ?>
+<style>
+@keyframes pulsaVenc { 0%,100% { opacity:1; } 50% { opacity:.3; } }
+.venc-pulsa { animation: pulsaVenc 1.1s ease-in-out infinite; }
+</style>
 <h1 class="page-title"><?= $func_view_only ? e(t('Meus clientes')) : e(t('Clientes')) ?></h1>
 <?php if ($flash): ?><div class="flash <?= e($flash[0]) ?>"><?= e($flash[1]) ?></div><?php endif; ?>
 <?php if (is_admin()): ?>
@@ -324,7 +337,9 @@ if (is_admin()) {
         <div class="sub">
           <?= e($cl['nome_contato'] ?? '—') ?> · <?= e($cl['moeda']) ?>
           · <?= (int)$ac['qtd'] ?> <?= $ac['qtd'] == 1 ? e(t('assinatura')) : e(t('assinaturas')) ?>
-          <?php if (!empty($cl['dia_cobranca'])): ?>
+          <?php if (!empty($cli_vencido[(int)$cl['id']])): ?>
+            · <span class="status status-vencida venc-pulsa">⚠ <?= e(t('vencido')) ?> <?= e(date('d/m', strtotime($cli_vencido[(int)$cl['id']]))) ?></span>
+          <?php elseif (!empty($cl['dia_cobranca'])): ?>
             · <?= e(t('vence dia')) ?> <?= (int)$cl['dia_cobranca'] ?>
           <?php elseif ($ac['qtd'] > 0): ?>
             · <span class="status status-vencida"><?= e(t('sem dia de cobrança')) ?></span>
