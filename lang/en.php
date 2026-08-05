@@ -1899,4 +1899,5 @@ Confirm?',
     'Nenhuma distribuição neste mês.' => 'No distribution this month.',
     'vence dia' => 'due on day',
     'sem dia de cobrança' => 'no billing day',
+    'venc.' => 'due',
 ];

@@ -1899,4 +1899,5 @@ Los ítems volverán a la cola como pendientes.
     'Nenhuma distribuição neste mês.' => 'Ninguna distribución este mes.',
     'vence dia' => 'vence el día',
     'sem dia de cobrança' => 'sin día de cobro',
+    'venc.' => 'vence',
 ];

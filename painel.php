@@ -500,7 +500,7 @@ renderChartSaude();
     $nome_mes_cx = t($meses_nm[(int)substr($competencia,5,2)]) . ' ' . substr($competencia,0,4);
 
     // ENTROU: recebimentos de clientes confirmados no mês (pela data do pagamento)
-    $stmt = $db->prepare("SELECT p.valor_pago, p.data_pagamento, p.metodo, c.moeda, cl.nome_empresa
+    $stmt = $db->prepare("SELECT p.valor_pago, p.data_pagamento, p.metodo, c.moeda, c.vencimento, c.competencia_mes, cl.nome_empresa
                           FROM pagamentos_cliente p
                           JOIN cobrancas c ON c.id = p.cobranca_id
                           JOIN clientes cl ON cl.id = c.cliente_id
@@ -578,7 +578,11 @@ renderChartSaude();
     <div class="list-card">
       <div class="info">
         <div class="nome"><?= e($e['nome_empresa']) ?></div>
-        <div class="sub"><?= e(date('d/m/Y', strtotime($e['data_pagamento']))) ?><?php if ($e['metodo']): ?> · <?= e($e['metodo']) ?><?php endif; ?></div>
+        <div class="sub">
+          <?= e(t('pago')) ?> <?= e(date('d/m/Y', strtotime($e['data_pagamento']))) ?>
+          <?php if (!empty($e['vencimento'])): ?> · <?= e(t('venc.')) ?> <?= e(date('d/m/Y', strtotime($e['vencimento']))) ?><?php endif; ?>
+          <?php if ($e['metodo']): ?> · <?= e($e['metodo']) ?><?php endif; ?>
+        </div>
       </div>
       <div class="right"><div class="money md" style="color:var(--c-success);"><?= e(money_fmt((float)$e['valor_pago'], $e['moeda'])) ?></div></div>
     </div>
