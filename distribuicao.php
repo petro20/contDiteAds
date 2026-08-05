@@ -51,8 +51,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $stq->execute([$ini, $fim]);
                     $pag_func = (float)$stq->fetchColumn();
                 } catch (PDOException $e) {}
-                $liq = $rec_m[$moeda] - ($desp_m['totais'][$moeda] ?? 0);
-                if ($moeda === 'USD') $liq -= $pag_func;
+                // Despesas (todas convertidas) + equipe são custo em USD; receita da moeda entra cheia.
+                $liq = $rec_m[$moeda];
+                if ($moeda === 'USD') {
+                    $desp_usd_c = 0.0;
+                    foreach (['BRL','USD','EUR'] as $mm) $desp_usd_c += para_usd($db, $desp_m['totais'][$mm] ?? 0, $mm);
+                    $liq -= ($desp_usd_c + $pag_func);
+                }
                 // Saldo (com sinal) não distribuído do mês anterior entra no bolo —
                 // senão a trava bloquearia o valor que veio de trás.
                 $saldo_ant = saldo_distribuicao_mes_anterior($db, $comp);
@@ -110,11 +115,14 @@ try {
     $pag_func_mes = (float)$stmt->fetchColumn();
 } catch (PDOException $e) {}
 
-// Lucro líquido = receita - despesas - pagamentos a funcionários (USD)
+// Despesas do mês, TODAS convertidas pra USD (gastos em real/euro viram custo em dólar).
+$desp_usd_mes = 0.0;
+foreach (['BRL','USD','EUR'] as $m) $desp_usd_mes += para_usd($db, $desp_mes['totais'][$m] ?? 0, $m);
+// Lucro por moeda: receita da moeda; despesas + equipe descontam só do lado USD.
 $liq_mes = [];
 foreach (['BRL','USD','EUR'] as $m) {
-    $liq_mes[$m] = $rec_mes[$m] - ($desp_mes['totais'][$m] ?? 0);
-    if ($m === 'USD') $liq_mes[$m] -= $pag_func_mes;
+    $liq_mes[$m] = $rec_mes[$m];
+    if ($m === 'USD') $liq_mes[$m] -= ($desp_usd_mes + $pag_func_mes);
 }
 
 // Saldo (com sinal) NÃO distribuído do mês anterior — entra no bolo deste mês.
@@ -210,7 +218,8 @@ require __DIR__ . '/includes/header.php';
 
 <h2><?= e(t('Receita × Despesas × Lucro líquido')) ?></h2>
 <?php foreach (['BRL','USD','EUR'] as $m):
-    $rec = $rec_mes[$m]; $desp = $desp_mes['totais'][$m] ?? 0;
+    $rec = $rec_mes[$m];
+    $desp = ($m === 'USD') ? $desp_usd_mes : 0;   // despesas viram custo em USD
     $pf = ($m === 'USD') ? $pag_func_mes : 0;
     $liq = $liq_mes[$m];
     $cy  = $carry[$m];                 // saldo (com sinal) do mês anterior nesta moeda

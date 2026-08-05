@@ -576,7 +576,7 @@ renderChartSaude();
   <div class="section-label mt-3"><?= e(t('Por moeda')) ?></div>
   <?php foreach (['BRL','USD','EUR'] as $mc):
       $c_ent   = $cx_tot_ent[$mc];
-      $c_desp  = $cx_tot_desp[$mc] ?? 0;
+      $c_desp  = ($mc === 'USD') ? $cx_desp_usd : 0.0;       // despesas viram custo em USD
       $c_eq    = ($mc === 'USD') ? $cx_tot_equipe_usd : 0.0; // equipe é paga em USD
       $c_lucro = $c_ent - $c_desp - $c_eq;
       $c_soc   = $cx_tot_soc[$mc];

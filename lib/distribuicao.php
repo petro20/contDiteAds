@@ -81,14 +81,14 @@ function saldo_distribuicao_mes_anterior(PDO $db, string $competencia): array {
         $pf_ac = (float)$st->fetchColumn();
     } catch (PDOException $e) {}
 
-    // Despesas acumuladas de maio até o mês anterior (por moeda) — soma mês a mês
-    // (despesas_do_mes já resolve recorrência mensal/anual/única).
-    $desp_ac = ['BRL'=>0.0,'USD'=>0.0,'EUR'=>0.0];
+    // Despesas acumuladas de maio até o mês anterior, TODAS convertidas pra USD
+    // (gastos em real/euro viram custo em dólar, a moeda-mestre).
+    $desp_ac_usd = 0.0;
     if (function_exists('despesas_do_mes')) {
         $cur = $INICIO;
         for ($i = 0; $i < 120 && $cur <= $prev_mes; $i++) {
             $dm = despesas_do_mes($db, $cur);
-            foreach (['BRL','USD','EUR'] as $m) $desp_ac[$m] += (float)($dm['totais'][$m] ?? 0);
+            foreach (['BRL','USD','EUR'] as $m) $desp_ac_usd += para_usd($db, (float)($dm['totais'][$m] ?? 0), $m);
             $cur = date('Y-m', strtotime($cur . '-01 +1 month'));
         }
     }
@@ -103,8 +103,8 @@ function saldo_distribuicao_mes_anterior(PDO $db, string $competencia): array {
 
     $saldo = ['BRL'=>0.0,'USD'=>0.0,'EUR'=>0.0];
     foreach (['BRL','USD','EUR'] as $m) {
-        $lucro_ac = (float)$rec_ac[$m] - $desp_ac[$m];
-        if ($m === 'USD') $lucro_ac -= $pf_ac;
+        $lucro_ac = (float)$rec_ac[$m];               // receita da moeda
+        if ($m === 'USD') $lucro_ac -= ($desp_ac_usd + $pf_ac); // despesas+equipe: custo em USD
         $saldo[$m] = round($lucro_ac - $dist_ac[$m], 2);
     }
     return $saldo;
