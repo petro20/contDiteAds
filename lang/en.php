@@ -1897,4 +1897,6 @@ Confirm?',
     'Nenhum pagamento à equipe neste mês.' => 'No team payments this month.',
     'Distribuição aos sócios/empresa' => 'Distribution to partners/company',
     'Nenhuma distribuição neste mês.' => 'No distribution this month.',
+    'vence dia' => 'due on day',
+    'sem dia de cobrança' => 'no billing day',
 ];

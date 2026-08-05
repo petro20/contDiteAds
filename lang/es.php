@@ -1897,4 +1897,6 @@ Los ítems volverán a la cola como pendientes.
     'Nenhum pagamento à equipe neste mês.' => 'Ningún pago al equipo este mes.',
     'Distribuição aos sócios/empresa' => 'Distribución a socios/empresa',
     'Nenhuma distribuição neste mês.' => 'Ninguna distribución este mes.',
+    'vence dia' => 'vence el día',
+    'sem dia de cobrança' => 'sin día de cobro',
 ];

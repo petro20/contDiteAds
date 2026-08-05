@@ -249,7 +249,7 @@ if ($func_view_only) {
     $clientes = $stmt->fetchAll();
 } else {
     $clientes = $db->query('
-        SELECT cl.id, cl.nome_empresa, cl.nome_contato, cl.moeda, cl.ativo,
+        SELECT cl.id, cl.nome_empresa, cl.nome_contato, cl.moeda, cl.ativo, cl.dia_cobranca,
                (SELECT COUNT(*) FROM usuarios u WHERE u.cliente_id=cl.id AND u.role="cliente") AS tem_login
         FROM clientes cl ORDER BY cl.nome_empresa, cl.nome
     ')->fetchAll();
@@ -324,6 +324,11 @@ if (is_admin()) {
         <div class="sub">
           <?= e($cl['nome_contato'] ?? '—') ?> · <?= e($cl['moeda']) ?>
           · <?= (int)$ac['qtd'] ?> <?= $ac['qtd'] == 1 ? e(t('assinatura')) : e(t('assinaturas')) ?>
+          <?php if (!empty($cl['dia_cobranca'])): ?>
+            · <?= e(t('vence dia')) ?> <?= (int)$cl['dia_cobranca'] ?>
+          <?php elseif ($ac['qtd'] > 0): ?>
+            · <span class="status status-vencida"><?= e(t('sem dia de cobrança')) ?></span>
+          <?php endif; ?>
           <?php if ($cl['tem_login']): ?> · <span class="status status-paga"><?= e(t('login')) ?></span><?php endif; ?>
         </div>
       </div>
