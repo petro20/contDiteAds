@@ -1910,4 +1910,6 @@ Los ítems volverán a la cola como pendientes.
     'descontado do total abaixo.' => 'descontado del total de abajo.',
     'Por moeda' => 'Por moneda',
     'a distribuir' => 'a distribuir',
+    'ver saldo mês a mês' => 'ver saldo mes a mes',
+    'distribuído' => 'distribuido',
 ];

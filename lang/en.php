@@ -1910,4 +1910,6 @@ Confirm?',
     'descontado do total abaixo.' => 'deducted from the total below.',
     'Por moeda' => 'By currency',
     'a distribuir' => 'to distribute',
+    'ver saldo mês a mês' => 'see balance month by month',
+    'distribuído' => 'distributed',
 ];

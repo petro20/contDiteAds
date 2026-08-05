@@ -111,6 +111,43 @@ function saldo_distribuicao_mes_anterior(PDO $db, string $competencia): array {
 }
 
 /**
+ * Detalhe mês a mês do saldo (em US$), de maio até o mês ANTERIOR ao competência.
+ * Cada linha: [mes, lucro_usd, dist_usd, saldo_usd]. A soma dos saldo_usd é
+ * exatamente o "Saldo de meses anteriores" em US$ mostrado no consolidado.
+ * (mesma regra: receita convertida − despesas convertidas − equipe; distribuído por competência)
+ */
+function saldo_distribuicao_por_mes(PDO $db, string $competencia): array {
+    $INICIO   = '2026-05';
+    $prev_mes = date('Y-m', strtotime($competencia . '-01 -1 month'));
+    $out = [];
+    if ($prev_mes < $INICIO) return $out;
+    $cur = $INICIO;
+    for ($i = 0; $i < 120 && $cur <= $prev_mes; $i++) {
+        $rec  = receita_mes($db, $cur);
+        $desp = function_exists('despesas_do_mes') ? despesas_do_mes($db, $cur) : ['totais' => []];
+        $ini  = $cur . '-01';
+        $fim  = date('Y-m-t', strtotime($ini));
+        $team = 0.0;
+        try { $st = $db->prepare("SELECT COALESCE(SUM(valor_usd),0) FROM pagamentos_funcionario WHERE data_pagamento BETWEEN ? AND ?"); $st->execute([$ini, $fim]); $team = (float)$st->fetchColumn(); } catch (PDOException $e) {}
+        $rec_usd = 0.0; $desp_usd = 0.0;
+        foreach (['BRL','USD','EUR'] as $m) {
+            $rec_usd  += para_usd($db, (float)$rec[$m], $m);
+            $desp_usd += para_usd($db, (float)($desp['totais'][$m] ?? 0), $m);
+        }
+        $lucro_usd = $rec_usd - $desp_usd - $team;
+        $dist_usd = 0.0;
+        try {
+            $st = $db->prepare("SELECT moeda, COALESCE(SUM(valor),0) AS t FROM pagamentos_socio WHERE competencia_mes=? GROUP BY moeda");
+            $st->execute([$cur]);
+            foreach ($st->fetchAll() as $r) $dist_usd += para_usd($db, (float)$r['t'], $r['moeda']);
+        } catch (PDOException $e) {}
+        $out[] = ['mes' => $cur, 'lucro_usd' => $lucro_usd, 'dist_usd' => $dist_usd, 'saldo_usd' => round($lucro_usd - $dist_usd, 2)];
+        $cur = date('Y-m', strtotime($cur . '-01 +1 month'));
+    }
+    return $out;
+}
+
+/**
  * Cobranças pagas recentes (para histórico).
  */
 function cobrancas_pagas_recentes(PDO $db, int $limit = 30): array {

@@ -202,6 +202,18 @@ require __DIR__ . '/includes/header.php';
       <span><?= $carry_usd >= 0 ? '+ ' . e(t('Saldo de meses anteriores')) : '− ' . e(t('Saldo de meses anteriores (distribuído a mais)')) ?></span>
       <strong style="color:<?= $carry_usd >= 0 ? 'var(--c-success)' : 'var(--c-danger)' ?>;"><?= e(money_fmt(abs($carry_usd), 'USD')) ?></strong>
     </div>
+    <?php $saldo_det = saldo_distribuicao_por_mes($db, $competencia); if ($saldo_det): ?>
+      <details style="margin:0 0 4px;">
+        <summary class="muted" style="cursor:pointer; font-size:12px; padding:2px 0;">▸ <?= e(t('ver saldo mês a mês')) ?></summary>
+        <?php $meses_ab = ['','jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez']; ?>
+        <?php foreach ($saldo_det as $sd): $lbl = t($meses_ab[(int)substr($sd['mes'],5,2)]) . '/' . substr($sd['mes'],2,2); ?>
+          <div class="spaced" style="padding:3px 0; font-size:12px;">
+            <span class="muted"><strong><?= e($lbl) ?></strong> · <?= e(t('lucro')) ?> <?= e(money_fmt($sd['lucro_usd'],'USD')) ?> − <?= e(t('distribuído')) ?> <?= e(money_fmt($sd['dist_usd'],'USD')) ?></span>
+            <strong style="color:<?= $sd['saldo_usd']>=0?'var(--c-success)':'var(--c-danger)' ?>; white-space:nowrap;"><?= e(money_fmt($sd['saldo_usd'],'USD')) ?></strong>
+          </div>
+        <?php endforeach; ?>
+      </details>
+    <?php endif; ?>
     <div class="spaced" style="padding:8px 0; border-top:1px solid var(--border);">
       <strong><?= e(t('= A distribuir')) ?></strong>
       <strong style="font-size:16px; color:<?= $liq_dist_usd >= 0 ? 'var(--c-success)' : 'var(--c-danger)' ?>;"><?= e(money_fmt($liq_dist_usd, 'USD')) ?></strong>
