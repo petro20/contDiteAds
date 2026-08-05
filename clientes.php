@@ -297,6 +297,7 @@ if (is_admin()) {
 <style>
 @keyframes pulsaVenc { 0%,100% { opacity:1; } 50% { opacity:.3; } }
 .venc-pulsa { animation: pulsaVenc 1.1s ease-in-out infinite; }
+.venc-pulsa-azul { animation: pulsaVenc 2.4s ease-in-out infinite; color: var(--c-primary-2, #3B82F6); font-weight:600; }
 </style>
 <h1 class="page-title"><?= $func_view_only ? e(t('Meus clientes')) : e(t('Clientes')) ?></h1>
 <?php if ($flash): ?><div class="flash <?= e($flash[0]) ?>"><?= e($flash[1]) ?></div><?php endif; ?>
@@ -340,7 +341,7 @@ if (is_admin()) {
           <?php if (!empty($cli_vencido[(int)$cl['id']])): ?>
             · <span class="status status-vencida venc-pulsa">⚠ <?= e(t('vencido')) ?> <?= e(date('d/m', strtotime($cli_vencido[(int)$cl['id']]))) ?></span>
           <?php elseif (!empty($cl['dia_cobranca'])): ?>
-            · <?= e(t('vence dia')) ?> <?= (int)$cl['dia_cobranca'] ?>
+            · <span class="venc-pulsa-azul"><?= e(t('vence dia')) ?> <?= (int)$cl['dia_cobranca'] ?></span>
           <?php elseif ($ac['qtd'] > 0): ?>
             · <span class="status status-vencida"><?= e(t('sem dia de cobrança')) ?></span>
           <?php endif; ?>
