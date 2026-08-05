@@ -1912,4 +1912,7 @@ Confirm?',
     'a distribuir' => 'to distribute',
     'ver saldo mês a mês' => 'see balance month by month',
     'distribuído' => 'distributed',
+    'Já distribuído no mês' => 'Distributed this month',
+    'Falta distribuir' => 'Left to distribute',
+    'Falta por sócio (÷' => 'Left per partner (÷',
 ];

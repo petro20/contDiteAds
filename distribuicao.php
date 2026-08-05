@@ -135,6 +135,21 @@ foreach (['BRL','USD','EUR'] as $m) {
     $carry_usd   += para_usd($db, $carry[$m], $m);
 }
 
+// Já distribuído NESTE mês (competência atual), por moeda. O que FALTA distribuir
+// sai disso — assim o que você já pagou (ex.: o euro) não aparece mais como pendente.
+$dist_atual = ['BRL'=>0.0,'USD'=>0.0,'EUR'=>0.0];
+try {
+    $stmt = $db->prepare("SELECT moeda, COALESCE(SUM(valor),0) AS t FROM pagamentos_socio WHERE competencia_mes=? GROUP BY moeda");
+    $stmt->execute([$competencia]);
+    foreach ($stmt->fetchAll() as $r) $dist_atual[$r['moeda']] = (float)$r['t'];
+} catch (PDOException $e) {}
+$restante = ['BRL'=>0.0,'USD'=>0.0,'EUR'=>0.0];
+$dist_atual_usd = 0.0;
+foreach (['BRL','USD','EUR'] as $m) {
+    $restante[$m]    = round($liq_dist[$m] - $dist_atual[$m], 2);
+    $dist_atual_usd += para_usd($db, $dist_atual[$m], $m);
+}
+
 $dt = DateTime::createFromFormat('Y-m', $competencia);
 $mes_ant  = (clone $dt)->modify('-1 month')->format('Y-m');
 $mes_prox = (clone $dt)->modify('+1 month')->format('Y-m');
@@ -179,7 +194,8 @@ require __DIR__ . '/includes/header.php';
   $pf_usd  = $pag_func_mes;                 // pagamentos a funcionários já são em USD
   $liq_usd = $rec_usd - $desp_usd - $pf_usd;
   $liq_dist_usd = $liq_usd + $carry_usd;    // + saldo (com sinal) do mês anterior
-  $parte_usd = $total_quotas > 0 ? $liq_dist_usd / $total_quotas : 0;
+  $restante_usd = $liq_dist_usd - $dist_atual_usd;   // FALTA distribuir (tira o já pago no mês)
+  $parte_usd = $total_quotas > 0 ? $restante_usd / $total_quotas : 0; // por sócio, do que falta
   $cot_data = (string)($cot['data'] ?? '');
   $cot_data_fmt = preg_match('/^\d{4}-\d{2}-\d{2}$/', $cot_data) ? date('d/m/Y', strtotime($cot_data)) : $cot_data;
 ?>
@@ -219,8 +235,15 @@ require __DIR__ . '/includes/header.php';
       <strong style="font-size:16px; color:<?= $liq_dist_usd >= 0 ? 'var(--c-success)' : 'var(--c-danger)' ?>;"><?= e(money_fmt($liq_dist_usd, 'USD')) ?></strong>
     </div>
   <?php endif; ?>
+  <?php if ($dist_atual_usd > 0.01): ?>
+    <div class="spaced" style="padding:6px 0;"><span>− <?= e(t('Já distribuído no mês')) ?></span><strong style="color:var(--c-primary-2);"><?= e(money_fmt($dist_atual_usd, 'USD')) ?></strong></div>
+    <div class="spaced" style="padding:8px 0; border-top:1px solid var(--border);">
+      <strong>= <?= e(t('Falta distribuir')) ?></strong>
+      <strong style="font-size:18px; color:<?= $restante_usd >= 0 ? 'var(--c-success)' : 'var(--c-danger)' ?>;"><?= e(money_fmt($restante_usd, 'USD')) ?></strong>
+    </div>
+  <?php endif; ?>
   <div class="spaced" style="padding:6px 0; color:var(--c-primary-2);">
-    <span><?= e(t('Por quota (÷')) ?> <?= $total_quotas ?>)</span>
+    <span><?= ($dist_atual_usd > 0.01 ? e(t('Falta por sócio (÷')) : e(t('Por quota (÷'))) ?> <?= $total_quotas ?>)</span>
     <strong><?= e(money_fmt($parte_usd, 'USD')) ?></strong>
   </div>
   <div class="muted" style="font-size:11px; margin-top:8px; border-top:1px dashed var(--border); padding-top:8px;">
@@ -235,9 +258,11 @@ require __DIR__ . '/includes/header.php';
     $pf = ($m === 'USD') ? $pag_func_mes : 0;
     $liq = $liq_mes[$m];
     $cy  = $carry[$m];                 // saldo (com sinal) do mês anterior nesta moeda
-    $liq_d = $liq + $cy;
-    $parte = $total_quotas > 0 ? $liq_d / $total_quotas : 0;
-    if ($rec == 0 && $desp == 0 && $pf == 0 && abs($cy) < 0.01) continue;
+    $liq_d = $liq + $cy;               // total a distribuir na moeda
+    $da    = $dist_atual[$m];          // já distribuído neste mês
+    $rest  = $restante[$m];            // falta distribuir = liq_d − da
+    $parte = $total_quotas > 0 ? $rest / $total_quotas : 0; // por sócio, do que FALTA
+    if ($rec == 0 && $desp == 0 && $pf == 0 && abs($cy) < 0.01 && abs($da) < 0.01) continue;
 ?>
   <div class="card">
     <div class="title"><?= $m ?></div>
@@ -262,8 +287,15 @@ require __DIR__ . '/includes/header.php';
         <strong style="color:<?= $liq_d>=0 ? 'var(--c-success)' : 'var(--c-danger)' ?>;"><?= e(money_fmt($liq_d, $m)) ?></strong>
       </div>
     <?php endif; ?>
+    <?php if (abs($da) >= 0.01): ?>
+      <div class="spaced" style="padding:6px 0;"><span>− <?= e(t('Já distribuído no mês')) ?></span><strong style="color:var(--c-primary-2);"><?= e(money_fmt($da, $m)) ?></strong></div>
+      <div class="spaced" style="padding:6px 0; border-top:1px solid var(--border);">
+        <strong>= <?= e(t('Falta distribuir')) ?></strong>
+        <strong style="color:<?= $rest>=0 ? 'var(--c-success)' : 'var(--c-danger)' ?>;"><?= e(money_fmt($rest, $m)) ?></strong>
+      </div>
+    <?php endif; ?>
     <div class="spaced" style="padding:6px 0; color:var(--c-primary-2);">
-      <span><?= e(t('Por quota (÷')) ?> <?= $total_quotas ?>)</span>
+      <span><?= (abs($da) >= 0.01 ? e(t('Falta por sócio (÷')) : e(t('Por quota (÷'))) ?> <?= $total_quotas ?>)</span>
       <strong><?= e(money_fmt($parte, $m)) ?></strong>
     </div>
   </div>
@@ -340,76 +372,8 @@ require __DIR__ . '/includes/header.php';
   $quota_brl = $liq_dist['BRL'] / $total_quotas;
   $quota_usd = $liq_dist['USD'] / $total_quotas;
   $quota_eur = $liq_dist['EUR'] / $total_quotas;
-
-  // Destinatários da divisão: sócios + empresa (cada um = 1 quota)
-  $div_destinatarios = [];
-  foreach ($socios as $s) $div_destinatarios[] = $s['nome'];
-  $div_destinatarios[] = '🏢 ' . t('Empresa (reserva)');
 ?>
 
-<h2>🧮 <?= e(t('Dividir lucro entre os sócios')) ?></h2>
-<div class="card">
-  <p class="muted" style="font-size:13px;"><?= e(t('Marque as moedas que quer dividir (lucro ÷')) ?> <?= $total_quotas ?> <?= e(t('quotas:')) ?> <?= $n_socios ?> <?= e($n_socios===1?t('sócio'):t('sócios')) ?> + <?= e(t('empresa')) ?>). <?= e(t('A coluna da direita mostra o')) ?> <strong><?= e(t('total em US$')) ?></strong> <?= e(t('(as moedas marcadas, convertidas pra dólar).')) ?> <strong><?= e(t('Só simulação — não registra pagamento.')) ?></strong></p>
-  <div class="spaced" style="gap:18px; flex-wrap:wrap; margin:var(--s-3) 0;">
-    <?php foreach (['BRL','USD','EUR'] as $m): ?>
-      <label class="check" style="display:inline-flex; align-items:center; gap:6px; cursor:pointer;">
-        <input type="checkbox" class="moeda-div" value="<?= $m ?>" checked onchange="recalcDivisao()">
-        <strong><?= $m ?></strong> <span class="muted" style="font-size:12px;">(<?= e(t('a distribuir')) ?> <?= e(money_fmt($liq_dist[$m], $m)) ?>)</span>
-      </label>
-    <?php endforeach; ?>
-  </div>
-  <div id="divisao_resultado" class="mt-3"></div>
-</div>
-
-<script>
-(function () {
-  var QUOTAS = {
-    BRL: <?= json_encode($quota_brl) ?>,
-    USD: <?= json_encode($quota_usd) ?>,
-    EUR: <?= json_encode($quota_eur) ?>
-  };
-  var RATES = { // quantas unidades da moeda valem US$ 1
-    BRL: <?= json_encode((float)($cot['BRL'] ?? 0)) ?>,
-    EUR: <?= json_encode((float)($cot['EUR'] ?? 0)) ?>
-  };
-  var RECIPIENTS = <?= json_encode($div_destinatarios, JSON_UNESCAPED_UNICODE) ?>;
-  function paraUsd(m) {
-    if (m === 'USD') return QUOTAS.USD;
-    var r = RATES[m];
-    return (r > 0) ? QUOTAS[m] / r : 0;
-  }
-  function fmt(v, moeda) {
-    var neg = v < 0 ? '-' : '';
-    var p = Math.abs(v).toFixed(2).split('.'), intp = p[0], dec = p[1], thou, decs, pre;
-    if (moeda === 'BRL')      { thou = '.'; decs = ','; pre = 'R$ '; }
-    else if (moeda === 'USD') { thou = ','; decs = '.'; pre = '$'; }
-    else                      { thou = '.'; decs = ','; pre = '€'; }
-    intp = intp.replace(/\B(?=(\d{3})+(?!\d))/g, thou);
-    return neg + pre + intp + decs + dec;
-  }
-  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]; }); }
-  window.recalcDivisao = function () {
-    var sel = Array.prototype.slice.call(document.querySelectorAll('.moeda-div:checked')).map(function (c) { return c.value; });
-    var box = document.getElementById('divisao_resultado');
-    if (!box) return;
-    if (!sel.length) { box.innerHTML = '<div class="muted" style="padding:8px 0;">' + <?= json_encode(t('Selecione ao menos uma moeda.')) ?> + '</div>'; return; }
-    var html = '', totalUsd = 0;
-    RECIPIENTS.forEach(function (nome) {
-      var breakdown = sel.map(function (m) { return fmt(QUOTAS[m], m); }).join(' · ');
-      var usd = sel.reduce(function (acc, m) { return acc + paraUsd(m); }, 0);
-      totalUsd += usd;
-      html += '<div class="spaced" style="padding:8px 0; border-bottom:1px solid var(--border); align-items:flex-start;">'
-            +   '<div><div>💼 ' + esc(nome) + '</div><div class="muted" style="font-size:12px;">' + breakdown + '</div></div>'
-            +   '<strong style="white-space:nowrap;">' + fmt(usd, 'USD') + '</strong>'
-            + '</div>';
-    });
-    html += '<div class="spaced" style="padding:10px 0 2px; color:var(--c-primary-2);"><strong>' + <?= json_encode(t('Total dividido (US$)')) ?> + '</strong><strong>' + fmt(totalUsd, 'USD') + '</strong></div>';
-    html += '<div class="muted" style="font-size:11px; margin-top:6px; border-top:1px dashed var(--border); padding-top:6px;">💱 US$ 1 = ' + fmt(RATES.BRL, 'BRL') + ' · ' + fmt(RATES.EUR, 'EUR') + ' — ' + <?= json_encode(t('coluna da direita já convertida pra dólar')) ?> + '</div>';
-    box.innerHTML = html;
-  };
-  recalcDivisao();
-})();
-</script>
 
 <h2><?= e(t('Sócios ativos')) ?></h2>
 <?php foreach ($socios as $s):

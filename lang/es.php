@@ -1912,4 +1912,7 @@ Los ítems volverán a la cola como pendientes.
     'a distribuir' => 'a distribuir',
     'ver saldo mês a mês' => 'ver saldo mes a mes',
     'distribuído' => 'distribuido',
+    'Já distribuído no mês' => 'Distribuido en el mes',
+    'Falta distribuir' => 'Falta distribuir',
+    'Falta por sócio (÷' => 'Falta por socio (÷',
 ];
