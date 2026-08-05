@@ -50,5 +50,7 @@ Em produção desde 2026-05. Implementado: todo o fluxo comercial/financeiro, en
 2FA-recuperação, backups, auditoria, PWA+push, integração Dite Gateway (cartão) e Wise (webhook+CSV),
 e **i18n completo PT/EN/ES** (interface + relatórios/PDFs). Item **avulso** de cobrança pode ter
 **funcionário responsável + valor USD** próprio, entrando na fila de pagamento da equipe igual às
-assinaturas (migration 022). `schema.sql` está levemente defasado das migrations 018/020/021/022 —
+assinaturas (migration 022). O Dite Gateway gera **link de pagamento por cobrança** (copiável pelo
+admin, migration 023). O **Painel** tem aba **Caixa** — a conta do lucro do mês aberta (entrou × saiu),
+pra auditar o lucro. `schema.sql` está levemente defasado das migrations 018/020/021/022/023 —
 para instalar do zero, rode as migrations em ordem.

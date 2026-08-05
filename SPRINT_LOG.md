@@ -233,10 +233,17 @@ evolução contínua (fora do BUILD_PLAN original), resumida abaixo por tema. De
 - **Wise**: conciliação por **CSV** e por **webhook em tempo real** (`migration_014`, `wise_*.php`).
 - **Dite Gateway** (`migration_019`): pagamento por **cartão** confirmado por webhook
   `/webhooks/dite`; endpoint público `/api/plans` lista itens mensais como planos.
+- **Link de pagamento por cobrança** (`migration_023`): admin gera o checkout do Dite com o
+  valor da cobrança já preenchido, guardado na cobrança e copiável pra mandar ao cliente.
 
 ### Finanças
 - **Despesas** (`migration_005`) e **distribuição de lucro** entre sócios + quota "Empresa"
   (`migration_008`), por moeda e consolidado em US$.
+- **Aba Caixa** no Painel: a conta do lucro do mês aberta (entrou × despesas × equipe ×
+  distribuição), com itens detalhados e alerta se distribuiu mais que o lucro — pra auditar.
+- **Distribuição**: cobranças pagas agrupadas em cards recolhíveis por mês, cada uma mostrando
+  recebido × pago à equipe × sobra. **Assinaturas** agrupadas por cliente com total (com desconto);
+  **Clientes** mostra qtd/total de assinaturas, dia de cobrança e alerta visual de vencido.
 
 ### Operação
 - **Duplas** de funcionário (`migration_013`); **acompanhamento geral** (`agenda_geral.php`);

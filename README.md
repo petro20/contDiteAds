@@ -60,7 +60,8 @@ Helpers de autorização em `includes/auth.php`: `current_user()`, `require_logi
   avulsa na hora. Status: `aberta` / `em_analise` / `paga` / `cancelada`.
 - **Recebimento**: cliente envia comprovante (→ `em_analise` → admin confirma), ou paga por
   **cartão via Dite Gateway** (confirma sozinho por webhook), ou por Zelle/Wise. Conciliação
-  Wise por **webhook em tempo real** e por **upload de CSV**.
+  Wise por **webhook em tempo real** e por **upload de CSV**. O admin pode gerar um **link de
+  pagamento por cobrança** (Dite, com valor já preenchido) pra enviar ao cliente (migration 023).
 - **Folha da equipe** (`pagamentos_funcionarios.php`): fila em USD por funcionário, valor por
   par (funcionário × item), comprovante e email ao pagar via Wise. Funcionário vê em
   `meus_pagamentos.php`. Itens **avulsos** (sem assinatura) também podem ter funcionário
@@ -68,7 +69,9 @@ Helpers de autorização em `includes/auth.php`: `current_user()`, `require_logi
 - **Distribuição de lucro** (`distribuicao.php`): lucro = receita − despesas − pagamentos à
   equipe, dividido em quotas (N sócios + 1 quota "Empresa"). Por moeda + consolidado em US$.
 - **Despesas** (`despesas.php`): categorizadas, recorrência única/mensal/anual.
-- **Painel financeiro** (`painel.php`): agenda (vencidas/próximas + KPIs por moeda), por cliente, por serviço.
+- **Painel financeiro** (`painel.php`): abas **Agenda** (vencidas/próximas + KPIs por moeda),
+  **Por cliente**, **Por serviço** e **Caixa** — a conta do lucro do mês aberta (o que entrou ×
+  despesas × equipe × distribuição), pra auditar se o lucro bate.
 
 **Operação & entregas**
 - **Agenda de entregas** (`agenda.php`): funcionário marca entregas em 4 modos conforme o
@@ -124,7 +127,7 @@ Helpers de autorização em `includes/auth.php`: `current_user()`, `require_logi
 
 ## Banco de dados
 
-Schema canônico em `db/schema.sql`; evolução em `db/migration_001..022`. Principais tabelas:
+Schema canônico em `db/schema.sql`; evolução em `db/migration_001..023`. Principais tabelas:
 `usuarios`, `clientes`, `convites`, `itens_catalogo` (+ `itens_pacote_composicao`),
 `assinaturas`, `cobrancas` (+ `cobranca_itens`), `pagamentos_cliente`,
 `func_servico_pagamento`, `pagamentos_funcionario` (+ `_itens`), `pagamentos_socio`,
@@ -134,7 +137,8 @@ Schema canônico em `db/schema.sql`; evolução em `db/migration_001..022`. Prin
 
 > ⚠️ **`schema.sql` está levemente defasado**: não inclui as colunas de `assinaturas`
 > adicionadas nas migrations 018/020/021 (`cobrar_fixo_mensal`, `desconto_pct`,
-> `desconto_meses`) nem as de `cobranca_itens` da 022 (`funcionario_id`, `pagamento_func_usd`).
+> `desconto_meses`) nem as de `cobranca_itens` da 022 (`funcionario_id`, `pagamento_func_usd`)
+> nem as de `cobrancas` da 023 (`dite_pay_url`, `dite_payment_id`, `dite_link_valor`, `dite_link_em`).
 > Para instalação do zero, rode as migrations em ordem, ou atualize o
 > `schema.sql`. Migration destrutiva: **`002_dite_full`** (recriou todo o schema a partir do MVP antigo).
 
