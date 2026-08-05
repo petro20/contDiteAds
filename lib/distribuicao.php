@@ -62,27 +62,30 @@ function receita_mes(PDO $db, ?string $competencia = null): array {
  * verdade, usada tanto na trava de pagamento quanto na exibição.
  */
 function saldo_distribuicao_mes_anterior(PDO $db, string $competencia): array {
+    // Piso: 1º mês de operação da Dite Ads. Antes disso (abril/2026 e antes)
+    // não há lucro nem distribuição — o acumulado começa em maio/2026.
+    $INICIO   = '2026-05';
     $prev_mes = date('Y-m', strtotime($competencia . '-01 -1 month'));
+    if ($prev_mes < $INICIO) return ['BRL'=>0.0,'USD'=>0.0,'EUR'=>0.0];
     $prev_end = date('Y-m-t', strtotime($prev_mes . '-01'));
+    $ini_dia  = $INICIO . '-01';
 
-    // Receita acumulada até o fim do mês anterior (por data de pagamento)
-    $rec_ac = receita_por_moeda($db, null, $prev_end);
+    // Receita acumulada de maio até o fim do mês anterior (por data de pagamento)
+    $rec_ac = receita_por_moeda($db, $ini_dia, $prev_end);
 
-    // Pagamentos a funcionários acumulados até o fim do mês anterior (USD)
+    // Pagamentos a funcionários acumulados de maio até o fim do mês anterior (USD)
     $pf_ac = 0.0;
     try {
-        $st = $db->prepare("SELECT COALESCE(SUM(valor_usd),0) FROM pagamentos_funcionario WHERE data_pagamento <= ?");
-        $st->execute([$prev_end]);
+        $st = $db->prepare("SELECT COALESCE(SUM(valor_usd),0) FROM pagamentos_funcionario WHERE data_pagamento BETWEEN ? AND ?");
+        $st->execute([$ini_dia, $prev_end]);
         $pf_ac = (float)$st->fetchColumn();
     } catch (PDOException $e) {}
 
-    // Despesas acumuladas até o mês anterior (por moeda) — soma mês a mês desde a 1ª despesa
+    // Despesas acumuladas de maio até o mês anterior (por moeda) — soma mês a mês
     // (despesas_do_mes já resolve recorrência mensal/anual/única).
     $desp_ac = ['BRL'=>0.0,'USD'=>0.0,'EUR'=>0.0];
-    $ini_desp = null;
-    try { $ini_desp = $db->query("SELECT MIN(data_inicio) FROM despesas")->fetchColumn(); } catch (PDOException $e) {}
-    if ($ini_desp && function_exists('despesas_do_mes')) {
-        $cur = date('Y-m', strtotime((string)$ini_desp));
+    if (function_exists('despesas_do_mes')) {
+        $cur = $INICIO;
         for ($i = 0; $i < 120 && $cur <= $prev_mes; $i++) {
             $dm = despesas_do_mes($db, $cur);
             foreach (['BRL','USD','EUR'] as $m) $desp_ac[$m] += (float)($dm['totais'][$m] ?? 0);
@@ -90,11 +93,11 @@ function saldo_distribuicao_mes_anterior(PDO $db, string $competencia): array {
         }
     }
 
-    // Distribuído acumulado (competência ≤ mês anterior), por moeda
+    // Distribuído acumulado (competência de maio até o mês anterior), por moeda
     $dist_ac = ['BRL'=>0.0,'USD'=>0.0,'EUR'=>0.0];
     try {
-        $st = $db->prepare("SELECT moeda, COALESCE(SUM(valor),0) AS t FROM pagamentos_socio WHERE competencia_mes <= ? GROUP BY moeda");
-        $st->execute([$prev_mes]);
+        $st = $db->prepare("SELECT moeda, COALESCE(SUM(valor),0) AS t FROM pagamentos_socio WHERE competencia_mes BETWEEN ? AND ? GROUP BY moeda");
+        $st->execute([$INICIO, $prev_mes]);
         foreach ($st->fetchAll() as $r) $dist_ac[$r['moeda']] = (float)$r['t'];
     } catch (PDOException $e) {}
 
