@@ -1901,4 +1901,11 @@ Los ítems volverán a la cola como pendientes.
     'sem dia de cobrança' => 'sin día de cobro',
     'venc.' => 'vence',
     'vencido' => 'vencido',
+    'Saldo de meses anteriores' => 'Saldo de meses anteriores',
+    'Saldo de meses anteriores (distribuído a mais)' => 'Saldo de meses anteriores (distribuido de más)',
+    '= A distribuir' => '= A distribuir',
+    'Sobra de meses anteriores:' => 'Saldo de meses anteriores:',
+    'ainda a distribuir — já somado ao total abaixo.' => 'aún por distribuir — ya sumado al total de abajo.',
+    'De meses anteriores foi distribuído a mais:' => 'De meses anteriores se distribuyó de más:',
+    'descontado do total abaixo.' => 'descontado del total de abajo.',
 ];

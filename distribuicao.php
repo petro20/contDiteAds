@@ -53,6 +53,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 } catch (PDOException $e) {}
                 $liq = $rec_m[$moeda] - ($desp_m['totais'][$moeda] ?? 0);
                 if ($moeda === 'USD') $liq -= $pag_func;
+                // Saldo (com sinal) não distribuído do mês anterior entra no bolo —
+                // senão a trava bloquearia o valor que veio de trás.
+                $saldo_ant = saldo_distribuicao_mes_anterior($db, $comp);
+                $liq += ($saldo_ant[$moeda] ?? 0);
                 $quota = $liq / $n_q;
 
                 // Já pago a esse beneficiário (sócio ou empresa) na competência+moeda
@@ -113,6 +117,16 @@ foreach (['BRL','USD','EUR'] as $m) {
     if ($m === 'USD') $liq_mes[$m] -= $pag_func_mes;
 }
 
+// Saldo (com sinal) NÃO distribuído do mês anterior — entra no bolo deste mês.
+// liq_dist = lucro do mês + saldo do mês anterior (base real da distribuição).
+$carry = saldo_distribuicao_mes_anterior($db, $competencia);
+$liq_dist = [];
+$carry_usd = 0.0;
+foreach (['BRL','USD','EUR'] as $m) {
+    $liq_dist[$m] = $liq_mes[$m] + $carry[$m];
+    $carry_usd   += para_usd($db, $carry[$m], $m);
+}
+
 $dt = DateTime::createFromFormat('Y-m', $competencia);
 $mes_ant  = (clone $dt)->modify('-1 month')->format('Y-m');
 $mes_prox = (clone $dt)->modify('+1 month')->format('Y-m');
@@ -136,6 +150,16 @@ require __DIR__ . '/includes/header.php';
   <a class="btn btn-ghost small" href="?mes=<?= e($mes_prox) ?>"><?= e($mes_prox) ?> →</a>
 </div>
 
+<?php if (abs($carry_usd) >= 0.01): ?>
+  <div class="flash <?= $carry_usd >= 0 ? 'destaque' : 'err' ?> mt-3">
+    <?php if ($carry_usd >= 0): ?>
+      ⚠ <?= e(t('Sobra de meses anteriores:')) ?> <strong><?= e(money_fmt($carry_usd, 'USD')) ?></strong> <?= e(t('ainda a distribuir — já somado ao total abaixo.')) ?>
+    <?php else: ?>
+      ⚠ <?= e(t('De meses anteriores foi distribuído a mais:')) ?> <strong><?= e(money_fmt(abs($carry_usd), 'USD')) ?></strong> — <?= e(t('descontado do total abaixo.')) ?>
+    <?php endif; ?>
+  </div>
+<?php endif; ?>
+
 <?php
   // === Resumo consolidado em US$ (BRL e EUR convertidos pela cotação do dia) ===
   $cot = cotacao_atual($db);
@@ -146,7 +170,8 @@ require __DIR__ . '/includes/header.php';
   }
   $pf_usd  = $pag_func_mes;                 // pagamentos a funcionários já são em USD
   $liq_usd = $rec_usd - $desp_usd - $pf_usd;
-  $parte_usd = $total_quotas > 0 ? $liq_usd / $total_quotas : 0;
+  $liq_dist_usd = $liq_usd + $carry_usd;    // + saldo (com sinal) do mês anterior
+  $parte_usd = $total_quotas > 0 ? $liq_dist_usd / $total_quotas : 0;
   $cot_data = (string)($cot['data'] ?? '');
   $cot_data_fmt = preg_match('/^\d{4}-\d{2}-\d{2}$/', $cot_data) ? date('d/m/Y', strtotime($cot_data)) : $cot_data;
 ?>
@@ -164,6 +189,16 @@ require __DIR__ . '/includes/header.php';
     <strong><?= e(t('Lucro líquido')) ?></strong>
     <strong style="font-size:18px; color:<?= $liq_usd >= 0 ? 'var(--c-success)' : 'var(--c-danger)' ?>;"><?= e(money_fmt($liq_usd, 'USD')) ?></strong>
   </div>
+  <?php if (abs($carry_usd) >= 0.01): ?>
+    <div class="spaced" style="padding:6px 0;">
+      <span><?= $carry_usd >= 0 ? '+ ' . e(t('Saldo de meses anteriores')) : '− ' . e(t('Saldo de meses anteriores (distribuído a mais)')) ?></span>
+      <strong style="color:<?= $carry_usd >= 0 ? 'var(--c-success)' : 'var(--c-danger)' ?>;"><?= e(money_fmt(abs($carry_usd), 'USD')) ?></strong>
+    </div>
+    <div class="spaced" style="padding:8px 0; border-top:1px solid var(--border);">
+      <strong><?= e(t('= A distribuir')) ?></strong>
+      <strong style="font-size:16px; color:<?= $liq_dist_usd >= 0 ? 'var(--c-success)' : 'var(--c-danger)' ?>;"><?= e(money_fmt($liq_dist_usd, 'USD')) ?></strong>
+    </div>
+  <?php endif; ?>
   <div class="spaced" style="padding:6px 0; color:var(--c-primary-2);">
     <span><?= e(t('Por quota (÷')) ?> <?= $total_quotas ?>)</span>
     <strong><?= e(money_fmt($parte_usd, 'USD')) ?></strong>
@@ -177,8 +212,11 @@ require __DIR__ . '/includes/header.php';
 <?php foreach (['BRL','USD','EUR'] as $m):
     $rec = $rec_mes[$m]; $desp = $desp_mes['totais'][$m] ?? 0;
     $pf = ($m === 'USD') ? $pag_func_mes : 0;
-    $liq = $liq_mes[$m]; $parte = $total_quotas > 0 ? $liq / $total_quotas : 0;
-    if ($rec == 0 && $desp == 0 && $pf == 0) continue;
+    $liq = $liq_mes[$m];
+    $cy  = $carry[$m];                 // saldo (com sinal) do mês anterior nesta moeda
+    $liq_d = $liq + $cy;
+    $parte = $total_quotas > 0 ? $liq_d / $total_quotas : 0;
+    if ($rec == 0 && $desp == 0 && $pf == 0 && abs($cy) < 0.01) continue;
 ?>
   <div class="card">
     <div class="title"><?= $m ?></div>
@@ -193,6 +231,16 @@ require __DIR__ . '/includes/header.php';
       <strong><?= e(t('Lucro líquido')) ?></strong>
       <strong style="color:<?= $liq>=0 ? 'var(--c-success)' : 'var(--c-danger)' ?>;"><?= e(money_fmt($liq, $m)) ?></strong>
     </div>
+    <?php if (abs($cy) >= 0.01): ?>
+      <div class="spaced" style="padding:6px 0;">
+        <span><?= $cy >= 0 ? '+ ' . e(t('Saldo de meses anteriores')) : '− ' . e(t('Saldo de meses anteriores (distribuído a mais)')) ?></span>
+        <strong style="color:<?= $cy >= 0 ? 'var(--c-success)' : 'var(--c-danger)' ?>;"><?= e(money_fmt(abs($cy), $m)) ?></strong>
+      </div>
+      <div class="spaced" style="padding:6px 0; border-top:1px solid var(--border);">
+        <strong><?= e(t('= A distribuir')) ?></strong>
+        <strong style="color:<?= $liq_d>=0 ? 'var(--c-success)' : 'var(--c-danger)' ?>;"><?= e(money_fmt($liq_d, $m)) ?></strong>
+      </div>
+    <?php endif; ?>
     <div class="spaced" style="padding:6px 0; color:var(--c-primary-2);">
       <span><?= e(t('Por quota (÷')) ?> <?= $total_quotas ?>)</span>
       <strong><?= e(money_fmt($parte, $m)) ?></strong>
@@ -267,9 +315,10 @@ require __DIR__ . '/includes/header.php';
       <?php
   }
 
-  $quota_brl = $liq_mes['BRL'] / $total_quotas;
-  $quota_usd = $liq_mes['USD'] / $total_quotas;
-  $quota_eur = $liq_mes['EUR'] / $total_quotas;
+  // Quota já inclui o saldo (com sinal) do mês anterior — liq_dist, não liq_mes.
+  $quota_brl = $liq_dist['BRL'] / $total_quotas;
+  $quota_usd = $liq_dist['USD'] / $total_quotas;
+  $quota_eur = $liq_dist['EUR'] / $total_quotas;
 
   // Destinatários da divisão: sócios + empresa (cada um = 1 quota)
   $div_destinatarios = [];

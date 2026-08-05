@@ -50,6 +50,64 @@ function receita_mes(PDO $db, ?string $competencia = null): array {
 }
 
 /**
+ * Saldo ACUMULADO não distribuído até o FIM do mês anterior ao competência dado,
+ * por moeda (COM SINAL: negativo = distribuiu a mais no passado, desconta agora).
+ *
+ * saldo[m] = lucro_acumulado(≤ mês anterior)[m] − distribuído_acumulado(competência ≤ mês anterior)[m]
+ *   - lucro_acumulado = receita − despesas − pagamentos a funcionários (USD), tudo somado até o mês anterior
+ *   - distribuído_acumulado = pagamentos_socio com competência até o mês anterior
+ *
+ * É ACUMULADO (não só o mês anterior isolado) de propósito: assim o saldo "rola"
+ * corretamente mesmo quando um mês distribui o que veio de trás. Fonte única de
+ * verdade, usada tanto na trava de pagamento quanto na exibição.
+ */
+function saldo_distribuicao_mes_anterior(PDO $db, string $competencia): array {
+    $prev_mes = date('Y-m', strtotime($competencia . '-01 -1 month'));
+    $prev_end = date('Y-m-t', strtotime($prev_mes . '-01'));
+
+    // Receita acumulada até o fim do mês anterior (por data de pagamento)
+    $rec_ac = receita_por_moeda($db, null, $prev_end);
+
+    // Pagamentos a funcionários acumulados até o fim do mês anterior (USD)
+    $pf_ac = 0.0;
+    try {
+        $st = $db->prepare("SELECT COALESCE(SUM(valor_usd),0) FROM pagamentos_funcionario WHERE data_pagamento <= ?");
+        $st->execute([$prev_end]);
+        $pf_ac = (float)$st->fetchColumn();
+    } catch (PDOException $e) {}
+
+    // Despesas acumuladas até o mês anterior (por moeda) — soma mês a mês desde a 1ª despesa
+    // (despesas_do_mes já resolve recorrência mensal/anual/única).
+    $desp_ac = ['BRL'=>0.0,'USD'=>0.0,'EUR'=>0.0];
+    $ini_desp = null;
+    try { $ini_desp = $db->query("SELECT MIN(data_inicio) FROM despesas")->fetchColumn(); } catch (PDOException $e) {}
+    if ($ini_desp && function_exists('despesas_do_mes')) {
+        $cur = date('Y-m', strtotime((string)$ini_desp));
+        for ($i = 0; $i < 120 && $cur <= $prev_mes; $i++) {
+            $dm = despesas_do_mes($db, $cur);
+            foreach (['BRL','USD','EUR'] as $m) $desp_ac[$m] += (float)($dm['totais'][$m] ?? 0);
+            $cur = date('Y-m', strtotime($cur . '-01 +1 month'));
+        }
+    }
+
+    // Distribuído acumulado (competência ≤ mês anterior), por moeda
+    $dist_ac = ['BRL'=>0.0,'USD'=>0.0,'EUR'=>0.0];
+    try {
+        $st = $db->prepare("SELECT moeda, COALESCE(SUM(valor),0) AS t FROM pagamentos_socio WHERE competencia_mes <= ? GROUP BY moeda");
+        $st->execute([$prev_mes]);
+        foreach ($st->fetchAll() as $r) $dist_ac[$r['moeda']] = (float)$r['t'];
+    } catch (PDOException $e) {}
+
+    $saldo = ['BRL'=>0.0,'USD'=>0.0,'EUR'=>0.0];
+    foreach (['BRL','USD','EUR'] as $m) {
+        $lucro_ac = (float)$rec_ac[$m] - $desp_ac[$m];
+        if ($m === 'USD') $lucro_ac -= $pf_ac;
+        $saldo[$m] = round($lucro_ac - $dist_ac[$m], 2);
+    }
+    return $saldo;
+}
+
+/**
  * Cobranças pagas recentes (para histórico).
  */
 function cobrancas_pagas_recentes(PDO $db, int $limit = 30): array {
