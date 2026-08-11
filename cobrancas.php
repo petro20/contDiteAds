@@ -570,9 +570,13 @@ if ($id) {
 
     <?php
       // KPI total
+      // Recebimento parcial: recebeu parte (pago>0) mas ainda falta (saldo>0) e não está
+      // paga/cancelada → mostra "PARCIAL · falta <saldo>" (mais informativo que vencida/pendente).
+      $tem_parcial = $pago > 0 && $saldo > 0 && !in_array($cob['status'], ['paga','cancelada'], true);
       if ($cob['status'] === 'paga')          { $status_label = t('PAGA');        $status_class = 'success'; }
-      elseif ($cob['status'] === 'em_analise'){ $status_label = t('EM ANÁLISE');  $status_class = 'destaque'; }
       elseif ($cob['status'] === 'cancelada') { $status_label = t('CANCELADA');   $status_class = 'info'; }
+      elseif ($tem_parcial)                   { $status_label = t('PARCIAL · falta') . ' ' . money_fmt($saldo, $cob['moeda']); $status_class = 'destaque'; }
+      elseif ($cob['status'] === 'em_analise'){ $status_label = t('EM ANÁLISE');  $status_class = 'destaque'; }
       elseif ($vencido)                       { $status_label = t('VENCIDA') . ' · ' . date('d/m', strtotime($cob['vencimento'])); $status_class = 'vencida'; }
       else                                    { $status_label = t('PENDENTE · vence') . ' ' . date('d/m', strtotime($cob['vencimento'])); $status_class = 'aberta'; }
     ?>
@@ -714,26 +718,25 @@ if ($id) {
         <button class="btn btn-ghost block" type="submit">🔕 <?= $cob['silenciada'] ? e(t('Reativar lembretes')) : e(t('Silenciar lembretes')) ?></button>
       </form>
 
-      <details class="mt-5">
-        <summary class="muted" style="cursor:pointer; padding:var(--s-3);"><?= e(t('Pagamento detalhado (parcial, com comprovante, etc.)')) ?></summary>
-        <div class="card mt-3">
-          <form method="post" enctype="multipart/form-data">
-            <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
-            <input type="hidden" name="op" value="registrar_pagamento_admin">
-            <input type="hidden" name="id" value="<?= (int)$cob['id'] ?>">
-            <div class="grid-2">
-              <div class="field"><label><?= e(t('Valor')) ?> (<?= e($cob['moeda']) ?>)</label><input type="number" step="0.01" min="0.01" name="valor" required value="<?= e(number_format($saldo, 2, '.', '')) ?>"></div>
-              <div class="field"><label><?= e(t('Data')) ?></label><input type="date" name="data" required value="<?= e(date('Y-m-d')) ?>"></div>
-            </div>
-            <div class="field"><label><?= e(t('Método')) ?></label>
-              <select name="metodo"><option value="">—</option><option><?= e(t('Pix')) ?></option><option><?= e(t('Transferência')) ?></option><option><?= e(t('Boleto')) ?></option><option><?= e(t('Dinheiro')) ?></option><option><?= e(t('Cartão')) ?></option><option><?= e(t('Outro')) ?></option></select>
-            </div>
-            <div class="field"><label><?= e(t('Observação')) ?></label><input name="observacao"></div>
-            <div class="field"><label><?= e(t('Comprovante (opcional)')) ?></label><input type="file" name="comprovante" accept=".pdf,.jpg,.jpeg,.png"></div>
-            <button class="btn block" type="submit"><?= e(t('Registrar pagamento')) ?></button>
-          </form>
-        </div>
-      </details>
+      <div class="section-label mt-5">💵 <?= e(t('Registrar recebimento')) ?></div>
+      <div class="card">
+        <p class="muted" style="font-size:13px; margin-bottom:var(--s-3);"><?= e(t('Pode registrar um valor parcial — a cobrança continua em aberto e mostrando o saldo até receber tudo.')) ?></p>
+        <form method="post" enctype="multipart/form-data">
+          <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
+          <input type="hidden" name="op" value="registrar_pagamento_admin">
+          <input type="hidden" name="id" value="<?= (int)$cob['id'] ?>">
+          <div class="grid-2">
+            <div class="field"><label><?= e(t('Valor')) ?> (<?= e($cob['moeda']) ?>)</label><input type="number" step="0.01" min="0.01" name="valor" required value="<?= e(number_format($saldo, 2, '.', '')) ?>"></div>
+            <div class="field"><label><?= e(t('Data')) ?></label><input type="date" name="data" required value="<?= e(date('Y-m-d')) ?>"></div>
+          </div>
+          <div class="field"><label><?= e(t('Método')) ?></label>
+            <select name="metodo"><option value="">—</option><option><?= e(t('Pix')) ?></option><option><?= e(t('Transferência')) ?></option><option><?= e(t('Boleto')) ?></option><option><?= e(t('Dinheiro')) ?></option><option><?= e(t('Cartão')) ?></option><option><?= e(t('Outro')) ?></option></select>
+          </div>
+          <div class="field"><label><?= e(t('Observação')) ?></label><input name="observacao"></div>
+          <div class="field"><label><?= e(t('Comprovante (opcional)')) ?></label><input type="file" name="comprovante" accept=".pdf,.jpg,.jpeg,.png"></div>
+          <button class="btn block" type="submit"><?= e(t('Registrar pagamento')) ?></button>
+        </form>
+      </div>
     <?php endif; ?>
 
     <?php
