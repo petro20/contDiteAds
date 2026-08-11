@@ -155,6 +155,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
+    if ($op === 'dite_verificar_pagamento' && is_admin()) {
+        // Fallback do webhook: consulta o gateway e, se pago, dá baixa na hora.
+        // (Idempotente pelo saldo: registra só o saldo em aberto; saldo 0 = nada a fazer.)
+        $cid = (int)($_POST['id'] ?? 0);
+        if (($_POST['back'] ?? '') === 'lista') {
+            $params = ['acao' => 'lista'];
+            if (($_POST['status'] ?? '') !== '')      $params['status']     = (string)$_POST['status'];
+            if ((int)($_POST['cliente_id'] ?? 0) > 0) $params['cliente_id'] = (int)$_POST['cliente_id'];
+            $base_back = APP_BASE_URL . '/cobrancas.php?' . http_build_query($params);
+        } else {
+            $base_back = APP_BASE_URL . '/cobrancas.php?id=' . $cid;
+        }
+        if (!dite_habilitado()) { header('Location: ' . $base_back . '&err=dite_off'); exit; }
+        if (!db_coluna_existe($db, 'cobrancas', 'dite_payment_id')) {
+            header('Location: ' . $base_back . '&err=dite_migration'); exit;
+        }
+        $stmt = $db->prepare('SELECT * FROM cobrancas WHERE id = ?');
+        $stmt->execute([$cid]);
+        $cob_v = $stmt->fetch();
+        if (!$cob_v) { http_response_code(404); exit(t('Cobrança não encontrada.')); }
+        $pay_id = (string)($cob_v['dite_payment_id'] ?? '');
+        if ($pay_id === '') { header('Location: ' . $base_back . '&err=dite_sem_link'); exit; }
+        try {
+            $chk = dite_consultar_pagamento($pay_id);
+        } catch (Throwable $e) {
+            error_log('Dite verificar pagamento: ' . $e->getMessage());
+            header('Location: ' . $base_back . '&err=dite_erro'); exit;
+        }
+        if (empty($chk['paid'])) { header('Location: ' . $base_back . '&err=dite_nao_pago'); exit; }
+        // Pago no gateway → registra o saldo em aberto e baixa. saldo<=0 => já estava paga.
+        $stmt = $db->prepare('SELECT COALESCE(SUM(valor_pago),0) FROM pagamentos_cliente WHERE cobranca_id = ?');
+        $stmt->execute([$cid]);
+        $saldo_v = max((float)$cob_v['valor_total'] - (float)$stmt->fetchColumn(), 0);
+        if ($saldo_v <= 0) { header('Location: ' . $base_back . '&ok=dite_ja_paga'); exit; }
+        try {
+            registrar_pagamento_cliente($db, $cid, $saldo_v, date('Y-m-d'), 'Cartão (Dite)',
+                'Dite Gateway (verificação manual) · ' . $pay_id, null, autor_sistema($db), false);
+            audit_log('cobranca.dite_verificado_pago', 'cobrancas', $cid);
+            header('Location: ' . $base_back . '&ok=dite_pago'); exit;
+        } catch (Throwable $e) {
+            error_log('Dite verificar registrar: ' . $e->getMessage());
+            header('Location: ' . $base_back . '&err=dite_erro'); exit;
+        }
+    }
+
     if ($op === 'rodar_cron_geracao' && is_admin()) {
         // Roda EXATAMENTE o que o cron das 05:00 faz: varre todos os clientes
         // com dia_cobranca, gera quem está na janela de 7 dias do vencimento.
@@ -481,7 +526,9 @@ if (isset($_GET['ok'])) {
              'pag'  => t('Pagamento registrado.'),
              'del'  => t('Cobrança removida.'),
              'dite' => t('Pagamento por cartão iniciado. Assim que o gateway confirmar, a cobrança é baixada automaticamente — não precisa enviar comprovante.'),
-             'dite_link' => t('Link de pagamento gerado. Copie e envie ao cliente.')];
+             'dite_link' => t('Link de pagamento gerado. Copie e envie ao cliente.'),
+             'dite_pago' => t('Pagamento confirmado no gateway — cobrança baixada.'),
+             'dite_ja_paga' => t('Esta cobrança já estava paga.')];
     $flash = ['ok', $msgs[$_GET['ok']] ?? t('OK.')];
 }
 if (isset($_GET['err'])) {
@@ -490,7 +537,9 @@ if (isset($_GET['err'])) {
              'dite_paga'   => t('Esta cobrança já está paga.'),
              'dite_cancel' => t('Pagamento por cartão cancelado. Você pode tentar de novo quando quiser.'),
              'dite_erro'   => t('Não foi possível iniciar o pagamento por cartão agora. Tente novamente em instantes.'),
-             'dite_migration' => t('Rode a migration 023 no banco pra poder guardar o link de pagamento.')];
+             'dite_migration' => t('Rode a migration 023 no banco pra poder guardar o link de pagamento.'),
+             'dite_sem_link' => t('Gere o link de pagamento primeiro.'),
+             'dite_nao_pago' => t('Ainda não consta pago no gateway. Se o cliente acabou de pagar, tente de novo em instantes.')];
     $flash = ['err', $errs[$_GET['err']] ?? t('Erro.')];
 }
 
@@ -798,6 +847,20 @@ if ($id) {
           <input type="hidden" name="id" value="<?= (int)$cob['id'] ?>">
           <button class="btn <?= $link_salvo === '' ? 'btn-brand' : 'btn-ghost' ?> block" type="submit"><?= $link_salvo === '' ? '🔗 ' . e(t('Gerar link de pagamento')) : '♻ ' . e(t('Gerar link novo')) ?></button>
         </form>
+        <?php
+          // Fallback: se já existe um link gerado (dite_payment_id) e a cobrança não está
+          // paga, o admin pode consultar o gateway e dar baixa manual (caso o webhook falhe).
+          $pid_salvo = $tem_col_link ? (string)($cob['dite_payment_id'] ?? '') : '';
+          if ($pid_salvo !== '' && $cob['status'] !== 'paga'):
+        ?>
+        <form method="post" class="mt-2">
+          <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
+          <input type="hidden" name="op" value="dite_verificar_pagamento">
+          <input type="hidden" name="id" value="<?= (int)$cob['id'] ?>">
+          <button class="btn btn-ghost block" type="submit">🔄 <?= e(t('Verificar pagamento')) ?></button>
+          <div class="hint"><?= e(t('Consulta o gateway e dá baixa se já estiver pago (caso o aviso automático não tenha chegado).')) ?></div>
+        </form>
+        <?php endif; ?>
         <?php if (!$tem_col_link): ?>
           <div class="hint" style="color:var(--c-attention);"><?= e(t('Rode a migration 023 pra guardar o link na cobrança.')) ?></div>
         <?php endif; ?>
@@ -1230,6 +1293,17 @@ foreach ($funcs_lista as $f) { $func_opts_html .= '<option value="' . (int)$f['i
             <input type="hidden" name="status" value="<?= e($f_status) ?>">
             <input type="hidden" name="cliente_id" value="<?= (int)$f_cliente ?>">
             <button type="submit" class="btn btn-brand"><?= $link_c === '' ? '🔗 ' . e(t('Gerar link')) : '♻ ' . e(t('Novo link')) ?></button>
+          </form>
+        <?php endif; ?>
+        <?php if (($c['dite_payment_id'] ?? '') !== ''): ?>
+          <form method="post">
+            <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
+            <input type="hidden" name="op" value="dite_verificar_pagamento">
+            <input type="hidden" name="id" value="<?= (int)$c['id'] ?>">
+            <input type="hidden" name="back" value="lista">
+            <input type="hidden" name="status" value="<?= e($f_status) ?>">
+            <input type="hidden" name="cliente_id" value="<?= (int)$f_cliente ?>">
+            <button type="submit" class="btn btn-ghost">🔄 <?= e(t('Verificar')) ?></button>
           </form>
         <?php endif; ?>
       </div>

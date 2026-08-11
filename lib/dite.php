@@ -92,3 +92,54 @@ function dite_criar_pagamento(
         'raw'        => $r,
     ];
 }
+
+/**
+ * GET autenticado na API do gateway. Retorna o JSON decodificado.
+ * Lança RuntimeException em erro de conexão ou status != 2xx.
+ */
+function dite_api_get(string $path): array {
+    if (!function_exists('curl_init')) throw new RuntimeException('cURL indisponível no servidor.');
+    if (DITE_API_KEY === '') throw new RuntimeException('DITE_API_KEY não configurada.');
+
+    $url = DITE_BASE_URL . $path;
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_HTTPHEADER     => ['Accept: application/json', 'X-Api-Key: ' . DITE_API_KEY],
+        CURLOPT_TIMEOUT        => 20,
+        CURLOPT_CONNECTTIMEOUT => 8,
+        CURLOPT_SSL_VERIFYPEER => true,
+    ]);
+    $resp = curl_exec($ch);
+    $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $cerr = curl_error($ch);
+    curl_close($ch);
+
+    if ($resp === false) throw new RuntimeException('Falha na conexão com o gateway: ' . $cerr);
+    $data = json_decode((string)$resp, true);
+    if ($code < 200 || $code >= 300) {
+        $msg = is_array($data) ? ($data['error'] ?? $data['message'] ?? (string)$resp) : (string)$resp;
+        throw new RuntimeException('Gateway retornou HTTP ' . $code . ': ' . $msg);
+    }
+    return is_array($data) ? $data : [];
+}
+
+/**
+ * Consulta o status de um pagamento no gateway (GET /api/v1/payments/{id}).
+ * Retorna ['paid'=>bool, 'status'=>string, 'amount'=>float, 'currency'=>string, 'raw'=>array].
+ * Considera PAGO quando o status ∈ {paid, pago, approved, completed, succeeded, success}.
+ */
+function dite_consultar_pagamento(string $paymentId): array {
+    $r = dite_api_get('/api/v1/payments/' . rawurlencode($paymentId));
+    // A API embrulha em "data" (igual ao create); tolera resposta direta também.
+    $d = is_array($r['data'] ?? null) ? $r['data'] : $r;
+    $status = strtolower(trim((string)($d['status'] ?? '')));
+    $pagos  = ['paid', 'pago', 'approved', 'completed', 'succeeded', 'success'];
+    return [
+        'paid'     => in_array($status, $pagos, true),
+        'status'   => (string)($d['status'] ?? ''),
+        'amount'   => (float)($d['amount'] ?? 0),
+        'currency' => strtoupper((string)($d['currency'] ?? '')),
+        'raw'      => $r,
+    ];
+}
