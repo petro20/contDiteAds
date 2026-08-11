@@ -126,7 +126,8 @@ if (strpos($event_type, 'credit') !== false || strpos($event_type, 'balances') !
                 // Evita marcar cobrança como 'paga' automaticamente sem revisão humana
                 // (proteção contra payload falsificado ou casamento errado por valor).
                 try {
-                    $pag_id = registrar_pagamento_cliente($db, $cob_id, $valor, date('Y-m-d'), 'Wise', $obs, null, 0, true);
+                    // registrado_por: webhook sem usuário logado. Autor válido evita a FK 1452.
+                    $pag_id = registrar_pagamento_cliente($db, $cob_id, $valor, date('Y-m-d'), 'Wise', $obs, null, autor_sistema($db), true);
                     $status = 'casado';
                 } catch (Throwable $e) {
                     // Notificação ou outro side-effect pode falhar; ainda assim o pagamento

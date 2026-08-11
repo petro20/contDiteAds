@@ -86,7 +86,9 @@ if ($event_type === 'payment.paid') {
                 if ($vpag > 0.001) {
                     // Assinatura do webhook já validada → pagamento confiável (pendente=false).
                     $obs = 'Dite Gateway · ' . $event_id;
-                    $pag_id = registrar_pagamento_cliente($db, $cob_id, $vpag, date('Y-m-d'), 'Cartão (Dite)', $obs, null, 0, false);
+                    // registrado_por: webhook não tem usuário logado. Autor válido
+                    // evita a FK 1452 (registrado_por=0 aponta pra usuário inexistente).
+                    $pag_id = registrar_pagamento_cliente($db, $cob_id, $vpag, date('Y-m-d'), 'Cartão (Dite)', $obs, null, autor_sistema($db), false);
                     $status = 'pago';
                 } else {
                     $status = 'sem_saldo';

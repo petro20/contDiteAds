@@ -96,6 +96,20 @@ function atualiza_status_cobranca(PDO $db, int $cobranca_id): void {
 }
 
 /**
+ * Retorna um usuário válido pra atribuir ao 'registrado_por' de pagamentos
+ * criados automaticamente (webhooks Dite/Wise), que não têm usuário logado.
+ * Prioriza admin/sadmin ativo. Sem isso, passar 0 viola a FK fk_pagcli_user
+ * (registrado_por → usuarios.id): o INSERT falha com erro 1452 e o pagamento
+ * NÃO é gravado — a cobrança nunca baixa.
+ */
+function autor_sistema(PDO $db): int {
+    $id = $db->query("SELECT id FROM usuarios WHERE ativo = 1
+                      ORDER BY (role IN ('admin','sadmin')) DESC, id ASC
+                      LIMIT 1")->fetchColumn();
+    return (int)$id;
+}
+
+/**
  * Registra um pagamento do cliente, opcionalmente com comprovante.
  * Retorna o ID do pagamento.
  */
