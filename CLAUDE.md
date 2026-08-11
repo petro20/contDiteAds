@@ -57,3 +57,14 @@ distribuído de meses anteriores (com sinal, piso maio/2026), trata **despesas c
 (gastos em real/euro convertidos, descontam só do lado USD) e mostra **"falta distribuir"** (tira o já
 pago no mês). `schema.sql` está levemente defasado das migrations 018/020/021/022/023 —
 para instalar do zero, rode as migrations em ordem.
+
+**Correção crítica (2026-08-11) — baixa automática por webhook:** os webhooks `webhooks/dite.php`
+(cartão) e `wise_webhook.php` gravavam o pagamento com `registrado_por=0`, violando a FK
+`fk_pagcli_user` (erro 1452) — **nenhum** pagamento por cartão/Wise baixava sozinho. Corrigido com o
+helper **`autor_sistema($db)`** (`lib/pagamentos.php`), que escolhe um admin/sadmin ativo; os dois
+webhooks o usam. Além disso: a **migration_019 (`dite_eventos`) nunca tinha sido aplicada em produção**
+— foi aplicada neste dia (rodaram a 023 mas pularam a 019). E o webhook Dite passou a usar
+`vpag = min(amount, saldo)` pra não duplicar baixa em reenvio. **Recebimento parcial** já é suportado
+(o form de pagamento aceita valor menor que o total; a cobrança fica **aberta** com saldo até quitar —
+só vira `paga` quando a soma alcança o total). Auto-deploy da Hostinger confirmado ativo (push no
+`master` publica sozinho). Specs de features em aberto: `docs/superpowers/specs/`.
