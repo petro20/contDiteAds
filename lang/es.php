@@ -1878,6 +1878,8 @@ Los ítems volverán a la cola como pendientes.
     'Abrir link' => 'Abrir enlace',
     'Gerar link de pagamento' => 'Generar enlace de pago',
     'Gerar link novo' => 'Generar enlace nuevo',
+    'Gerar link' => 'Generar enlace',
+    'Novo link' => 'Enlace nuevo',
     'Rode a migration 023 pra guardar o link na cobrança.' => 'Ejecuta la migración 023 para guardar el enlace en el cobro.',
     'Link de pagamento gerado. Copie e envie ao cliente.' => 'Enlace de pago generado. Cópialo y envíalo al cliente.',
     'Rode a migration 023 no banco pra poder guardar o link de pagamento.' => 'Ejecuta la migración 023 en la base de datos para guardar el enlace de pago.',

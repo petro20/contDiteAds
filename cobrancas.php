@@ -103,9 +103,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($op === 'dite_gerar_link' && is_admin()) {
         // Gera o link de checkout do gateway e GUARDA na cobrança, pro admin
-        // copiar e mandar pro cliente (WhatsApp/email). Não redireciona.
+        // copiar e mandar pro cliente (WhatsApp/email). Não redireciona pro checkout.
         $cid = (int)($_POST['id'] ?? 0);
-        $base_back = APP_BASE_URL . '/cobrancas.php?id=' . $cid;
+        // Volta pro detalhe por padrão; se veio da LISTA (back=lista), volta à lista
+        // preservando os filtros atuais (status, cliente_id).
+        if (($_POST['back'] ?? '') === 'lista') {
+            $params = ['acao' => 'lista'];
+            if (($_POST['status'] ?? '') !== '')      $params['status']     = (string)$_POST['status'];
+            if ((int)($_POST['cliente_id'] ?? 0) > 0) $params['cliente_id'] = (int)$_POST['cliente_id'];
+            $base_back = APP_BASE_URL . '/cobrancas.php?' . http_build_query($params);
+        } else {
+            $base_back = APP_BASE_URL . '/cobrancas.php?id=' . $cid;
+        }
         if (!dite_habilitado()) { header('Location: ' . $base_back . '&err=dite_off'); exit; }
         if (!db_coluna_existe($db, 'cobrancas', 'dite_pay_url')) {
             header('Location: ' . $base_back . '&err=dite_migration'); exit;
@@ -1016,7 +1025,13 @@ if (is_admin() && $f_cliente) {
     $where[] = 'c.cliente_id = ?'; $params[] = $f_cliente;
 }
 
-$sql = 'SELECT c.id, c.competencia_mes, c.valor_total, c.moeda, c.vencimento, c.status, cl.nome_empresa
+// Botão de link de cartão na lista só faz sentido pra admin, com gateway ligado e a
+// migration 023 aplicada. Nesse caso a query traz também o link salvo pra decidir o estado.
+$dite_lista = is_admin() && dite_habilitado() && db_coluna_existe($db, 'cobrancas', 'dite_pay_url');
+$col_dite   = $dite_lista ? ', c.dite_pay_url, c.dite_link_valor, c.dite_payment_id' : '';
+$sql = 'SELECT c.id, c.competencia_mes, c.valor_total, c.moeda, c.vencimento, c.status, cl.nome_empresa,
+               COALESCE((SELECT SUM(p.valor_pago) FROM pagamentos_cliente p WHERE p.cobranca_id = c.id), 0) AS pago'
+        . $col_dite . '
         FROM cobrancas c JOIN clientes cl ON cl.id = c.cliente_id
         WHERE ' . implode(' AND ', $where) . '
         ORDER BY c.status = "paga", c.vencimento DESC LIMIT 200';
@@ -1180,23 +1195,81 @@ foreach ($funcs_lista as $f) { $func_opts_html .= '<option value="' . (int)$f['i
 <div class="section-label mt-5"><?= e(t('Cobranças')) ?> (<?= count($cobr) ?>)</div>
 <?php foreach ($cobr as $c):
     $vencido = $c['status'] === 'aberta' && strtotime($c['vencimento']) < strtotime(date('Y-m-d'));
+    $saldo_c = max((float)$c['valor_total'] - (float)($c['pago'] ?? 0), 0);
+    // Botão de link de cartão: só admin/gateway/migration (via $dite_lista), cobrança
+    // aberta ou em análise, e com saldo em aberto.
+    $btn_dite   = $dite_lista && in_array($c['status'], ['aberta','em_analise'], true) && $saldo_c > 0;
+    $link_c     = $btn_dite ? (string)($c['dite_pay_url'] ?? '') : '';
+    $vlink_c    = (float)($c['dite_link_valor'] ?? 0);
+    $defasado_c = $link_c !== '' && abs($vlink_c - $saldo_c) > 0.01; // saldo mudou desde o link
 ?>
-  <a class="list-card" href="?id=<?= (int)$c['id'] ?>">
-    <div class="info">
-      <div class="nome">
-        #<?= (int)$c['id'] ?> · <?= e($c['nome_empresa']) ?>
-        <span class="status status-<?= e($c['status']) ?>"><?= e($c['status']) ?></span>
-        <?php if ($vencido): ?><span class="status status-vencida"><?= e(t('vencida')) ?></span><?php endif; ?>
+  <div class="cob-row">
+    <a class="list-card lc-main" href="?id=<?= (int)$c['id'] ?>">
+      <div class="info">
+        <div class="nome">
+          #<?= (int)$c['id'] ?> · <?= e($c['nome_empresa']) ?>
+          <span class="status status-<?= e($c['status']) ?>"><?= e($c['status']) ?></span>
+          <?php if ($vencido): ?><span class="status status-vencida"><?= e(t('vencida')) ?></span><?php endif; ?>
+        </div>
+        <div class="sub"><?= e($c['competencia_mes']) ?> · <?= e(t('venc')) ?> <?= e(date('d/m/Y', strtotime($c['vencimento']))) ?></div>
       </div>
-      <div class="sub"><?= e($c['competencia_mes']) ?> · <?= e(t('venc')) ?> <?= e(date('d/m/Y', strtotime($c['vencimento']))) ?></div>
-    </div>
-    <div class="right">
-      <div class="money md"><?= e(money_fmt((float)$c['valor_total'], $c['moeda'])) ?></div>
-    </div>
-  </a>
+      <div class="right">
+        <div class="money md"><?= e(money_fmt((float)$c['valor_total'], $c['moeda'])) ?></div>
+      </div>
+    </a>
+    <?php if ($btn_dite): ?>
+      <div class="lc-actions">
+        <?php if ($link_c !== '' && !$defasado_c): ?>
+          <button type="button" class="btn btn-secondary" data-link="<?= e($link_c) ?>" onclick="copiarLinkLista(this)">📋 <?= e(t('Copiar')) ?></button>
+        <?php else: ?>
+          <form method="post">
+            <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
+            <input type="hidden" name="op" value="dite_gerar_link">
+            <input type="hidden" name="id" value="<?= (int)$c['id'] ?>">
+            <input type="hidden" name="back" value="lista">
+            <input type="hidden" name="status" value="<?= e($f_status) ?>">
+            <input type="hidden" name="cliente_id" value="<?= (int)$f_cliente ?>">
+            <button type="submit" class="btn btn-brand"><?= $link_c === '' ? '🔗 ' . e(t('Gerar link')) : '♻ ' . e(t('Novo link')) ?></button>
+          </form>
+        <?php endif; ?>
+      </div>
+    <?php endif; ?>
+  </div>
 <?php endforeach; ?>
 <?php if (!$cobr): ?>
   <p class="muted center mt-5"><?= e(t('Nenhuma cobrança.')) ?></p>
+<?php endif; ?>
+
+<?php if ($dite_lista): ?>
+<style>
+  /* Linha da lista com zona de ação (não quebra o .list-card das outras telas) */
+  .cob-row { display: flex; align-items: stretch; gap: var(--s-2); margin-bottom: var(--s-2); }
+  .cob-row .lc-main { flex: 1; min-width: 0; margin-bottom: 0; }
+  .cob-row .lc-actions { display: flex; flex-direction: column; justify-content: center; gap: var(--s-2); flex-shrink: 0; }
+  .cob-row .lc-actions form { margin: 0; }
+  .cob-row .lc-actions .btn { white-space: nowrap; padding: var(--s-2) var(--s-3); font-size: 13px; }
+</style>
+<script>
+function copiarLinkLista(btn) {
+  var url = btn.getAttribute('data-link') || '';
+  if (!url) return;
+  var done = function () {
+    var old = btn.textContent;
+    btn.textContent = '<?= e(t('Link copiado!')) ?>';
+    setTimeout(function () { btn.textContent = old; }, 1500);
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(url).then(done, function () { copiarLinkListaFallback(url, done); });
+  } else { copiarLinkListaFallback(url, done); }
+}
+function copiarLinkListaFallback(text, cb) {
+  var t = document.createElement('textarea');
+  t.value = text; t.style.position = 'fixed'; t.style.opacity = '0';
+  document.body.appendChild(t); t.focus(); t.select();
+  try { document.execCommand('copy'); } catch (e) {}
+  document.body.removeChild(t); if (cb) cb();
+}
+</script>
 <?php endif; ?>
 
 <?php require __DIR__ . '/includes/footer.php'; ?>
