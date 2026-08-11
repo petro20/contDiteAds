@@ -1,7 +1,9 @@
 # Botão de link de pagamento (cartão) na lista de cobranças
 
 Data: 2026-08-11
-Status: aprovado (design), aguardando revisão do spec
+Status: ✅ IMPLEMENTADO em 2026-08-11 (commit fc2c7bf). O CSS/JS ficaram **inline** em
+`cobrancas.php` (não no `style.css`) pra não afetar o `.list-card` das outras 16 telas nem
+cair no cache do service worker.
 Relacionado: `2026-08-11-verificar-pagamento-cartao-baixa-design.md` — a zona de ação
 `.lc-actions` desta linha **também** hospeda o botão **🔄 Verificar pagamento** daquele
 spec. As duas features compartilham a query ampliada e o layout da linha; a coluna

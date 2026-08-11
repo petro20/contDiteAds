@@ -1,7 +1,8 @@
 # Recebimento parcial mais visível
 
 Data: 2026-08-11
-Status: aprovado (design), aguardando implementação
+Status: ✅ IMPLEMENTADO em 2026-08-11 (commit 50def69). §3 (selo "parcial" na LISTA) ficou
+**fora de escopo** nesta rodada — só o detalhe (card visível + selo "PARCIAL · falta $X").
 
 ## Problema
 

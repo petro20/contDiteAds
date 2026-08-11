@@ -1,7 +1,11 @@
 # Verificar pagamento no gateway e dar baixa (fallback do webhook)
 
 Data: 2026-08-11
-Status: aprovado (design), aguardando revisão do spec
+Status: ✅ IMPLEMENTADO em 2026-08-11 (commit 7f69a32). Endpoint `GET /api/v1/payments/{id}`
+**confirmado funcionando**. Desvio do design: a idempotência ficou **apenas pelo saldo**
+(registra só o saldo em aberto; saldo 0 → nada a fazer) — a trava sintética
+`manual_<payment_id>` em `dite_eventos` foi dispensada, porque o `min(amount, saldo)` já
+aplicado no webhook cobre a colisão webhook × verificação manual.
 Relacionado: `2026-08-11-link-cartao-na-lista-cobrancas-design.md` (compartilha a zona de
 ação `.lc-actions` na lista).
 

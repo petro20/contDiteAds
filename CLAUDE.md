@@ -64,7 +64,15 @@ para instalar do zero, rode as migrations em ordem.
 helper **`autor_sistema($db)`** (`lib/pagamentos.php`), que escolhe um admin/sadmin ativo; os dois
 webhooks o usam. Além disso: a **migration_019 (`dite_eventos`) nunca tinha sido aplicada em produção**
 — foi aplicada neste dia (rodaram a 023 mas pularam a 019). E o webhook Dite passou a usar
-`vpag = min(amount, saldo)` pra não duplicar baixa em reenvio. **Recebimento parcial** já é suportado
-(o form de pagamento aceita valor menor que o total; a cobrança fica **aberta** com saldo até quitar —
-só vira `paga` quando a soma alcança o total). Auto-deploy da Hostinger confirmado ativo (push no
-`master` publica sozinho). Specs de features em aberto: `docs/superpowers/specs/`.
+`vpag = min(amount, saldo)` pra não duplicar baixa em reenvio.
+
+**Features de cartão (2026-08-11, no ar):** (1) **link de cartão na lista** de cobranças — botão por linha
+🔗 Gerar / 📋 Copiar / ♻ Novo link (reusa `op=dite_gerar_link` com `back=lista`); (2) **Verificar pagamento** —
+`dite_consultar_pagamento()` faz `GET /api/v1/payments/{id}` (endpoint REST confirmado), `op=dite_verificar_pagamento`
+dá baixa se pago; botão 🔄 no detalhe e na lista; (3) **recebimento parcial mais visível** — o form de registrar
+pagamento saiu do `<details>` escondido pra um card "💵 Registrar recebimento", e o topo mostra selo
+**"PARCIAL · falta $X"** quando 0<pago<total (parcial mantém a cobrança **aberta** até quitar; só vira `paga`
+quando a soma alcança o total — lógica de status inalterada).
+
+Auto-deploy da Hostinger confirmado ativo (push no `master` publica sozinho). Specs (com status de
+implementação): `docs/superpowers/specs/`.
