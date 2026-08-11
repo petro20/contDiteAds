@@ -82,7 +82,10 @@ if ($event_type === 'payment.paid') {
                 $stmt->execute([$cob_id]);
                 $pago  = (float)$stmt->fetchColumn();
                 $saldo = (float)$cob['valor_total'] - $pago;
-                $vpag  = $valor > 0 ? $valor : $saldo;
+                // Nunca registra mais que o saldo em aberto: se o gateway reenviar
+                // o mesmo pagamento (ou "Notificar site" for clicado 2x), o saldo já
+                // estará 0 e nada é gravado — evita baixa dupla.
+                $vpag  = min($valor > 0 ? $valor : $saldo, $saldo);
                 if ($vpag > 0.001) {
                     // Assinatura do webhook já validada → pagamento confiável (pendente=false).
                     $obs = 'Dite Gateway · ' . $event_id;
