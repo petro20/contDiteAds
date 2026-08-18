@@ -1324,20 +1324,27 @@ $render_card = function ($c) use ($dite_lista, $f_status, $f_cliente) {
 <?php
 }; // fim do $render_card
 
-// Separa atrasadas (aberta e já vencida) num grupo próprio; o resto agrupa por mês.
-// Quando uma atrasada é paga, deixa de ser "aberta+vencida" e cai no bloco do mês dela.
+// Três baldes: Atrasados (aberta + vencida), Abertos (aberta/em análise ainda no prazo)
+// e o histórico agrupado por mês (pagas/canceladas). Ao pagar, a cobrança sai de
+// Atrasados/Abertos e cai no bloco do mês pertinente.
 $hoje_ts   = strtotime(date('Y-m-d'));
 $atrasados = [];
+$abertos   = [];
 $grupos    = []; // competencia_mes => [cobranças]
 foreach ($cobr as $c) {
+    $em_aberto = in_array($c['status'], ['aberta', 'em_analise'], true);
     if ($c['status'] === 'aberta' && strtotime($c['vencimento']) < $hoje_ts) {
         $atrasados[] = $c;
+    } elseif ($em_aberto) {
+        $abertos[] = $c;
     } else {
         $grupos[(string)$c['competencia_mes']][] = $c;
     }
 }
-// Mais vencidas primeiro (vencimento mais antigo no topo).
-usort($atrasados, function ($a, $b) { return strcmp((string)$a['vencimento'], (string)$b['vencimento']); });
+// Atrasados: mais vencidas primeiro. Abertos: as que vencem mais cedo primeiro.
+$por_vencimento = function ($a, $b) { return strcmp((string)$a['vencimento'], (string)$b['vencimento']); };
+usort($atrasados, $por_vencimento);
+usort($abertos,   $por_vencimento);
 ?>
 
 <?php if ($atrasados): ?>
@@ -1348,6 +1355,18 @@ usort($atrasados, function ($a, $b) { return strcmp((string)$a['vencimento'], (s
     </summary>
     <div class="cob-mes-body cob-grid">
       <?php foreach ($atrasados as $c) { $render_card($c); } ?>
+    </div>
+  </details>
+<?php endif; ?>
+
+<?php if ($abertos): ?>
+  <details class="cob-mes cob-abertos" open>
+    <summary>
+      <span class="cob-mes-esq"><span class="cob-mes-chev">▸</span> <span class="cob-mes-nome">🟡 <?= e(t('Abertos')) ?></span></span>
+      <span class="cob-mes-qtd"><?= count($abertos) ?></span>
+    </summary>
+    <div class="cob-mes-body cob-grid">
+      <?php foreach ($abertos as $c) { $render_card($c); } ?>
     </div>
   </details>
 <?php endif; ?>
