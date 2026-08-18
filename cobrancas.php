@@ -1097,7 +1097,7 @@ $sql = 'SELECT c.id, c.competencia_mes, c.valor_total, c.moeda, c.vencimento, c.
         . $col_dite . '
         FROM cobrancas c JOIN clientes cl ON cl.id = c.cliente_id
         WHERE ' . implode(' AND ', $where) . '
-        ORDER BY c.status = "paga", c.vencimento DESC LIMIT 200';
+        ORDER BY c.competencia_mes DESC, c.status = "paga", c.vencimento DESC LIMIT 200';
 $stmt = $db->prepare($sql);
 $stmt->execute($params);
 $cobr = $stmt->fetchAll();
@@ -1256,7 +1256,31 @@ foreach ($funcs_lista as $f) { $func_opts_html .= '<option value="' . (int)$f['i
 <?php endif; ?>
 
 <div class="section-label mt-5"><?= e(t('Cobranças')) ?> (<?= count($cobr) ?>)</div>
-<?php foreach ($cobr as $c):
+<?php
+// Agrupa as cobranças por mês (competencia_mes = "AAAA-MM"), cada mês num bloco recolhível.
+$meses_nome = ['','janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+$mes_qtd = [];
+foreach ($cobr as $c) { $mes_qtd[$c['competencia_mes']] = ($mes_qtd[$c['competencia_mes']] ?? 0) + 1; }
+$mes_atual = null;
+foreach ($cobr as $c):
+    $mes = (string)$c['competencia_mes'];
+    if ($mes !== $mes_atual):
+        if ($mes_atual !== null): ?>
+          </div>
+        </details>
+        <?php endif;
+        $mes_atual = $mes;
+        $mdt = date_create($mes . '-01');
+        $mes_label = $mdt ? ucfirst(t($meses_nome[(int)$mdt->format('n')])) . ' ' . $mdt->format('Y') : $mes;
+    ?>
+    <details class="cob-mes">
+      <summary>
+        <span class="cob-mes-esq"><span class="cob-mes-chev">▸</span> <span class="cob-mes-nome"><?= e($mes_label) ?></span></span>
+        <span class="cob-mes-qtd"><?= (int)$mes_qtd[$mes] ?></span>
+      </summary>
+      <div class="cob-mes-body">
+    <?php endif; ?>
+<?php
     $vencido = $c['status'] === 'aberta' && strtotime($c['vencimento']) < strtotime(date('Y-m-d'));
     $pago_c  = (float)($c['pago'] ?? 0);
     $saldo_c = max((float)$c['valor_total'] - $pago_c, 0);
@@ -1316,6 +1340,10 @@ foreach ($funcs_lista as $f) { $func_opts_html .= '<option value="' . (int)$f['i
     <?php endif; ?>
   </div>
 <?php endforeach; ?>
+<?php if ($mes_atual !== null): ?>
+      </div>
+    </details>
+<?php endif; ?>
 <?php if (!$cobr): ?>
   <p class="muted center mt-5"><?= e(t('Nenhuma cobrança.')) ?></p>
 <?php endif; ?>
