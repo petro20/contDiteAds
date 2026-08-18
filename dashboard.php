@@ -385,6 +385,7 @@ require __DIR__ . '/includes/header.php';
   </script>
 
   <div class="section-label"><?= e(t('Ações rápidas')) ?></div>
+  <div class="menu-grid">
   <a class="card" href="<?= e(APP_BASE_URL) ?>/painel.php">
     <div class="title">📊 <?= e(t('Painel financeiro')) ?></div>
     <div class="desc"><?= e(t('Agenda · Por cliente · Por serviço')) ?></div>
@@ -436,8 +437,10 @@ require __DIR__ . '/includes/header.php';
     <div class="desc"><?= e(t('Sua quota como sócio')) ?></div>
   </a>
   <?php endif; ?>
+  </div>
 
   <div class="section-label"><?= e(t('Minha área de execução (também trabalho nos serviços)')) ?></div>
+  <div class="menu-grid">
   <a class="card" href="<?= e(APP_BASE_URL) ?>/agenda.php">
     <div class="title">📅 <?= e(t('Minha agenda')) ?></div>
     <div class="desc"><?= e(t('Marcar entregas dos clientes que eu atendo (como funcionário)')) ?></div>
@@ -450,6 +453,7 @@ require __DIR__ . '/includes/header.php';
     <div class="title">✉️ <?= e(t('Gerar convite')) ?></div>
     <div class="desc"><?= e(t('Link para cliente ou funcionário se cadastrar')) ?></div>
   </a>
+  </div>
 
 <?php elseif ($u['role'] === 'funcionario'): ?>
   <?php

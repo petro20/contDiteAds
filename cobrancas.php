@@ -1257,30 +1257,12 @@ foreach ($funcs_lista as $f) { $func_opts_html .= '<option value="' . (int)$f['i
 
 <div class="section-label mt-5"><?= e(t('Cobranças')) ?> (<?= count($cobr) ?>)</div>
 <?php
-// Agrupa as cobranças por mês (competencia_mes = "AAAA-MM"), cada mês num bloco recolhível.
+// Nome do mês localizado (competencia_mes = "AAAA-MM").
 $meses_nome = ['','janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
-$mes_qtd = [];
-foreach ($cobr as $c) { $mes_qtd[$c['competencia_mes']] = ($mes_qtd[$c['competencia_mes']] ?? 0) + 1; }
-$mes_atual = null;
-foreach ($cobr as $c):
-    $mes = (string)$c['competencia_mes'];
-    if ($mes !== $mes_atual):
-        if ($mes_atual !== null): ?>
-          </div>
-        </details>
-        <?php endif;
-        $mes_atual = $mes;
-        $mdt = date_create($mes . '-01');
-        $mes_label = $mdt ? ucfirst(t($meses_nome[(int)$mdt->format('n')])) . ' ' . $mdt->format('Y') : $mes;
-    ?>
-    <details class="cob-mes">
-      <summary>
-        <span class="cob-mes-esq"><span class="cob-mes-chev">▸</span> <span class="cob-mes-nome"><?= e($mes_label) ?></span></span>
-        <span class="cob-mes-qtd"><?= (int)$mes_qtd[$mes] ?></span>
-      </summary>
-      <div class="cob-mes-body">
-    <?php endif; ?>
-<?php
+
+// Renderiza uma linha da lista (card + zona de ação de cartão). Reusado no grupo
+// "Atrasados" e nos blocos por mês.
+$render_card = function ($c) use ($dite_lista, $f_status, $f_cliente) {
     $vencido = $c['status'] === 'aberta' && strtotime($c['vencimento']) < strtotime(date('Y-m-d'));
     $pago_c  = (float)($c['pago'] ?? 0);
     $saldo_c = max((float)$c['valor_total'] - $pago_c, 0);
@@ -1339,11 +1321,51 @@ foreach ($cobr as $c):
       </div>
     <?php endif; ?>
   </div>
-<?php endforeach; ?>
-<?php if ($mes_atual !== null): ?>
-      </div>
-    </details>
+<?php
+}; // fim do $render_card
+
+// Separa atrasadas (aberta e já vencida) num grupo próprio; o resto agrupa por mês.
+// Quando uma atrasada é paga, deixa de ser "aberta+vencida" e cai no bloco do mês dela.
+$hoje_ts   = strtotime(date('Y-m-d'));
+$atrasados = [];
+$grupos    = []; // competencia_mes => [cobranças]
+foreach ($cobr as $c) {
+    if ($c['status'] === 'aberta' && strtotime($c['vencimento']) < $hoje_ts) {
+        $atrasados[] = $c;
+    } else {
+        $grupos[(string)$c['competencia_mes']][] = $c;
+    }
+}
+// Mais vencidas primeiro (vencimento mais antigo no topo).
+usort($atrasados, function ($a, $b) { return strcmp((string)$a['vencimento'], (string)$b['vencimento']); });
+?>
+
+<?php if ($atrasados): ?>
+  <details class="cob-mes cob-atrasados" open>
+    <summary>
+      <span class="cob-mes-esq"><span class="cob-mes-chev">▸</span> <span class="cob-mes-nome">⚠ <?= e(t('Atrasados')) ?></span></span>
+      <span class="cob-mes-qtd"><?= count($atrasados) ?></span>
+    </summary>
+    <div class="cob-mes-body cob-grid">
+      <?php foreach ($atrasados as $c) { $render_card($c); } ?>
+    </div>
+  </details>
 <?php endif; ?>
+
+<?php foreach ($grupos as $mes => $lista):
+    $mdt = date_create($mes . '-01');
+    $mes_label = $mdt ? ucfirst(t($meses_nome[(int)$mdt->format('n')])) . ' ' . $mdt->format('Y') : $mes;
+?>
+  <details class="cob-mes">
+    <summary>
+      <span class="cob-mes-esq"><span class="cob-mes-chev">▸</span> <span class="cob-mes-nome"><?= e($mes_label) ?></span></span>
+      <span class="cob-mes-qtd"><?= count($lista) ?></span>
+    </summary>
+    <div class="cob-mes-body cob-grid">
+      <?php foreach ($lista as $c) { $render_card($c); } ?>
+    </div>
+  </details>
+<?php endforeach; ?>
 <?php if (!$cobr): ?>
   <p class="muted center mt-5"><?= e(t('Nenhuma cobrança.')) ?></p>
 <?php endif; ?>

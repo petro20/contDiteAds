@@ -242,6 +242,7 @@ Los ítems volverán a la cola como pendientes.
     'Aviso de período mínimo de contrato' => 'Aviso de período mínimo de contrato',
     'Ação (prefix)' => 'Acción (prefijo)',
     'Ações rápidas' => 'Acciones rápidas',
+    'Atrasados' => 'Vencidos',
     'BLOQUEADO' => 'BLOQUEADO',
     'BLOQUEADO se houver pagamentos confirmados' => 'BLOQUEADO si hay pagos confirmados',
     'BLOQUEADO via flock' => 'BLOQUEADO vía flock',

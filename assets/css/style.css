@@ -1020,6 +1020,29 @@ select {
 }
 .cob-mes-body { padding-top: var(--s-2); }
 
+/* Grupo "Atrasados" — destaque em vermelho */
+.cob-atrasados > summary {
+    background: rgba(239, 68, 68, 0.08);
+    border-color: rgba(239, 68, 68, 0.30);
+    color: var(--c-danger-2);
+}
+.cob-atrasados > summary:hover {
+    background: rgba(239, 68, 68, 0.14);
+    border-color: rgba(239, 68, 68, 0.45);
+}
+.cob-atrasados .cob-mes-chev { color: var(--c-danger-2); }
+.cob-atrasados .cob-mes-qtd { color: var(--c-danger-2); background: rgba(239, 68, 68, 0.12); }
+
+/* Cards das cobranças em 2 colunas (1 coluna no mobile) */
+.cob-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-2); }
+.cob-grid .cob-row { margin-bottom: 0; }
+@media (max-width: 640px) { .cob-grid { grid-template-columns: 1fr; } }
+
+/* Menu do dashboard em 2 colunas (1 coluna no mobile) */
+.menu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-3); margin-bottom: var(--s-4); }
+.menu-grid > .card { margin-bottom: 0; height: 100%; }
+@media (max-width: 560px) { .menu-grid { grid-template-columns: 1fr; } }
+
 /* ============================================
  * Login (auth-wrap) premium
  * ============================================ */
