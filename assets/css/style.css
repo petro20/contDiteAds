@@ -1033,10 +1033,23 @@ select {
 .cob-atrasados .cob-mes-chev { color: var(--c-danger-2); }
 .cob-atrasados .cob-mes-qtd { color: var(--c-danger-2); background: rgba(239, 68, 68, 0.12); }
 
-/* Cards das cobranças em 2 colunas (1 coluna no mobile) */
-.cob-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-2); }
-.cob-grid .cob-row { margin-bottom: 0; }
+/* Lista de cobranças — cards em 2 colunas (1 no mobile) */
+.cob-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-3); align-items: start; }
 @media (max-width: 640px) { .cob-grid { grid-template-columns: 1fr; } }
+
+/* Linha = card ocupa a largura toda; as ações viram ícones no canto superior direito */
+.cob-row { position: relative; margin-bottom: var(--s-2); }
+.cob-row .lc-main { margin-bottom: 0; width: 100%; }
+.cob-row.has-actions .lc-main { align-items: flex-start; }
+.cob-row.has-actions .lc-main .right { padding-top: 40px; }   /* espaço p/ os ícones no topo */
+.lc-actions { position: absolute; top: 8px; right: 10px; display: flex; flex-direction: row; gap: 6px; z-index: 2; }
+.lc-actions form { margin: 0; }
+.lc-actions .btn.btn-ico {
+    width: 30px; height: 30px; min-width: 0; padding: 0;
+    font-size: 15px; line-height: 1;
+    display: inline-flex; align-items: center; justify-content: center;
+    border-radius: 10px;
+}
 
 /* Menu do dashboard em 2 colunas (1 coluna no mobile) */
 .menu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-3); margin-bottom: var(--s-4); }

@@ -1275,7 +1275,7 @@ $render_card = function ($c) use ($dite_lista, $f_status, $f_cliente) {
     $vlink_c    = (float)($c['dite_link_valor'] ?? 0);
     $defasado_c = $link_c !== '' && abs($vlink_c - $saldo_c) > 0.01; // saldo mudou desde o link
 ?>
-  <div class="cob-row">
+  <div class="cob-row<?= $btn_dite ? ' has-actions' : '' ?>">
     <a class="list-card lc-main" href="?id=<?= (int)$c['id'] ?>">
       <div class="info">
         <div class="nome">
@@ -1295,7 +1295,7 @@ $render_card = function ($c) use ($dite_lista, $f_status, $f_cliente) {
     <?php if ($btn_dite): ?>
       <div class="lc-actions">
         <?php if ($link_c !== '' && !$defasado_c): ?>
-          <button type="button" class="btn btn-secondary" data-link="<?= e($link_c) ?>" onclick="copiarLinkLista(this)">📋 <?= e(t('Copiar')) ?></button>
+          <button type="button" class="btn btn-secondary btn-ico" data-link="<?= e($link_c) ?>" onclick="copiarLinkLista(this)" title="<?= e(t('Copiar link')) ?>" aria-label="<?= e(t('Copiar link')) ?>">📋</button>
         <?php else: ?>
           <form method="post">
             <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
@@ -1304,7 +1304,7 @@ $render_card = function ($c) use ($dite_lista, $f_status, $f_cliente) {
             <input type="hidden" name="back" value="lista">
             <input type="hidden" name="status" value="<?= e($f_status) ?>">
             <input type="hidden" name="cliente_id" value="<?= (int)$f_cliente ?>">
-            <button type="submit" class="btn btn-brand"><?= $link_c === '' ? '🔗 ' . e(t('Gerar link')) : '♻ ' . e(t('Novo link')) ?></button>
+            <button type="submit" class="btn btn-brand btn-ico" title="<?= $link_c === '' ? e(t('Gerar link')) : e(t('Novo link')) ?>" aria-label="<?= $link_c === '' ? e(t('Gerar link')) : e(t('Novo link')) ?>"><?= $link_c === '' ? '🔗' : '♻' ?></button>
           </form>
         <?php endif; ?>
         <?php if (($c['dite_payment_id'] ?? '') !== ''): ?>
@@ -1315,7 +1315,7 @@ $render_card = function ($c) use ($dite_lista, $f_status, $f_cliente) {
             <input type="hidden" name="back" value="lista">
             <input type="hidden" name="status" value="<?= e($f_status) ?>">
             <input type="hidden" name="cliente_id" value="<?= (int)$f_cliente ?>">
-            <button type="submit" class="btn btn-ghost">🔄 <?= e(t('Verificar')) ?></button>
+            <button type="submit" class="btn btn-ghost btn-ico" title="<?= e(t('Verificar pagamento')) ?>" aria-label="<?= e(t('Verificar pagamento')) ?>">🔄</button>
           </form>
         <?php endif; ?>
       </div>
@@ -1371,21 +1371,13 @@ usort($atrasados, function ($a, $b) { return strcmp((string)$a['vencimento'], (s
 <?php endif; ?>
 
 <?php if ($dite_lista): ?>
-<style>
-  /* Linha da lista com zona de ação (não quebra o .list-card das outras telas) */
-  .cob-row { display: flex; align-items: stretch; gap: var(--s-2); margin-bottom: var(--s-2); }
-  .cob-row .lc-main { flex: 1; min-width: 0; margin-bottom: 0; }
-  .cob-row .lc-actions { display: flex; flex-direction: column; justify-content: center; gap: var(--s-2); flex-shrink: 0; }
-  .cob-row .lc-actions form { margin: 0; }
-  .cob-row .lc-actions .btn { white-space: nowrap; padding: var(--s-2) var(--s-3); font-size: 13px; }
-</style>
 <script>
 function copiarLinkLista(btn) {
   var url = btn.getAttribute('data-link') || '';
   if (!url) return;
   var done = function () {
     var old = btn.textContent;
-    btn.textContent = '<?= e(t('Link copiado!')) ?>';
+    btn.textContent = '✅';
     setTimeout(function () { btn.textContent = old; }, 1500);
   };
   if (navigator.clipboard && navigator.clipboard.writeText) {
