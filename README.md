@@ -62,6 +62,11 @@ Helpers de autorização em `includes/auth.php`: `current_user()`, `require_logi
   **cartão via Dite Gateway** (confirma sozinho por webhook), ou por Zelle/Wise. Conciliação
   Wise por **webhook em tempo real** e por **upload de CSV**. O admin pode gerar um **link de
   pagamento por cobrança** (Dite, com valor já preenchido) pra enviar ao cliente (migration 023).
+- **Lista de cobranças organizada** (`cobrancas.php`): cards agrupados em **⚠ Atrasados**
+  (vencidas não pagas) → **🟡 Abertos** (em aberto no prazo) → **blocos por mês** recolhíveis
+  com o histórico pago; ao pagar, a cobrança migra pro mês. Pagamento **parcial** mostra
+  "Pago / Falta" no card. Layout em 2 colunas (1 no mobile) e ações de cartão como **ícones**
+  (gerar/novo link, verificar, copiar) no canto do card, com tooltip.
 - **Folha da equipe** (`pagamentos_funcionarios.php`): fila em USD por funcionário, valor por
   par (funcionário × item), comprovante e email ao pagar via Wise. Funcionário vê em
   `meus_pagamentos.php`. Itens **avulsos** (sem assinatura) também podem ter funcionário

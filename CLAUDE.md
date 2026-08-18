@@ -74,5 +74,20 @@ pagamento saiu do `<details>` escondido pra um card "💵 Registrar recebimento"
 **"PARCIAL · falta $X"** quando 0<pago<total (parcial mantém a cobrança **aberta** até quitar; só vira `paga`
 quando a soma alcança o total — lógica de status inalterada).
 
+**Lista de cobranças reorganizada (2026-08-18, no ar):** a tela `cobrancas.php` deixou de ser uma lista
+plana. Agora as cobranças caem em três baldes (partição em PHP, render por um closure `$render_card`
+reusado): **⚠ Atrasados** (`aberta` + vencida, vermelho, aberto por padrão, mais vencidas primeiro) →
+**🟡 Abertos** (`aberta`/`em_analise` ainda no prazo, âmbar, aberto) → **blocos por mês** recolhíveis
+(`<details class="cob-mes">`, nome do mês localizado + contagem, **recolhidos**) com o histórico
+**pago/cancelado**. Ao pagar, a cobrança sai de Atrasados/Abertos e cai no mês pertinente (é só
+consequência do status, sem lógica extra). A **query** ordena por `competencia_mes DESC` e traz
+`SUM(valor_pago) AS pago` por cobrança; a lista mostra **"Pago: X · Falta: Y"** no card quando é parcial.
+Layout em **2 colunas** (`.cob-grid`, 1 coluna no mobile ≤640px); o **menu do dashboard** também
+(`.menu-grid` em `dashboard.php`, 1 coluna ≤560px). As **ações de cartão** viraram **botões-ícone**
+(♻/🔗 link, 🔄 verificar, 📋 copiar) no **canto superior direito do card**, com `title`/`aria-label`
+(tooltip no hover) — as regras `.cob-row`/`.lc-actions` foram pro `style.css`. Chaves i18n novas:
+`Atrasados`, `Abertos`, `Falta:`. ⚠ Dívida técnica: `var(--c-attention)` (usado no detalhe da cobrança,
+`cobrancas.php` ~L790) **não existe** no CSS — trocar por `var(--c-warning)`.
+
 Auto-deploy da Hostinger confirmado ativo (push no `master` publica sozinho). Specs (com status de
 implementação): `docs/superpowers/specs/`.
