@@ -1258,7 +1258,10 @@ foreach ($funcs_lista as $f) { $func_opts_html .= '<option value="' . (int)$f['i
 <div class="section-label mt-5"><?= e(t('Cobranças')) ?> (<?= count($cobr) ?>)</div>
 <?php foreach ($cobr as $c):
     $vencido = $c['status'] === 'aberta' && strtotime($c['vencimento']) < strtotime(date('Y-m-d'));
-    $saldo_c = max((float)$c['valor_total'] - (float)($c['pago'] ?? 0), 0);
+    $pago_c  = (float)($c['pago'] ?? 0);
+    $saldo_c = max((float)$c['valor_total'] - $pago_c, 0);
+    // Pagamento parcial: já entrou algo, mas ainda falta e a cobrança não está quitada.
+    $parcial_c = $pago_c > 0 && $saldo_c > 0 && $c['status'] !== 'paga';
     // Botão de link de cartão: só admin/gateway/migration (via $dite_lista), cobrança
     // aberta ou em análise, e com saldo em aberto.
     $btn_dite   = $dite_lista && in_array($c['status'], ['aberta','em_analise'], true) && $saldo_c > 0;
@@ -1278,6 +1281,9 @@ foreach ($funcs_lista as $f) { $func_opts_html .= '<option value="' . (int)$f['i
       </div>
       <div class="right">
         <div class="money md"><?= e(money_fmt((float)$c['valor_total'], $c['moeda'])) ?></div>
+        <?php if ($parcial_c): ?>
+          <div style="font-size:12px; color:var(--txt-2); margin-top:4px;"><?= e(t('Pago:')) ?> <?= e(money_fmt($pago_c, $c['moeda'])) ?> · <strong style="color:var(--c-warning);"><?= e(t('Falta:')) ?> <?= e(money_fmt($saldo_c, $c['moeda'])) ?></strong></div>
+        <?php endif; ?>
       </div>
     </a>
     <?php if ($btn_dite): ?>

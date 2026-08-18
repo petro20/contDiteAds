@@ -1189,6 +1189,7 @@ Los ítems volverán a la cola como pendientes.
     'Saldo' => 'Saldo',
     'Saldo após distribuição' => 'Saldo tras distribución',
     'Saldo:' => 'Saldo:',
+    'Falta:' => 'Falta:',
     'Salva' => 'Guardada',
     'Salva o arquivo no computador/celular' => 'Guarda el archivo en la computadora/celular',
     'Salvar' => 'Guardar',
