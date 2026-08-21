@@ -83,7 +83,7 @@ require __DIR__ . '/includes/header.php';
   <?php if ($modo === 'calendar'):
       $cal = calendario_do_mes($competencia);
       $marcadas = [];
-      foreach ($entregas as $en) if ($en['data_marcada']) $marcadas[$en['data_marcada']] = true;
+      foreach ($entregas as $en) if ($en['data_marcada']) $marcadas[$en['data_marcada']] = $en['redes'] ?? '';
   ?>
     <table style="width:100%; border-collapse:collapse; text-align:center; font-size:13px;">
       <thead><tr>
@@ -98,13 +98,9 @@ require __DIR__ . '/includes/header.php';
                 $m = isset($marcadas[$iso]);
                 $dia = (int)substr($iso, 8, 2);
               ?>
-              <div style="
-                width:36px; height:36px; border-radius:6px; border:1px solid var(--border);
-                display:inline-flex; align-items:center; justify-content:center;
-                background: <?= $m ? 'var(--c-success)' : 'var(--bg-input)' ?>;
-                color: <?= $m ? '#fff' : 'var(--txt-3)' ?>;
-                font-weight: <?= $m ? '700' : '400' ?>;
-              "><?= $dia ?></div>
+              <div class="dia-btn dia-view<?= $m ? ' marcado' : '' ?>">
+                <span class="dia-num"><?= $dia ?></span><?= $m ? entregas_redes_html($marcadas[$iso]) : '' ?>
+              </div>
               <?php endif; ?>
             </td>
           <?php endforeach; ?>

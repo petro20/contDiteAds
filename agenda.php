@@ -55,7 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $result = null;
     if ($op === 'toggle_dia') {
-        $result = entregas_toggle_dia($db, $assin, $comp, $_POST['data'] ?? date('Y-m-d'), (int)$u['id']);
+        $result = entregas_toggle_dia($db, $assin, $comp, $_POST['data'] ?? date('Y-m-d'), (int)$u['id'], $_POST['redes'] ?? '');
     } elseif ($op === 'add_unidade') {
         $result = ['id' => entregas_add_unidade($db, $assin, $comp, (int)$u['id'])];
     } elseif ($op === 'toggle_unico') {
@@ -161,8 +161,15 @@ require __DIR__ . '/includes/header.php';
   <?php if ($modo === 'calendar'):
       $cal = calendario_do_mes($competencia);
       $marcadas_set = [];
-      foreach ($entregas as $en) if ($en['data_marcada']) $marcadas_set[$en['data_marcada']] = (int)$en['id'];
+      foreach ($entregas as $en) if ($en['data_marcada']) $marcadas_set[$en['data_marcada']] = ['id' => (int)$en['id'], 'redes' => $en['redes'] ?? ''];
   ?>
+  <div class="paleta-redes" data-assin="<?= (int)$a['assinatura_id'] ?>" title="<?= e(t('Selecione as redes e clique no dia')) ?>">
+    <span class="paleta-label"><?= e(t('Redes:')) ?></span>
+    <?php foreach (entregas_redes_defs() as $slug => $def): ?>
+      <button type="button" class="rede-btn" data-rede="<?= e($slug) ?>" aria-pressed="false"
+              aria-label="<?= e($def['nome']) ?>" title="<?= e($def['nome']) ?>"><?= $def['svg'] ?></button>
+    <?php endforeach; ?>
+  </div>
   <table style="width:100%; border-collapse:collapse; text-align:center; font-size:13px;">
     <thead><tr>
       <?php foreach (['D','S','T','Q','Q','S','S'] as $w): ?><th style="padding:6px; color:var(--txt-3);"><?= e($w) ?></th><?php endforeach; ?>
@@ -175,6 +182,7 @@ require __DIR__ . '/includes/header.php';
             <?php if (!$iso): ?>&nbsp;<?php else:
               $marcado = isset($marcadas_set[$iso]);
               $dia = (int)substr($iso, 8, 2);
+              $redes_dia = $marcado ? ($marcadas_set[$iso]['redes'] ?? '') : '';
             ?>
             <form method="post" style="margin:0;">
               <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
@@ -182,13 +190,11 @@ require __DIR__ . '/includes/header.php';
               <input type="hidden" name="assinatura_id" value="<?= (int)$a['assinatura_id'] ?>">
               <input type="hidden" name="competencia" value="<?= e($competencia) ?>">
               <input type="hidden" name="data" value="<?= e($iso) ?>">
-              <button type="submit" style="
-                width:36px; height:36px; border-radius:6px; border:1px solid var(--border);
-                background: <?= $marcado ? 'var(--c-success)' : 'var(--bg-input)' ?>;
-                color: <?= $marcado ? '#fff' : 'var(--txt-2)' ?>;
-                font-weight:<?= $marcado ? '700' : '400' ?>;
-                cursor: pointer;
-              " title="<?= e($marcado ? t('Desmarcar') : t('Marcar entrega')) ?>"><?= $dia ?></button>
+              <input type="hidden" name="redes" value="">
+              <button type="submit" class="dia-btn<?= $marcado ? ' marcado' : '' ?>"
+                title="<?= e($marcado ? t('Desmarcar') : t('Marcar entrega')) ?>">
+                <span class="dia-num"><?= $dia ?></span><?= entregas_redes_html($redes_dia) ?>
+              </button>
             </form>
             <?php endif; ?>
           </td>
@@ -248,12 +254,54 @@ require __DIR__ . '/includes/header.php';
 
 <script>
 (function () {
+  var REDES = <?php
+    $redes_js = [];
+    foreach (entregas_redes_defs() as $slug => $def) { $redes_js[$slug] = ['nome' => $def['nome'], 'svg' => $def['svg']]; }
+    echo json_encode($redes_js, JSON_UNESCAPED_UNICODE);
+  ?>;
+
+  // --- Paleta de redes (por card): seleção fica no navegador (localStorage). ---
+  function paletaAtiva(assin) {
+    var bar = document.querySelector('.paleta-redes[data-assin="' + assin + '"]');
+    if (!bar) return [];
+    return Array.prototype.slice.call(bar.querySelectorAll('.rede-btn.ativa'))
+      .map(function (b) { return b.getAttribute('data-rede'); });
+  }
+  document.querySelectorAll('.paleta-redes').forEach(function (bar) {
+    var assin = bar.getAttribute('data-assin');
+    var key = 'cont_paleta_' + assin;
+    var saved = [];
+    try { saved = JSON.parse(localStorage.getItem(key) || '[]'); } catch (e) {}
+    bar.querySelectorAll('.rede-btn').forEach(function (b) {
+      if (saved.indexOf(b.getAttribute('data-rede')) !== -1) {
+        b.classList.add('ativa'); b.setAttribute('aria-pressed', 'true');
+      }
+      b.addEventListener('click', function () {
+        var on = b.classList.toggle('ativa');
+        b.setAttribute('aria-pressed', on ? 'true' : 'false');
+        try { localStorage.setItem(key, JSON.stringify(paletaAtiva(assin))); } catch (e) {}
+      });
+    });
+  });
+
+  // --- Render dos ícones de um dia a partir do CSV de slugs. ---
+  function renderDiaRedes(csv) {
+    if (!csv) return '';
+    var out = '';
+    csv.split(',').forEach(function (slug) {
+      var d = REDES[slug];
+      if (d) out += '<span class="rede-ico" title="' + d.nome + '">' + d.svg + '</span>';
+    });
+    return out ? '<span class="dia-redes">' + out + '</span>' : '';
+  }
+
   // Toggles de calendário e item único viram AJAX: sem reload, sem subir a tela.
-  function applyDay(btn, marked) {
-    btn.style.background = marked ? 'var(--c-success)' : 'var(--bg-input)';
-    btn.style.color = marked ? '#fff' : 'var(--txt-2)';
-    btn.style.fontWeight = marked ? '700' : '400';
+  function applyDay(btn, marked, csv) {
+    btn.classList.toggle('marcado', marked);
     btn.title = marked ? <?= json_encode(t('Desmarcar')) ?> : <?= json_encode(t('Marcar entrega')) ?>;
+    var old = btn.querySelector('.dia-redes');
+    if (old) old.parentNode.removeChild(old);
+    if (marked) btn.insertAdjacentHTML('beforeend', renderDiaRedes(csv));
   }
   function applySingle(btn, marked) {
     btn.classList.toggle('btn-success', marked);
@@ -272,8 +320,16 @@ require __DIR__ . '/includes/header.php';
     ev.preventDefault();
     var btn = form.querySelector('button[type="submit"]');
     if (btn && btn.dataset.busy) return;
-    if (btn) btn.dataset.busy = '1';
 
+    // Ao marcar um dia, carimba as redes ativas da paleta; ao desmarcar, vai vazio.
+    if (op === 'toggle_dia') {
+      var assinF = form.querySelector('input[name="assinatura_id"]').value;
+      var redesInput = form.querySelector('input[name="redes"]');
+      var vaiMarcar = !btn.classList.contains('marcado');
+      if (redesInput) redesInput.value = vaiMarcar ? paletaAtiva(assinF).join(',') : '';
+    }
+
+    if (btn) btn.dataset.busy = '1';
     var data = new FormData(form);
     fetch(window.location.pathname, {
       method: 'POST',
@@ -288,7 +344,7 @@ require __DIR__ . '/includes/header.php';
         var cnt = document.querySelector('.marc-count[data-assin="' + assin + '"]');
         if (cnt) cnt.textContent = res.count;
         var marked = res.result && res.result.action === 'added';
-        if (op === 'toggle_dia') applyDay(btn, marked);
+        if (op === 'toggle_dia') applyDay(btn, marked, res.result && res.result.redes);
         else applySingle(btn, marked);
         if (btn) delete btn.dataset.busy;
       })

@@ -1199,6 +1199,36 @@ select {
     }
 }
 
+/* === Agenda: paleta de redes sociais + ícones no dia === */
+.paleta-redes { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: var(--s-3); }
+.paleta-label { font-size: 12px; color: var(--txt-3); margin-right: 2px; }
+.rede-btn {
+    width: 30px; height: 30px; padding: 3px; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--bg-input);
+    display: inline-flex; align-items: center; justify-content: center;
+    cursor: pointer; opacity: 0.4; filter: grayscale(1);
+    transition: opacity 0.15s var(--ease-out), filter 0.15s var(--ease-out), border-color 0.15s var(--ease-out), transform 0.1s var(--ease-out);
+}
+.rede-btn:hover { opacity: 0.8; filter: grayscale(0.25); }
+.rede-btn.ativa { opacity: 1; filter: none; border-color: var(--border-focus); background: var(--bg-elevated-2); }
+.rede-btn:active { transform: scale(0.92); }
+.rede-btn svg { width: 100%; height: 100%; display: block; }
+
+.dia-btn {
+    width: 40px; min-height: 40px; border-radius: 6px;
+    border: 1px solid var(--border); background: var(--bg-input);
+    color: var(--txt-2); font-weight: 400; font-family: inherit; line-height: 1;
+    display: inline-flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 3px; padding: 4px 2px; cursor: pointer;
+    transition: background 0.12s var(--ease-out), border-color 0.12s var(--ease-out);
+}
+.dia-btn.marcado { background: var(--c-success); color: #fff; font-weight: 700; border-color: transparent; }
+.dia-btn.dia-view { cursor: default; }
+.dia-num { font-size: 13px; }
+.dia-redes { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 2px; max-width: 38px; }
+.rede-ico { display: inline-flex; }
+.rede-ico svg { width: 11px; height: 11px; display: block; border-radius: 3px; }
+
 /* === Motion preferences === */
 @media (prefers-reduced-motion: reduce) {
     * {

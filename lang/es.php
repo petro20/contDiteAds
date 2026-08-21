@@ -813,6 +813,8 @@ Los ítems volverán a la cola como pendientes.
     'Marcar como enviado' => 'Marcar como enviado',
     'Marcar como paga' => 'Marcar como pagado',
     'Marcar entrega' => 'Marcar entrega',
+    'Selecione as redes e clique no dia' => 'Selecciona las redes y haz clic en el día',
+    'Redes:' => 'Redes:',
     'Marcar entregas dos clientes que eu atendo (como funcionário)' => 'Registrar entregas de los clientes que atiendo (como empleado)',
     'Marcar entregas dos meus clientes' => 'Registrar entregas de mis clientes',
     'Marcar esta cobrança como totalmente paga?' => '¿Marcar este cobro como totalmente pagado?',
