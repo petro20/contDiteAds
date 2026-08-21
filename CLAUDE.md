@@ -89,19 +89,20 @@ Layout em **2 colunas** (`.cob-grid`, 1 coluna no mobile ≤640px); o **menu do 
 `Atrasados`, `Abertos`, `Falta:`. ⚠ Dívida técnica: `var(--c-attention)` (usado no detalhe da cobrança,
 `cobrancas.php` ~L790) **não existe** no CSS — trocar por `var(--c-warning)`.
 
-**Ícones de redes sociais na Agenda (2026-08-21):** o calendário (`agenda.php`, modo `calendar`,
-`e_pacote=1`) ganhou uma **paleta de 6 redes** por card (IG, FB, TikTok, YouTube, LinkedIn, X) — SVGs
-inline com cor da marca em `lib/entregas.php` (`entregas_redes_defs()`). Fluxo: **clica nos ícones pra
-selecionar** (estado só no navegador, salvo em `localStorage` por assinatura `cont_paleta_<id>`) →
-**clica no dia** e ele carimba as redes ativas; **clicar num dia marcado desmarca** (limpa). Persistência:
-coluna aditiva **`entregas.redes VARCHAR(60)`** (CSV de slugs) — **migration_024**, leitura/escrita
-protegidas por `entregas_coluna_existe()` (helper local, não acopla a `lib/cobrancas`); `redes` do POST
-sempre normalizada no servidor (whitelist via `entregas_redes_normaliza()`). `entregas_toggle_dia()`
-ganhou 5º parâmetro `$redes`; o AJAX de `op=toggle_dia` envia as redes e a resposta as devolve pro JS
-renderizar sem reload. Os ícones (11px) aparecem read-only pro cliente em `entregas.php` também. CSS
-(`.paleta-redes`, `.rede-btn`, `.dia-btn`, `.dia-redes`) no `style.css`; o botão do dia saiu de estilo
-inline pra classe `.dia-btn`. Chaves i18n novas: `Redes:`, `Selecione as redes e clique no dia`.
-⚠ **migration_024 é manual** — rodar o `.sql` no phpMyAdmin; até lá a feature grava sem redes (sem erro).
+**Ícones de redes sociais na Agenda (2026-08-21, no ar):** o calendário (`agenda.php`, modo `calendar`,
+`e_pacote=1`) ganhou uma **paleta de 8 redes** por card (IG, FB, TikTok, YouTube, LinkedIn, X, **Meta
+Business Suite** e **Google Ads**) — SVGs inline com cor da marca em `lib/entregas.php`
+(`entregas_redes_defs()`). Fluxo: **clica nos ícones pra selecionar** (estado só no navegador, salvo em
+`localStorage` por assinatura `cont_paleta_<id>`) → **clica no dia** e ele carimba as redes ativas;
+**clicar num dia marcado desmarca** (limpa). Persistência: coluna aditiva **`entregas.redes VARCHAR(60)`**
+(CSV de slugs; comporta os 8) — **migration_024, já aplicada em produção**; leitura/escrita protegidas por
+`entregas_coluna_existe()` (helper local, não acopla a `lib/cobrancas`); `redes` do POST sempre
+normalizada no servidor (whitelist via `entregas_redes_normaliza()`). `entregas_toggle_dia()` ganhou 5º
+parâmetro `$redes`; o AJAX de `op=toggle_dia` envia as redes e a resposta as devolve pro JS renderizar sem
+reload. Os ícones (11px) aparecem read-only pro cliente em `entregas.php` também. CSS (`.paleta-redes`,
+`.rede-btn`, `.dia-btn`, `.dia-redes`) no `style.css`; o botão do dia saiu de estilo inline pra classe
+`.dia-btn`. Chaves i18n novas: `Redes:`, `Selecione as redes e clique no dia`. Dias marcados com a paleta
+vazia ficam verdes sem ícones (compatível com o comportamento antigo).
 
 Auto-deploy da Hostinger confirmado ativo (push no `master` publica sozinho). Specs (com status de
 implementação): `docs/superpowers/specs/`.

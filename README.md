@@ -85,6 +85,11 @@ Helpers de autorização em `includes/auth.php`: `current_user()`, `require_logi
 - **Agenda de entregas** (`agenda.php`): funcionário marca entregas em 4 modos conforme o
   tipo do item — calendário (pacotes POSTAGEM), tally por unidade (criativos), único, ou só
   info (Meta/Google ADS). Cliente vê em `entregas.php` (read-only).
+  - **Ícones de redes por dia** (modo calendário): paleta de **8 redes** por card
+    (Instagram, Facebook, TikTok, YouTube, LinkedIn, X, Meta Business Suite, Google Ads).
+    Seleciona as redes na paleta (salvo no navegador por assinatura) → clica no dia e ele
+    carimba os ícones; clicar de novo desmarca. Slugs guardados em `entregas.redes` (CSV);
+    definição/SVG em `lib/entregas.php` (`entregas_redes_defs()`). Aparece read-only pro cliente.
 - **Duplas** (`trabalha_com_id`): dois funcionários compartilham agenda; pagamento vai ao principal.
 - **Capacidade** (`capacidade.php`): capacidade declarada por categoria vs. ocupação real.
 - **Acompanhamento geral** (`agenda_geral.php`) e **alertas de postagem** (`alertas.php`, cron Qua/Sex).
